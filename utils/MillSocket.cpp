@@ -21,7 +21,7 @@ std::string MillSocket::debug_string () const noexcept {
 }
 
 ssize_t MillSocket::read (uint8_t *buf, size_t len, int64_t dl) noexcept {
-    int64_t real_dl = dl>0 ? dl : (now()+1000);
+    int64_t real_dl = dl>0 ? dl : (mill_now()+1000);
     ssize_t rc;
 
     retry:
@@ -53,7 +53,7 @@ bool MillSocket::read_exactly(uint8_t *buf, size_t len, int64_t dl) noexcept {
             if (errno == EINTR)
                 continue;
             if (errno == EAGAIN) {
-                int64_t real_dl = dl>0 ? dl : (now()+1000);
+                int64_t real_dl = dl>0 ? dl : (mill_now()+1000);
                 auto evt = fdwait(sock_.fileno(), FDW_IN, real_dl);
                 if (evt & FDW_ERR)
                     return false;
@@ -81,7 +81,7 @@ bool MillSocket::send (struct iovec *iov, unsigned int count, int64_t dl) noexce
             if (errno == EINTR)
                 continue;
             if (errno == EAGAIN) {
-                const auto real_dl = dl>0 ? dl : now()+1000;
+                const auto real_dl = dl>0 ? dl : mill_now()+1000;
                 auto evt = fdwait(sock_.fileno(), FDW_OUT, real_dl);
                 if (evt & FDW_ERR)
                     return false;

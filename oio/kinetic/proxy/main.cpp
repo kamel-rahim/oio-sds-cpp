@@ -13,7 +13,6 @@
 
 #include <netinet/in.h>
 #include <signal.h>
-#include <setjmp.h>
 
 #include <glog/logging.h>
 #include <libmill.h>
@@ -199,7 +198,7 @@ struct CnxContext {
     CnxContext(const CnxContext &o) noexcept = delete;
 
     void reset() noexcept {
-        settings.set(default_settings);
+        settings = default_settings;
         expect_100 = false;
         last_field = HDR_none_matched;
         chunk_id.clear();
@@ -237,7 +236,7 @@ struct CnxContext {
                 BUF_IOV("\r\n"),
                 BUFLEN_IOV(payload.data(), payload.size())
         };
-        cnx->send(iov, 5, now() + 1000);
+        cnx->send(iov, 5, mill_now() + 1000);
     }
 
     void reply_success() noexcept {
@@ -250,7 +249,7 @@ struct CnxContext {
                 BUF_IOV("Content-Length: 0\r\n"),
                 BUF_IOV("\r\n"),
         };
-        cnx->send(iov, 4, now() + 1000);
+        cnx->send(iov, 4, mill_now() + 1000);
     }
 
     void reply_stream() noexcept {
@@ -263,12 +262,12 @@ struct CnxContext {
                 BUF_IOV("Transfer-Encoding: chunked\r\n"),
                 BUF_IOV("\r\n"),
         };
-        cnx->send(iov, 4, now() + 1000);
+        cnx->send(iov, 4, mill_now() + 1000);
     }
 
     void reply_end_of_stream() noexcept {
         struct iovec iov = BUF_IOV("0\r\n\r\n");
-        cnx->send(&iov, 1, now() + 1000);
+        cnx->send(&iov, 1, mill_now() + 1000);
     }
 
     void reply_100() noexcept {
@@ -285,7 +284,7 @@ struct CnxContext {
         };
         first[5] = '0' + parser->http_major;
         first[7] = '0' + parser->http_minor;
-        cnx->send(iov, 3, now() + 1000);
+        cnx->send(iov, 3, mill_now() + 1000);
     }
 };
 
@@ -381,7 +380,7 @@ int _on_message_complete_DOWNLOAD(http_parser *p UNUSED) {
                     BUFLEN_IOV(buf.data(), buf.size()),
                     BUF_IOV("\r\n")
             };
-            ctx->cnx->send(iov, 3, now()+1000);
+            ctx->cnx->send(iov, 3, mill_now() + 1000);
         }
     }
 
@@ -431,6 +430,20 @@ int _on_message_begin_COMMON(http_parser *p UNUSED) {
     return 0;
 }
 
+static bool _http_url_has(const http_parser_url &u, int field) {
+    assert(field < UF_MAX);
+    return 0 != (u.field_set & (1 << field));
+}
+
+static std::string _http_url_field(const http_parser_url &u, int f,
+                                   const char *buf, size_t len) {
+    if (!_http_url_has(u, f))
+        return std::string("");
+    assert(u.field_data[f].off < len);
+    assert(u.field_data[f].off + u.field_data[f].len < len);
+    return std::string(buf + u.field_data[f].off, u.field_data[f].len);
+}
+
 int _on_url_COMMON(http_parser *p, const char *buf, size_t len) {
     CnxContext *ctx = (CnxContext *) p->data;
 
@@ -440,17 +453,17 @@ int _on_url_COMMON(http_parser *p, const char *buf, size_t len) {
         ctx->save_header_error({400, 400, "URL parse error"});
         return 0;
     }
-    if (!url.has(UF_PATH)) {
+    if (!_http_url_has(url, UF_PATH)) {
         ctx->save_header_error({400, 400, "URL has no path"});
         return 0;
     }
-    auto path = url.field(buf, UF_PATH);
+    auto path = _http_url_field(url, UF_PATH, buf, len);
     auto last_sep = path.rfind('/');
     if (last_sep == std::string::npos) {
         ctx->save_header_error({400, 400, "URL has no/empty basename"});
         return 0;
     }
-    if (last_sep == path.size()-1) {
+    if (last_sep == path.size() - 1) {
         ctx->save_header_error({400, 400, "URL has no/empty basename"});
         return 0;
     }
@@ -500,13 +513,13 @@ int _on_headers_complete_COMMON(http_parser *p) {
     }
 
     if (p->method == HTTP_PUT) {
-        ctx->settings.set(upload_settings);
+        ctx->settings = upload_settings;
         return _on_headers_complete_UPLOAD(p);
     } else if (p->method == HTTP_GET) {
-        ctx->settings.set(download_settings);
+        ctx->settings = download_settings;
         return _on_headers_complete_DOWNLOAD(p);
     } else if (p->method == HTTP_DELETE) {
-        ctx->settings.set(removal_settings);
+        ctx->settings = removal_settings;
         return _on_headers_complete_REMOVAL(p);
     } else {
         ctx->reply_error({406, 406, "Method not managed"});
@@ -522,24 +535,26 @@ coroutine static void task_client(MillSocket *sock) noexcept {
     std::unique_ptr<MillSocket> front(sock);
     LOG(INFO) << "CLIENT fd " << front->fileno();
 
-    struct http_parser parser(HTTP_REQUEST);
+    struct http_parser parser;
+    http_parser_init(&parser, HTTP_REQUEST);
     CnxContext cnx(front.get(), &parser);
     parser.data = &cnx;
-    cnx.settings.set(default_settings);
+    cnx.settings = default_settings;
 
     std::vector<uint8_t> buffer(8192);
 
     while (flag_running) {
 
         errno = EAGAIN;
-        ssize_t sr = front->read(buffer.data(), buffer.size(), now() + 1000);
+        ssize_t sr = front->read(buffer.data(), buffer.size(), mill_now() + 1000);
 
         if (sr == -2) {
             DLOG(INFO) << "CLIENT peer closed";
             break;
         } else if (sr == -1) {
             if (errno != EAGAIN) {
-                DLOG(INFO) << "CLIENT error: (" << errno << ") " << strerror(errno);
+                DLOG(INFO) << "CLIENT error: (" << errno << ") " <<
+                strerror(errno);
                 break;
             }
         } else if (sr == 0) {
@@ -547,16 +562,16 @@ coroutine static void task_client(MillSocket *sock) noexcept {
         } else {
             DLOG(INFO) << "CLIENT " << sr << " bytes read";
             for (ssize_t done = 0; done < sr;) {
-                size_t consumed = parser.execute(&(cnx.settings),
-                                                 buffer.data() + done,
-                                                 sr - done);
+                size_t consumed = http_parser_execute(
+                        &parser, &(cnx.settings),
+                        reinterpret_cast<const char *>(buffer.data() + done),
+                        sr - done);
                 if (parser.http_errno != 0) {
-                    DLOG(INFO) << "HTTP parsing error "
+                    DLOG(INFO)
+                    << "HTTP parsing error "
                     << parser.http_errno
-                    << "/" <<
-                    http_errno_name(static_cast<http_errno>(parser.http_errno))
-                    << "/" << http_errno_description(
-                            static_cast<http_errno>(parser.http_errno));
+                    << "/" << http_errno_name(static_cast<http_errno>(parser.http_errno))
+                    << "/" << http_errno_description(static_cast<http_errno>(parser.http_errno));
                     goto out;
                 }
                 if (consumed > 0)
@@ -579,17 +594,17 @@ coroutine static void task_server(MillSocket &srv, chan out) noexcept {
         if (input_ready) {
             MillSocket cli;
             if (srv.accept(cli)) {
-                mill_go (task_client(new MillSocket(cli)));
+                mill_go(task_client(new MillSocket(cli)));
                 continue;
             }
         }
 
-        int rc = fdwait (srv.fileno(), FDW_IN, now() + 1000);
+        int rc = fdwait(srv.fileno(), FDW_IN, mill_now() + 1000);
         if (rc & FDW_ERR)
             break;
         input_ready = 0 != (rc & FDW_IN);
     }
-    chs (out, int, 1);
+    chs(out, int, 1);
 }
 
 static void _sighandler_stop(int s UNUSED) noexcept {
@@ -597,7 +612,7 @@ static void _sighandler_stop(int s UNUSED) noexcept {
 }
 
 static void _spawn_server(MillSocket &srv, chan out) noexcept {
-    mill_go (task_server(srv, out));
+    mill_go(task_server(srv, out));
 }
 
 static bool load_configuration_json(rapidjson::Document &doc) noexcept {
@@ -644,7 +659,7 @@ int main(int argc, char **argv) noexcept {
     signal(SIGPIPE, SIG_IGN);
 
     if (argc < 2) {
-        LOG(ERROR) << "Usage: "<< argv[0] <<" FILE [FILE...]";
+        LOG(ERROR) << "Usage: " << argv[0] << " FILE [FILE...]";
         return 1;
     }
     for (int i = 1; i < argc; ++i)
@@ -652,7 +667,7 @@ int main(int argc, char **argv) noexcept {
 
     factory.reset(new CoroutineClientFactory);
 
-    chan out = chmake (int, 0);
+    chan out = chmake(int, 0);
 
     for (auto &e: SRV) {
         if (!e.listen(default_backlog)) {
@@ -670,7 +685,7 @@ int main(int argc, char **argv) noexcept {
     /* Wait for the coroutines to exit */
     for (int i = SRV.size(); i > 0; --i) {
         int done = chr(out, int);
-        assert (done != 0);
+        assert(done != 0);
     }
 
     out:

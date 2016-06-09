@@ -25,16 +25,21 @@ PARTICULAR PURPOSE. See the Mozilla Public License for more details.
 
 ### oio-kinetic-client
 
-* [the Kinetic protocol](https://github.com/Kinetic/kinetic-protocol): Maintained by the Kinetic Open Storage group, as a Protocol Buffer definition.
-* [libmill](https://github.com/sustrik/libmill): Used for easy cooperative concurrency, thanks tyo Martin Sustrik's coroutines.
+* [the Kinetic protocol](https://github.com/Kinetic/kinetic-protocol)
+  included as a Git submodule, a Protocol Buffer definition maintained
+  by the Kinetic Open Storage group.
+* [libmill](https://github.com/sustrik/libmill): for easy cooperative
+  concurrency, thanks tyo Martin Sustrik's coroutines.
 * [glog](https://github.com/google/glog)
 
 ### oio-kinetic-proxy
 
-* [http-parser](https://github.com/nodejs/http-parser): Currently shipped and slightly modified for a "c++ friendly" version.
-* [ragel](https://github.com/colmnet/ragel): Used as a lexer to easily and efficiently recognize HTTP headers 
+* [http-parser](https://github.com/nodejs/http-parser) included as a Git
+  submodule
+* [ragel](https://github.com/colmnet/ragel): Used as a lexer to easily
+  and efficiently recognize HTTP headers 
+* [libmill](https://github.com/sustrik/libmill)
 * [glog](https://github.com/google/glog)
-* [libmill](https://github.com/sustrik/libmill): Used for easy cooperative concurrency, thanks tyo Martin Sustrik's coroutines.
 
 Build & Install
 ---------------

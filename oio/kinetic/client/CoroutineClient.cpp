@@ -111,7 +111,7 @@ bool CoroutineClient::forward(Frame &frame) noexcept {
             BUFLEN_IOV(frame.msg.data(), frame.msg.size()),
             BUFLEN_IOV(frame.val.data(), frame.val.size())
     };
-    return sock_.send(iov, 3, now() + 5000);
+    return sock_.send(iov, 3, mill_now() + 5000);
 }
 
 int CoroutineClient::pack(std::shared_ptr<Request> &req,
@@ -147,7 +147,7 @@ int CoroutineClient::pack(std::shared_ptr<Request> &req,
 coroutine void CoroutineClient::run_agent_consumer(chan done) noexcept {
 
     assert (sock_.fileno() < 0);
-    int64_t handshake_deadline = now() + 5000;
+    int64_t handshake_deadline = mill_now() + 5000;
 
     // Wait for an established connection
     if (0 > (sock_.connect(url_)))
@@ -181,7 +181,7 @@ coroutine void CoroutineClient::run_agent_consumer(chan done) noexcept {
         // consume frames from the device
         while (running_) {
             Frame frame;
-            int err = recv(frame, now() + 1000);
+            int err = recv(frame, mill_now() + 1000);
             if (err == 0) {
                 if (!manage(frame)) {
                     DLOG(INFO) << "Frame management error";
@@ -220,7 +220,7 @@ coroutine void CoroutineClient::run_agent_producer(chan done) noexcept {
                                 DLOG(INFO) << "K> forward error";
                             }
                         }
-                mill_deadline(now() + 1000):
+                mill_deadline(mill_now() + 1000):
             mill_end
         }
     }
@@ -235,7 +235,7 @@ coroutine void CoroutineClient::run_agents() noexcept {
         (void) chr(from_consumer, int);
         sock_.close();
         chclose(from_consumer);
-        if (running_) msleep(now() + 500);
+        if (running_) msleep(mill_now() + 500);
     }
     chs(stopped_, int, SIGNAL_AGENT_STOP);
 }

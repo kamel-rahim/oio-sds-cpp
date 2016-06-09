@@ -236,7 +236,7 @@ struct CnxContext {
                 BUF_IOV("\r\n"),
                 BUFLEN_IOV(payload.data(), payload.size())
         };
-        cnx->send(iov, 5, now() + 1000);
+        cnx->send(iov, 5, mill_now() + 1000);
     }
 
     void reply_success() noexcept {
@@ -249,7 +249,7 @@ struct CnxContext {
                 BUF_IOV("Content-Length: 0\r\n"),
                 BUF_IOV("\r\n"),
         };
-        cnx->send(iov, 4, now() + 1000);
+        cnx->send(iov, 4, mill_now() + 1000);
     }
 
     void reply_stream() noexcept {
@@ -262,12 +262,12 @@ struct CnxContext {
                 BUF_IOV("Transfer-Encoding: chunked\r\n"),
                 BUF_IOV("\r\n"),
         };
-        cnx->send(iov, 4, now() + 1000);
+        cnx->send(iov, 4, mill_now() + 1000);
     }
 
     void reply_end_of_stream() noexcept {
         struct iovec iov = BUF_IOV("0\r\n\r\n");
-        cnx->send(&iov, 1, now() + 1000);
+        cnx->send(&iov, 1, mill_now() + 1000);
     }
 
     void reply_100() noexcept {
@@ -284,7 +284,7 @@ struct CnxContext {
         };
         first[5] = '0' + parser->http_major;
         first[7] = '0' + parser->http_minor;
-        cnx->send(iov, 3, now() + 1000);
+        cnx->send(iov, 3, mill_now() + 1000);
     }
 };
 
@@ -380,7 +380,7 @@ int _on_message_complete_DOWNLOAD(http_parser *p UNUSED) {
                     BUFLEN_IOV(buf.data(), buf.size()),
                     BUF_IOV("\r\n")
             };
-            ctx->cnx->send(iov, 3, now() + 1000);
+            ctx->cnx->send(iov, 3, mill_now() + 1000);
         }
     }
 
@@ -546,7 +546,7 @@ coroutine static void task_client(MillSocket *sock) noexcept {
     while (flag_running) {
 
         errno = EAGAIN;
-        ssize_t sr = front->read(buffer.data(), buffer.size(), now() + 1000);
+        ssize_t sr = front->read(buffer.data(), buffer.size(), mill_now() + 1000);
 
         if (sr == -2) {
             DLOG(INFO) << "CLIENT peer closed";
@@ -599,7 +599,7 @@ coroutine static void task_server(MillSocket &srv, chan out) noexcept {
             }
         }
 
-        int rc = fdwait(srv.fileno(), FDW_IN, now() + 1000);
+        int rc = fdwait(srv.fileno(), FDW_IN, mill_now() + 1000);
         if (rc & FDW_ERR)
             break;
         input_ready = 0 != (rc & FDW_IN);

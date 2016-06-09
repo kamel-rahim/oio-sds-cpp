@@ -8,6 +8,7 @@
 #define OIO_KINETIC_EXCHANGE_H
 
 #include <cstdint>
+#include <memory>
 #include "Request.h"
 
 namespace oio {

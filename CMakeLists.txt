@@ -96,7 +96,7 @@ add_custom_command(OUTPUT
         DEPENDS oio/kinetic/proxy/headers.rl)
 
 add_executable(oio-kinetic-proxy
-        http-parser/http_parser.cpp
+        http-parser/http_parser.c
         http-parser/http_parser.h
         ${CMAKE_CURRENT_BINARY_DIR}/headers.cc
         oio/kinetic/proxy/headers.h

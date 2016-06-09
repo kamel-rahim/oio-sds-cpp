@@ -1,3 +1,6 @@
 [submodule "http-parser"]
 	path = http-parser
 	url = https://github.com/nodejs/http-parser
+[submodule "kinetic-protocol"]
+	path = kinetic-protocol
+	url = https://github.com/Kinetic/kinetic-protocol

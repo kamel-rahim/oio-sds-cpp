@@ -30,9 +30,9 @@ add_custom_command(OUTPUT
         ${CMAKE_CURRENT_BINARY_DIR}/kinetic.pb.h
         COMMAND ${EXE_PROTOC}
             --cpp_out=${CMAKE_CURRENT_BINARY_DIR}
-            -I${CMAKE_CURRENT_SOURCE_DIR}/oio/kinetic/rpc
-        ${CMAKE_CURRENT_SOURCE_DIR}/oio/kinetic/rpc/kinetic.proto
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/oio/kinetic/rpc/kinetic.proto)
+            -I${CMAKE_CURRENT_SOURCE_DIR}/kinetic-protocol
+        ${CMAKE_CURRENT_SOURCE_DIR}/kinetic-protocol/kinetic.proto
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/kinetic-protocol/kinetic.proto)
 
 add_library(oio-kinetic-client SHARED
         utils/MillSocket.cpp

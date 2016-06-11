@@ -6,5 +6,5 @@
 	url = https://github.com/Kinetic/kinetic-protocol
 [submodule "libmill"]
 	path = libmill
-	url = https://github.com/jfsmig/libmill
-	branch = symbols-renamed
+	url = https://github.com/sustrik/libmill
+	branch = master

@@ -8,7 +8,7 @@ find_program(RAGEL_EXE ragel)
 set(LINKER_LANGUAGE CXX)
 
 pkg_check_modules(GLOG libglog REQUIRED)
-pkg_check_modules(PROTOBUF libprotobuf REQUIRED)
+pkg_check_modules(PROTOBUF protobuf REQUIRED)
 pkg_check_modules(CRYPTO libcrypto REQUIRED)
 
 include_directories(BEFORE
@@ -19,8 +19,10 @@ include_directories(BEFORE
 		${CRYPTO_INCLUDE_DIRECTORIES}
 		${GLOG_INCLUDE_DIRECTORIES})
 
+add_subdirectory(libmill)
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -pipe -fPIC")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Werror")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GNU_SOURCE")
 
@@ -28,6 +30,10 @@ set(CMAKE_CXX_FLAGS_DEBUG "-O0 -fno-inline")
 set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2")
+
+add_definitions(-DMILL_USE_PREFIX=1)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
 
 add_custom_command(OUTPUT
         ${CMAKE_CURRENT_BINARY_DIR}/kinetic.pb.cc
@@ -37,8 +43,6 @@ add_custom_command(OUTPUT
 			-I${CMAKE_CURRENT_SOURCE_DIR}/kinetic-protocol
 			${CMAKE_CURRENT_SOURCE_DIR}/kinetic-protocol/kinetic.proto
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/kinetic-protocol/kinetic.proto)
-
-add_subdirectory(libmill)
 
 add_library(oio-kinetic-client SHARED
         utils/MillSocket.cpp

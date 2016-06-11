@@ -439,8 +439,10 @@ static std::string _http_url_field(const http_parser_url &u, int f,
                                    const char *buf, size_t len) {
     if (!_http_url_has(u, f))
         return std::string("");
-    assert(u.field_data[f].off < len);
-    assert(u.field_data[f].off + u.field_data[f].len < len);
+	DLOG(INFO) << "off " << u.field_data[f].off << " len " << u.field_data[f].len;
+    assert(u.field_data[f].off <= len);
+    assert(u.field_data[f].len <= len);
+    assert(u.field_data[f].off + u.field_data[f].len <= len);
     return std::string(buf + u.field_data[f].off, u.field_data[f].len);
 }
 
@@ -604,6 +606,7 @@ coroutine static void task_server(MillSocket &srv, chan out) noexcept {
             break;
         input_ready = 0 != (rc & FDW_IN);
     }
+	LOG(INFO) << "Exiting server " << srv.debug_string();
     chs(out, int, 1);
 }
 
@@ -649,7 +652,7 @@ int main(int argc, char **argv) noexcept {
     google::InitGoogleLogging(argv[0]);
     FLAGS_logtostderr = true;
 
-    goprepare(4096, 16384, sizeof(void *));
+    //goprepare(4096, 16384, sizeof(void *));
 
     signal(SIGINT, _sighandler_stop);
     signal(SIGTERM, _sighandler_stop);

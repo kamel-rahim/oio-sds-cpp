@@ -12,6 +12,7 @@
 #include <vector>
 #include <queue>
 #include <cassert>
+#include <utils/utils.h>
 #include <utils/MillSocket.h>
 #include <kinetic.pb.h>
 #include <oio/kinetic/rpc/Exchange.h>
@@ -76,11 +77,11 @@ class CoroutineClient : public ClientInterface {
     // Packs req in frame, and return errno
     int pack(std::shared_ptr<oio::kinetic::rpc::Request> &req, Frame &frame) noexcept;
 
-    void run_agent_consumer(struct mill_chan *done) noexcept;
+    NOINLINE void run_agent_consumer(struct mill_chan *done) noexcept;
 
-    void run_agent_producer(struct mill_chan *done) noexcept;
+    NOINLINE void run_agent_producer(struct mill_chan *done) noexcept;
 
-    void run_agents() noexcept;
+    NOINLINE void run_agents() noexcept;
 
   public:
     ~CoroutineClient() noexcept;

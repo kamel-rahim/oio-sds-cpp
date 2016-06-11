@@ -17,7 +17,13 @@
 
 #define ON_ENUM(D,F) case D::F: return #F
 
+
+#if defined __GNUC__ || defined __clang__
 #define UNUSED __attribute__ ((unused))
+#define NOINLINE __attribute__((noinline))
+#else
+#error "Unsupported compiler!"
+#endif
 
 std::vector<uint8_t> compute_sha1 (const std::vector<uint8_t> &val) noexcept;
 

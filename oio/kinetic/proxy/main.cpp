@@ -332,8 +332,6 @@ int _on_headers_complete_UPLOAD(http_parser *p) {
 }
 
 int _on_body_UPLOAD(http_parser *p, const char *buf, size_t len) {
-    DLOG(INFO) << __FUNCTION__;
-
     // We do not manage bodies exceeding 4GB at once
     if (len >= std::numeric_limits<uint32_t>::max()) {
         return 1;
@@ -543,6 +541,9 @@ int _on_header_value_COMMON(http_parser *p, const char *buf, size_t len) {
             ctx->xattrs[ctx->last_field_name] = std::move(std::string(buf, len));
         }
     }
+    else if (ctx->last_field == HDR_EXPECT) {
+        ctx->expect_100 = ("100-continue" == std::string(buf, len));
+    }
     return 0;
 }
 
@@ -619,7 +620,6 @@ coroutine static void task_client(MillSocket *sock) noexcept {
         } else if (sr == 0) {
             // TODO manage the data timeout
         } else {
-            DLOG(INFO) << "CLIENT " << sr << " bytes read";
             for (ssize_t done = 0; done < sr;) {
                 size_t consumed = http_parser_execute(
                         &parser, &(cnx.settings),

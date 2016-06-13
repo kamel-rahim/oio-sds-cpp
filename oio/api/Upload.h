@@ -15,11 +15,30 @@ namespace blob {
 
 class Upload {
   public:
+    enum class Status {
+        OK, Already, NetworkError, ProtocolError
+    };
+
+    static inline const char *Status2Str(Status s) {
+        switch (s) {
+            case Status::OK:
+                return "OK";
+            case Status::Already:
+                return "Already";
+            case Status::NetworkError:
+                return "Network error";
+            case Status::ProtocolError:
+                return "Protocol error";
+            default:
+                return "***invalid status***";
+        }
+    }
+  public:
     virtual ~Upload() { }
 
     virtual void SetXattr (const std::string &k, const std::string &v) = 0;
 
-    virtual bool Prepare() = 0;
+    virtual Status Prepare() = 0;
 
     virtual bool Commit() = 0;
 

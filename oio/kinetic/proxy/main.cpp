@@ -310,10 +310,25 @@ int _on_headers_complete_UPLOAD(http_parser *p) {
         builder.Target(to);
     ctx->upload = builder.Build();
 
-    ctx->upload->Prepare();
-    for (const auto &e: ctx->xattrs)
-        ctx->upload->SetXattr(e.first, e.second);
-    return 0;
+    auto rc = ctx->upload->Prepare();
+    switch (rc) {
+        case oio::blob::Upload::Status::OK:
+            for (const auto &e: ctx->xattrs)
+                ctx->upload->SetXattr(e.first, e.second);
+            return 0;
+        case oio::blob::Upload::Status::Already:
+            ctx->reply_error({406, 421, "blobs found"});
+            return 1;
+        case oio::blob::Upload::Status::NetworkError:
+            ctx->reply_error({502, 500, "network error to devices"});
+            return 1;
+        case oio::blob::Upload::Status::ProtocolError:
+            ctx->reply_error({500, 500, "protocol error to devices"});
+            return 1;
+    }
+
+    abort();
+    return 1;
 }
 
 int _on_body_UPLOAD(http_parser *p, const char *buf, size_t len) {
@@ -358,28 +373,39 @@ int _on_message_complete_UPLOAD(http_parser *p) {
 int _on_headers_complete_DOWNLOAD(http_parser *p) {
     CnxContext *ctx = (CnxContext *) p->data;
 
-    ctx->reply_100();
-    ctx->settings.on_header_field = _on_trailer_field_COMMON;
-    ctx->settings.on_header_value = _on_trailer_value_COMMON;
+    DownloadBuilder builder(factory);
+    builder.Name(ctx->chunk_id);
+    for (const auto t: ctx->targets)
+        builder.Target(t);
+    ctx->download = builder.Build();
 
-    return 0;
+    auto rc = ctx->download->Prepare();
+    switch (rc) {
+        case oio::blob::Download::Status::OK:
+            ctx->reply_100();
+            ctx->reply_stream();
+            return 0;
+        case oio::blob::Download::Status::NotFound:
+            ctx->reply_error({404, 420, "blobs not found"});
+            return 1;
+        case oio::blob::Download::Status::NetworkError:
+            ctx->reply_error({503, 500, "devices unreachable"});
+            return 1;
+        case oio::blob::Download::Status::ProtocolError:
+            ctx->reply_error({502, 500, "invalid reply from device"});
+            return 1;
+    }
+
+    abort();
+    return 1;
 }
 
 int _on_message_complete_DOWNLOAD(http_parser *p UNUSED) {
     CnxContext *ctx = (CnxContext *) p->data;
 
-    DownloadBuilder builder(factory);
-    builder.Name(ctx->chunk_id);
-    for (const auto t: ctx->targets)
-        builder.Target(t);
-    auto dl = builder.Build();
-
-    ctx->reply_stream();
-
-    dl->Prepare();
-    while (!dl->IsEof()) {
+    while (!ctx->download->IsEof()) {
         std::vector<uint8_t> buf;
-        dl->Read(buf);
+        ctx->download->Read(buf);
         if (buf.size() > 0) {
             std::stringstream ss;
             ss << std::hex << buf.size() << "\r\n";
@@ -402,19 +428,29 @@ int _on_message_complete_DOWNLOAD(http_parser *p UNUSED) {
 int _on_headers_complete_REMOVAL(http_parser *p UNUSED) {
     auto ctx = (CnxContext *) p->data;
 
-    ctx->reply_100();
-    ctx->settings.on_header_field = _on_trailer_field_COMMON;
-    ctx->settings.on_header_value = _on_trailer_value_COMMON;
-
     RemovalBuilder builder(factory);
     builder.Name(ctx->chunk_id);
     for (const auto t: ctx->targets)
         builder.Target(t);
     ctx->removal = builder.Build();
+
     auto rc = ctx->removal->Prepare();
-    if (rc)
-        return 0;
-    ctx->reply_error({500, 500, "Error"});
+    switch (rc) {
+        case oio::blob::Removal::Status::OK:
+            ctx->reply_100();
+            return 0;
+        case oio::blob::Removal::Status::NotFound:
+            ctx->reply_error({404, 402, "no blob found"});
+            return 1;
+        case oio::blob::Removal::Status::NetworkError:
+            ctx->reply_error({503, 500, "devices unreachable"});
+            return 1;
+        case oio::blob::Removal::Status::ProtocolError:
+            ctx->reply_error({502, 500, "invalid reply from devices"});
+            return 1;
+    }
+
+    abort();
     return 1;
 }
 

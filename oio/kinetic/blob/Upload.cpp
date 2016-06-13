@@ -12,6 +12,7 @@
 #include <rapidjson/writer.h>
 #include <libmill.h>
 #include <oio/kinetic/rpc/Put.h>
+#include <oio/kinetic/rpc/GetKeyRange.h>
 #include <oio/kinetic/client/ClientInterface.h>
 #include "Upload.h"
 
@@ -20,6 +21,7 @@ using oio::kinetic::client::ClientInterface;
 using oio::kinetic::client::ClientFactory;
 using oio::kinetic::client::Sync;
 using oio::kinetic::rpc::Put;
+using oio::kinetic::rpc::GetKeyRange;
 
 class Upload : public oio::blob::Upload {
     friend class UploadBuilder;
@@ -29,7 +31,7 @@ public:
 
     ~Upload() noexcept;
 
-    bool Prepare() noexcept;
+    oio::blob::Upload::Status Prepare() noexcept;
 
     void SetXattr (const std::string &k, const std::string &v) noexcept;
 
@@ -162,8 +164,27 @@ bool Upload::Abort() noexcept {
     return true;
 }
 
-bool Upload::Prepare() noexcept {
-    return true;
+oio::blob::Upload::Status Upload::Prepare() noexcept {
+
+    // Send the same listing request to all the clients
+    const std::string key_manifest(chunkid + "-#");
+    GetKeyRange gkr;
+    gkr.Start(key_manifest);
+    gkr.End(key_manifest);
+    gkr.IncludeStart(true);
+    gkr.IncludeEnd(true);
+    gkr.MaxItems(1);
+    std::vector<std::shared_ptr<Sync>> ops;
+    for (auto &cli: clients)
+        ops.emplace_back(cli->Start(&gkr));
+    for (auto &op: ops)
+        op->Wait();
+    std::vector<std::string> keys;
+    gkr.Steal(keys);
+    if (!keys.empty())
+        return oio::blob::Upload::Status::Already;
+
+    return oio::blob::Upload::Status::OK;
 }
 
 UploadBuilder::~UploadBuilder() noexcept { }

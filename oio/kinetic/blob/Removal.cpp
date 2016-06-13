@@ -41,7 +41,7 @@ class Removal : public oio::blob::Removal {
 
     virtual ~Removal() noexcept { }
 
-    virtual bool Prepare() noexcept;
+    virtual oio::blob::Removal::Status Prepare() noexcept;
 
     virtual bool Commit() noexcept;
 
@@ -58,14 +58,25 @@ class Removal : public oio::blob::Removal {
     std::vector<PendingDelete> ops;
 };
 
-bool Removal::Prepare() noexcept {
+oio::blob::Removal::Status Removal::Prepare() noexcept {
     ListingBuilder builder(factory);
     builder.Name(chunkid);
     for (const auto &to: targets)
         builder.Target(to);
     auto listing = builder.Build();
 
-    listing->Prepare();
+    auto rc = listing->Prepare();
+    switch (rc) {
+        case oio::blob::Listing::Status::OK:
+            break;
+        case oio::blob::Listing::Status::NotFound:
+            return oio::blob::Removal::Status::NotFound;
+        case oio::blob::Listing::Status::NetworkError:
+            return oio::blob::Removal::Status::NetworkError;
+        case oio::blob::Listing::Status::ProtocolError:
+            return oio::blob::Removal::Status::ProtocolError;
+    }
+
     std::string id, key;
     while (listing->Next(id, key)) {
         PendingDelete del;
@@ -76,7 +87,7 @@ bool Removal::Prepare() noexcept {
         ops.push_back(del);
     }
 
-    return true;
+    return oio::blob::Removal::Status::OK;
 }
 
 bool Removal::Commit() noexcept {

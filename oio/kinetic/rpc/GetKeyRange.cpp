@@ -32,8 +32,8 @@ std::shared_ptr<Request> GetKeyRange::MakeRequest() noexcept {
 }
 
 void GetKeyRange::ManageReply(Request &rep) noexcept {
-    status_ =
-            rep.cmd.status().code() == proto::Command_Status_StatusCode_SUCCESS;
+    auto code = rep.cmd.status().code();
+    status_ = code == proto::Command_Status_StatusCode_SUCCESS;
     if (!status_)
         return;
     for (const auto &k: rep.cmd.body().range().keys())

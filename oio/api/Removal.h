@@ -12,9 +12,28 @@ namespace blob {
 
 class Removal {
   public:
+    enum class Status {
+        OK, NotFound, NetworkError, ProtocolError
+    };
+
+    static inline const char *Status2Str(Status s) {
+        switch (s) {
+            case Status::OK:
+                return "OK";
+            case Status::NotFound:
+                return "Not found";
+            case Status::NetworkError:
+                return "Network error";
+            case Status::ProtocolError:
+                return "Protocol error";
+            default:
+                return "***invalid status***";
+        }
+    }
+  public:
     virtual ~Removal() noexcept { }
 
-    virtual bool Prepare() noexcept = 0;
+    virtual Status Prepare() noexcept = 0;
 
     virtual bool Commit() noexcept = 0;
 

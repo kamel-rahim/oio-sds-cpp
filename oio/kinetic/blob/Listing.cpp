@@ -38,16 +38,12 @@ class Listing : public oio::blob::Listing {
 
     std::vector<std::pair<int, std::string>> items;
     unsigned int next_item;
-
-    bool init_done;
 };
 
 Listing::Listing() noexcept
-        : clients(), name(), items(), next_item{0}, init_done{false} { }
+        : clients(), name(), items(), next_item{0} { }
 
 bool Listing::Next(std::string &id, std::string &key) noexcept {
-    if (!init_done)
-        return false;
     if (next_item >= items.size())
         return false;
 

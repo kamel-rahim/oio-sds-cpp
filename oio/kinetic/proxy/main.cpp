@@ -42,7 +42,6 @@ using oio::kinetic::blob::DownloadBuilder;
 using oio::kinetic::blob::UploadBuilder;
 using oio::kinetic::client::ClientFactory;
 using oio::kinetic::client::CoroutineClientFactory;
-using namespace rapidjson;
 
 static volatile unsigned int flag_running = 1;
 
@@ -161,7 +160,7 @@ struct SoftError {
 
 static void pack_error(std::string &dst, int softcode, const char *why) {
     rapidjson::StringBuffer buf;
-    Writer<StringBuffer> writer(buf);
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
     writer.StartObject();
     writer.Key("status");
     writer.Int(softcode);
@@ -179,11 +178,15 @@ struct CnxContext {
     // Related to the current request
     std::string chunk_id;
     std::vector<std::string> targets;
+
     SoftError defered_error;
     std::unique_ptr<Upload> upload;
     std::unique_ptr<Download> download;
     std::unique_ptr<Removal> removal;
+
     enum http_header_e last_field;
+    std::string last_field_name;
+    std::map<std::string,std::string> xattrs;
     bool expect_100;
 
     ~CnxContext() noexcept { }
@@ -191,7 +194,8 @@ struct CnxContext {
     CnxContext(MillSocket *c, http_parser *p) noexcept:
             cnx{c}, parser{p}, settings(), chunk_id(), targets(),
             upload{nullptr}, download{nullptr},
-            last_field{HDR_none_matched}, expect_100{false} { }
+            last_field{HDR_none_matched}, last_field_name(),
+            xattrs(), expect_100{false} { }
 
     CnxContext(CnxContext &&o) noexcept = delete;
 
@@ -298,12 +302,17 @@ int _on_headers_complete_UPLOAD(http_parser *p) {
     ctx->settings.on_header_field = _on_trailer_field_COMMON;
     ctx->settings.on_header_value = _on_trailer_value_COMMON;
 
+    // Get an upload obect
     auto builder = UploadBuilder(factory);
     builder.BlockSize(512 * 1024);
     builder.Name(ctx->chunk_id);
     for (const auto &to: ctx->targets)
         builder.Target(to);
     ctx->upload = builder.Build();
+
+    ctx->upload->Prepare();
+    for (const auto &e: ctx->xattrs)
+        ctx->upload->SetXattr(e.first, e.second);
     return 0;
 }
 
@@ -478,6 +487,13 @@ int _on_header_field_COMMON(http_parser *p, const char *buf, size_t len) {
     auto ctx = (CnxContext *) p->data;
     assert(ctx->defered_error.http == 0);
     ctx->last_field = header_parse(buf, len);
+    if (ctx->last_field == HDR_OIO_XATTR) {
+        if (p->method == HTTP_PUT) {
+            const char *_b = buf + sizeof(OIO_HEADER_XATTR_PREFIX) - 1;
+            size_t _l = len - sizeof(OIO_HEADER_XATTR_PREFIX) - 1;
+            ctx->last_field_name.assign(_b, _l);
+        }
+    }
     return 0;
 }
 
@@ -486,6 +502,11 @@ int _on_header_value_COMMON(http_parser *p, const char *buf, size_t len) {
     assert(ctx->defered_error.http == 0);
     if (ctx->last_field == HDR_OIO_TARGET)
         ctx->targets.emplace_back(buf, len);
+    else if (ctx->last_field == HDR_OIO_XATTR) {
+        if (p->method == HTTP_PUT) {
+            ctx->xattrs[ctx->last_field_name] = std::move(std::string(buf, len));
+        }
+    }
     return 0;
 }
 

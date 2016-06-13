@@ -28,14 +28,8 @@ parse_header := |*
     /host/i             { return HDR_HOST; };
     /accept/i           { return HDR_ACCEPT; };
     /user-agent/i       { return HDR_USERAGENT; };
-    /X-oio-account/i    { return HDR_OIO_ACCOUNT; };
-    /X-oio-user/i       { return HDR_OIO_USER; };
-    /X-oio-path/i       { return HDR_OIO_CONTENT; };
-    /X-oio-version/i    { return HDR_OIO_VERSION; };
     /X-oio-target/i     { return HDR_OIO_TARGET; };
-    /X-oio-chunk-id/i   { return HDR_OIO_CHUNK_ID; };
-    /X-oio-chunk-size/i { return HDR_OIO_CHUNK_SIZE; };
-    /X-oio-chunk-hash/i { return HDR_OIO_CHUNK_HASH; };
+    /X-oio-meta-.*/i    { return HDR_OIO_XATTR; };
 *|;
 }%%
 
@@ -43,6 +37,7 @@ parse_header := |*
 
 enum http_header_e header_parse (const char *p, unsigned int len) {
 	const char *pe = p + len;
+	const char *eof = pe;
 	struct header_lexer_s lexer;
 
 	assert (p != (void*)0);
@@ -62,14 +57,8 @@ const char * header_to_string (enum http_header_e h) {
 		ON_HEADER(HDR_,HOST);
 		ON_HEADER(HDR_,ACCEPT);
 		ON_HEADER(HDR_,USERAGENT);
-        ON_HEADER(HDR_,OIO_ACCOUNT);
-        ON_HEADER(HDR_,OIO_USER);
-        ON_HEADER(HDR_,OIO_CONTENT);
-        ON_HEADER(HDR_,OIO_VERSION);
         ON_HEADER(HDR_,OIO_TARGET);
-        ON_HEADER(HDR_,OIO_CHUNK_ID);
-        ON_HEADER(HDR_,OIO_CHUNK_SIZE);
-        ON_HEADER(HDR_,OIO_CHUNK_HASH);
+        ON_HEADER(HDR_,OIO_XATTR);
 		default:
 			return "unmanaged";
 	}

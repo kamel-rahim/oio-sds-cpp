@@ -8,8 +8,9 @@
 
 #include <glog/log_severity.h>
 #include <glog/logging.h>
+#include <rapidjson/document.h>
+#include <rapidjson/writer.h>
 #include <libmill.h>
-
 #include <oio/kinetic/rpc/Put.h>
 #include <oio/kinetic/client/ClientInterface.h>
 #include "Upload.h"
@@ -29,6 +30,8 @@ public:
     ~Upload() noexcept;
 
     bool Prepare() noexcept;
+
+    void SetXattr (const std::string &k, const std::string &v) noexcept;
 
     bool Commit() noexcept;
 
@@ -54,6 +57,7 @@ private:
     std::vector<uint8_t> buffer;
     uint32_t buffer_limit;
     std::string chunkid;
+    std::map<std::string,std::string> xattr;
 };
 
 Upload::~Upload() noexcept {
@@ -62,6 +66,10 @@ Upload::~Upload() noexcept {
 
 Upload::Upload() noexcept: clients(), next_client{0}, puts(), syncs() {
     DLOG(INFO) << __FUNCTION__;
+}
+
+void Upload::SetXattr(const std::string &k, const std::string &v) noexcept {
+    xattr[k] = v;
 }
 
 void Upload::TriggerUpload(const std::string &suffix) noexcept {
@@ -127,16 +135,24 @@ void Upload::Flush() noexcept {
 }
 
 bool Upload::Commit() noexcept {
+
+    // Flush the internal buffer so that we don't mix payload with xattr
     Flush();
 
-    DLOG(INFO) << __FUNCTION__ << " sending xattr";
-    // Send the attr metadata
-    std::string attr("{}");
-    Write(attr);
-
+    // Pack then send the xattr
+    rapidjson::StringBuffer buf;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
+    writer.StartObject();
+    for (const auto &e: xattr) {
+        writer.Key(e.first.c_str());
+        writer.String(e.second.c_str());
+    }
+    writer.EndObject();
+    this->Write(reinterpret_cast<const uint8_t *>(buf.GetString()), buf.GetSize());
     TriggerUpload("#");
 
-    DLOG(INFO) << __FUNCTION__ << " waiting for sub-op results";
+
+    // Wait for all the single PUT to finish
     for (auto &s: syncs)
         s->Wait();
     return true;

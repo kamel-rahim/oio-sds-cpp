@@ -25,7 +25,8 @@ using oio::kinetic::blob::ListingBuilder;
 using oio::kinetic::blob::DownloadBuilder;
 
 const char * chunkid = "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF";
-const char * target = ::getenv("OIO_KINETIC_URL");
+const char * envkey_URL = "OIO_KINETIC_URL";
+const char * target = ::getenv(envkey_URL);
 
 static void test_upload_empty (std::shared_ptr<ClientFactory> factory) {
     DLOG(INFO) << __FUNCTION__;
@@ -83,6 +84,8 @@ static void test_download (std::shared_ptr<ClientFactory> factory) {
     auto dl = builder.Build();
     auto rc = dl->Prepare();
     assert(rc == oio::blob::Download::Status::OK);
+    DLOG(INFO) << "DL ready, chunk found, eof " << dl->IsEof();
+
     while (!dl->IsEof()) {
         std::vector<uint8_t> buf;
         dl->Read(buf);
@@ -92,6 +95,11 @@ static void test_download (std::shared_ptr<ClientFactory> factory) {
 int main (int argc UNUSED, char **argv) {
     google::InitGoogleLogging(argv[0]);
     FLAGS_logtostderr = true;
+
+    if (target == nullptr) {
+        LOG(ERROR) << "Missing " << envkey_URL << " variable in environment";
+        return -1;
+    }
 
     std::shared_ptr<ClientFactory> factory(new CoroutineClientFactory);
     test_upload_empty(factory);

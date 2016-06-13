@@ -133,7 +133,12 @@ int main(int argc UNUSED, char **argv) {
     google::InitGoogleLogging(argv[0]);
     FLAGS_logtostderr = true;
 
-    const char *device = ::getenv("OIO_KINETIC_URL");
+    const char *envkey_URL = "OIO_KINETIC_URL";
+    const char *device = ::getenv(envkey_URL);
+    if (device == nullptr) {
+        LOG(ERROR) << "Missing " << envkey_URL << " variable in environment";
+        return -1;
+    }
     CoroutineClientFactory factory;
 
     do { // one batch reusing the client

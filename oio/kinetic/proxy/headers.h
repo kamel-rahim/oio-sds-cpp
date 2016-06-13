@@ -10,6 +10,8 @@
 extern "C" {
 #endif
 
+#define OIO_HEADER_XATTR_PREFIX "X-oio-meta-"
+
 enum http_header_e
 {
 	HDR_none_matched = 0,
@@ -20,14 +22,9 @@ enum http_header_e
 	HDR_HOST,
 	HDR_ACCEPT,
 	HDR_USERAGENT,
-	HDR_OIO_ACCOUNT,
-	HDR_OIO_USER,
-	HDR_OIO_CONTENT,
-	HDR_OIO_VERSION,
+
     HDR_OIO_TARGET,
-    HDR_OIO_CHUNK_ID,
-    HDR_OIO_CHUNK_SIZE,
-    HDR_OIO_CHUNK_HASH
+	HDR_OIO_XATTR,
 };
 
 enum http_header_e header_parse (const char *p, unsigned int len);

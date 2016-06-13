@@ -17,6 +17,8 @@ class Upload {
   public:
     virtual ~Upload() { }
 
+    virtual void SetXattr (const std::string &k, const std::string &v) = 0;
+
     virtual bool Prepare() = 0;
 
     virtual bool Commit() = 0;

@@ -29,4 +29,7 @@ std::vector<uint8_t> compute_sha1 (const std::vector<uint8_t> &val) noexcept;
 
 std::vector<uint8_t> compute_sha1_hmac (const std::string &key, const std::string &val) noexcept;
 
+void append_string_random(std::string &dst, unsigned int len,
+                          const std::string &chars) noexcept;
+
 #endif //OIO_KINETIC_UTILS_H

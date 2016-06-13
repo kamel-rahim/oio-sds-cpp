@@ -4,6 +4,7 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
+#include <random>
 #include <netinet/in.h>
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
@@ -43,3 +44,12 @@ compute_sha1_hmac (const std::string &key, const std::string &val) noexcept
     return result;
 }
 
+static std::random_device rand_dev;
+static std::default_random_engine prng(rand_dev());
+
+void append_string_random(std::string &dst, unsigned int len,
+                          const std::string &chars) noexcept {
+    std::uniform_int_distribution<int> uniform_dist(0, chars.size()-1);
+    while (len-- > 0)
+        dst.push_back(chars[uniform_dist(prng)]);
+}

@@ -15,20 +15,20 @@
 #include "oio/api/Removal.h"
 #include "oio/kinetic/blob/Upload.h"
 #include "oio/kinetic/blob/Download.h"
-#include "oio/kinetic/blob/Removal.h"
 #include "oio/kinetic/blob/Listing.h"
+#include "oio/kinetic/blob/Removal.h"
 
 using oio::kinetic::client::ClientFactory;
 using oio::kinetic::client::CoroutineClientFactory;
 using oio::kinetic::blob::UploadBuilder;
+using oio::kinetic::blob::RemovalBuilder;
 using oio::kinetic::blob::ListingBuilder;
 using oio::kinetic::blob::DownloadBuilder;
 
-const char * chunkid = "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF";
 const char * envkey_URL = "OIO_KINETIC_URL";
 const char * target = ::getenv(envkey_URL);
 
-static void test_upload_empty (std::shared_ptr<ClientFactory> factory) {
+static void test_upload_empty (std::string chunkid, std::shared_ptr<ClientFactory> factory) {
     DLOG(INFO) << __FUNCTION__;
     std::array<uint8_t,8> buf;
     buf.fill('0');
@@ -40,10 +40,12 @@ static void test_upload_empty (std::shared_ptr<ClientFactory> factory) {
         builder.Target(target);
 
     auto up = builder.Build();
+    auto rc = up->Prepare();
+    assert(rc == oio::blob::Upload::Status::OK);
     up->Commit();
 }
 
-static void test_upload_2blocks (std::shared_ptr<ClientFactory> factory) {
+static void test_upload_2blocks (std::string chunkid, std::shared_ptr<ClientFactory> factory) {
     DLOG(INFO) << __FUNCTION__;
     std::array<uint8_t,8192> buf;
     buf.fill('0');
@@ -55,12 +57,14 @@ static void test_upload_2blocks (std::shared_ptr<ClientFactory> factory) {
         builder.Target(target);
 
     auto up = builder.Build();
+    auto rc = up->Prepare();
+    assert(rc == oio::blob::Upload::Status::OK);
     up->Write(buf.data(), buf.size());
     up->Write(buf.data(), buf.size());
     up->Commit();
 }
 
-static void test_listing (std::shared_ptr<ClientFactory> factory) {
+static void test_listing (std::string chunkid, std::shared_ptr<ClientFactory> factory) {
     DLOG(INFO) << __FUNCTION__;
     auto builder = ListingBuilder(factory);
     builder.Name(chunkid);
@@ -76,7 +80,7 @@ static void test_listing (std::shared_ptr<ClientFactory> factory) {
     }
 }
 
-static void test_download (std::shared_ptr<ClientFactory> factory) {
+static void test_download (std::string chunkid, std::shared_ptr<ClientFactory> factory) {
     DLOG(INFO) << __FUNCTION__;
     auto builder = DownloadBuilder(factory);
     builder.Target(target);
@@ -92,6 +96,32 @@ static void test_download (std::shared_ptr<ClientFactory> factory) {
     }
 }
 
+static void test_removal (std::string chunkid, std::shared_ptr<ClientFactory> factory) {
+    DLOG(INFO) << __FUNCTION__;
+    auto builder = RemovalBuilder(factory);
+    builder.Target(target);
+    builder.Name(chunkid);
+    auto rem = builder.Build();
+    auto rc = rem->Prepare();
+    assert (rc == oio::blob::Removal::Status::OK);
+    rem->Commit();
+}
+
+static void test_cycle (std::shared_ptr<ClientFactory> factory) {
+    std::string chunkid;
+    append_string_random(chunkid, 32, "0123456789ABCDEF");
+
+    test_upload_empty(chunkid, factory);
+    test_listing(chunkid, factory);
+    test_download(chunkid, factory);
+    test_removal(chunkid, factory);
+
+    test_upload_2blocks(chunkid, factory);
+    test_listing(chunkid, factory);
+    test_download(chunkid, factory);
+    test_removal(chunkid, factory);
+}
+
 int main (int argc UNUSED, char **argv) {
     google::InitGoogleLogging(argv[0]);
     FLAGS_logtostderr = true;
@@ -102,9 +132,7 @@ int main (int argc UNUSED, char **argv) {
     }
 
     std::shared_ptr<ClientFactory> factory(new CoroutineClientFactory);
-    test_upload_empty(factory);
-    test_upload_2blocks(factory);
-    test_listing(factory);
-    test_download(factory);
+    test_cycle(factory);
+    test_cycle(factory);
     return 0;
 }

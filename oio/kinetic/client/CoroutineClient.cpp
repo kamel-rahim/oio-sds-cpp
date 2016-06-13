@@ -207,9 +207,11 @@ coroutine void CoroutineClient::run_agent_producer(chan done) noexcept {
         frame.val.clear();
         mill_choose {
                 mill_in(to_agent_, int, sig):
-                        if (SIGNAL_AGENT_STOP == sig)
+                        if (SIGNAL_AGENT_STOP == sig) {
+                            // TODO make shutdown available as a socket method
+                            ::shutdown(sock_.fileno(), SHUT_RDWR);
                             break;
-                        else {
+                        } else {
                             std::shared_ptr<PendingExchange> pe(
                                     waiting_.front());
                             waiting_.pop();

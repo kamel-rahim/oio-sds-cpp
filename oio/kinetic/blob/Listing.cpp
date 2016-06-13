@@ -68,7 +68,7 @@ oio::blob::Listing::Status Listing::Prepare() noexcept {
         gkr->IncludeStart(true);
         gkr->IncludeEnd(false);
         ops.emplace_back(gkr);
-        syncs.emplace_back(cli->Start(ops.back().get()));
+        syncs.emplace_back(cli->Start(gkr));
     }
     for (auto sync: syncs)
         sync->Wait();

@@ -252,7 +252,9 @@ std::shared_ptr<Sync> CoroutineClient::Start(Exchange *ei) noexcept {
     // push the rpc down
     PendingExchange *ex = new PendingExchange(ei);
     ex->SetSequence(seqid_++);
-    waiting_.push(std::move(std::shared_ptr<PendingExchange>(ex)));
+
+    std::shared_ptr<PendingExchange> shex(ex);
+    waiting_.push(shex);
     chs(to_agent_, int, SIGNAL_AGENT_DATA);
-    return std::shared_ptr<PendingExchange>(waiting_.back());
+    return shex;
 }

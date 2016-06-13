@@ -85,13 +85,13 @@ void Upload::TriggerUpload(const std::string &suffix) noexcept {
     ss << suffix;
     next_client++;
 
-    std::shared_ptr<Put> op(new Put);
-    op->Key(ss.str());
-    op->Value(buffer);
+    Put *put = new Put;
+    put->Key(ss.str());
+    put->Value(buffer);
     assert(buffer.size() == 0);
 
-    syncs.push_back(client->Start(op.get()));
-    puts.push_back(op);
+    puts.emplace_back(put);
+    syncs.emplace_back(client->Start(put));
 }
 
 void Upload::TriggerUpload() noexcept {
@@ -175,9 +175,9 @@ oio::blob::Upload::Status Upload::Prepare() noexcept {
     gkr.IncludeEnd(true);
     gkr.MaxItems(1);
     std::vector<std::shared_ptr<Sync>> ops;
-    for (auto &cli: clients)
-        ops.emplace_back(cli->Start(&gkr));
-    for (auto &op: ops)
+    for (auto cli: clients)
+        ops.push_back(cli->Start(&gkr));
+    for (auto op: ops)
         op->Wait();
     std::vector<std::string> keys;
     gkr.Steal(keys);

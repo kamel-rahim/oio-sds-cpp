@@ -11,9 +11,9 @@
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 #include <libmill.h>
-#include <oio/kinetic/rpc/Put.h>
-#include <oio/kinetic/rpc/GetKeyRange.h>
-#include <oio/kinetic/client/ClientInterface.h>
+#include <oio/kinetic/coro/rpc/Put.h>
+#include <oio/kinetic/coro/rpc/GetKeyRange.h>
+#include <oio/kinetic/coro/client/ClientInterface.h>
 #include "Upload.h"
 
 using oio::kinetic::blob::UploadBuilder;
@@ -23,7 +23,9 @@ using oio::kinetic::client::Sync;
 using oio::kinetic::rpc::Put;
 using oio::kinetic::rpc::GetKeyRange;
 
-class Upload : public oio::blob::Upload {
+namespace blob = ::oio::api::blob;
+
+class Upload : public blob::Upload {
     friend class UploadBuilder;
 
 public:
@@ -31,7 +33,7 @@ public:
 
     ~Upload() noexcept;
 
-    oio::blob::Upload::Status Prepare() noexcept;
+    blob::Upload::Status Prepare() noexcept;
 
     void SetXattr (const std::string &k, const std::string &v) noexcept;
 
@@ -164,7 +166,7 @@ bool Upload::Abort() noexcept {
     return true;
 }
 
-oio::blob::Upload::Status Upload::Prepare() noexcept {
+blob::Upload::Status Upload::Prepare() noexcept {
 
     // Send the same listing request to all the clients
     const std::string key_manifest(chunkid + "-#");
@@ -182,9 +184,9 @@ oio::blob::Upload::Status Upload::Prepare() noexcept {
     std::vector<std::string> keys;
     gkr.Steal(keys);
     if (!keys.empty())
-        return oio::blob::Upload::Status::Already;
+        return blob::Upload::Status::Already;
 
-    return oio::blob::Upload::Status::OK;
+    return blob::Upload::Status::OK;
 }
 
 UploadBuilder::~UploadBuilder() noexcept { }
@@ -214,7 +216,7 @@ void UploadBuilder::BlockSize(uint32_t s) noexcept {
     block_size = s;
 }
 
-std::unique_ptr<oio::blob::Upload> UploadBuilder::Build() noexcept {
+std::unique_ptr<blob::Upload> UploadBuilder::Build() noexcept {
     assert(!name.empty());
 
     Upload *ul = new Upload();

@@ -11,6 +11,7 @@
 #include <string>
 
 namespace oio {
+namespace api {
 namespace blob {
 
 class Upload {
@@ -33,10 +34,11 @@ class Upload {
                 return "***invalid status***";
         }
     }
+
   public:
     virtual ~Upload() { }
 
-    virtual void SetXattr (const std::string &k, const std::string &v) = 0;
+    virtual void SetXattr(const std::string &k, const std::string &v) = 0;
 
     virtual Status Prepare() = 0;
 
@@ -53,6 +55,7 @@ class Upload {
 };
 
 } // namespace blob
+} // namespace api
 } //namespace oio
 
 #endif //OIO_API_UPLOAD_H

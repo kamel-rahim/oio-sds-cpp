@@ -4,44 +4,41 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
-#ifndef OIO_KINETIC_CLIENT_UPLOAD_H
-#define OIO_KINETIC_CLIENT_UPLOAD_H
+#ifndef OIO_KINETIC_CLIENT_REMOVAL_H
+#define OIO_KINETIC_CLIENT_REMOVAL_H
 
 #include <string>
 #include <memory>
 #include <set>
-#include <oio/api/Upload.h>
-#include <oio/kinetic/client/ClientInterface.h>
+#include <oio/api/blob/Removal.h>
+#include <oio/kinetic/coro/client/ClientInterface.h>
 
 namespace oio {
 namespace kinetic {
 namespace blob {
 
-class UploadBuilder {
+class RemovalBuilder {
   public:
-    UploadBuilder(std::shared_ptr<oio::kinetic::client::ClientFactory> f) noexcept;
+    RemovalBuilder(std::shared_ptr<oio::kinetic::client::ClientFactory> f) noexcept;
 
-    ~UploadBuilder() noexcept;
-
-    void Target(const char *to) noexcept;
-    void Target(const std::string &to) noexcept;
-
-    void Name(const char *n) noexcept;
     void Name(const std::string &n) noexcept;
 
-    void BlockSize(uint32_t s) noexcept;
+    void Name(const char *n) noexcept;
 
-    std::unique_ptr<oio::blob::Upload> Build() noexcept;
+    void Target(const std::string &to) noexcept;
+
+    void Target(const char *to) noexcept;
+
+    std::unique_ptr<oio::api::blob::Removal> Build() noexcept;
 
   private:
     std::shared_ptr<oio::kinetic::client::ClientFactory> factory;
     std::set<std::string> targets;
     std::string name;
-    uint32_t block_size;
 };
 
-} // namespace rpc
+} // namespace client
 } // namespace kinetic
 } // namespace oio
 
-#endif //OIO_KINETIC_CLIENT_UPLOAD_H
+#endif //OIO_KINETIC_CLIENT_REMOVAL_H

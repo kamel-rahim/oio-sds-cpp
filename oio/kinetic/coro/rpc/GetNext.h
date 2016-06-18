@@ -8,7 +8,7 @@
 #define OIO_KINETIC_GETNEXT_H
 
 #include <cstdint>
-#include <oio/kinetic/client/ClientInterface.h>
+#include <oio/kinetic/coro/client/ClientInterface.h>
 
 namespace oio {
 namespace kinetic {

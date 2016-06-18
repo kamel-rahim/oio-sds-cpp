@@ -4,13 +4,17 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
-#ifndef OIO_API_REMOVAL_H
-#define OIO_API_REMOVAL_H
+#ifndef OIO_API_DOWNLOAD_H
+#define OIO_API_DOWNLOAD_H
+
+#include <vector>
+#include <cstdint>
 
 namespace oio {
+namespace api {
 namespace blob {
 
-class Removal {
+class Download {
   public:
     enum class Status {
         OK, NotFound, NetworkError, ProtocolError
@@ -30,18 +34,20 @@ class Removal {
                 return "***invalid status***";
         }
     }
+
   public:
-    virtual ~Removal() noexcept { }
+    virtual ~Download() noexcept { }
 
     virtual Status Prepare() noexcept = 0;
 
-    virtual bool Commit() noexcept = 0;
+    virtual bool IsEof() noexcept = 0;
 
-    virtual bool Abort() noexcept = 0;
-
-    virtual bool Ok() noexcept = 0;
+    virtual int32_t Read(std::vector<uint8_t> &buf) noexcept = 0;
 };
 
-}
-}
-#endif //OIO_API_REMOVAL_H
+} // namespace blob
+} // namespace api
+} // namespace oio
+
+
+#endif //OIO_API_DOWNLOAD_H

@@ -10,8 +10,8 @@
 #include <string>
 #include <memory>
 #include <set>
-#include <oio/api/Download.h>
-#include <oio/kinetic/client/ClientInterface.h>
+#include <oio/api/blob/Download.h>
+#include <oio/kinetic/coro/client/ClientInterface.h>
 
 namespace oio {
 namespace kinetic {
@@ -31,7 +31,7 @@ class DownloadBuilder {
 
     void Target(const std::string &to) noexcept;
 
-    std::unique_ptr<oio::blob::Download> Build() noexcept;
+    std::unique_ptr<oio::api::blob::Download> Build() noexcept;
 
   private:
     std::string name;

@@ -4,16 +4,29 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
-#ifndef OIO_API_DOWNLOAD_H
-#define OIO_API_DOWNLOAD_H
+#ifndef OIO_API_LISTING_H
+#define OIO_API_LISTING_H
 
-#include <vector>
-#include <cstdint>
+#include <string>
 
 namespace oio {
+namespace api {
 namespace blob {
 
-class Download {
+/**
+ * Usage:
+ * Listing *list = ...; // get an instance
+ * auto rc = list->Prepare(); // mandatory step
+ * if (rc != Listing::Status::Ok) {
+ *   std::cerr << Listing::Status2Str(rc) << std::endl;
+ * } else {
+ *   std::string id, key;
+ *   while (list->Next(id, key)) {
+ *     std::cerr << id << " has " << key << std::endl;
+ *   }
+ * }
+ */
+class Listing {
   public:
     enum class Status {
         OK, NotFound, NetworkError, ProtocolError
@@ -35,17 +48,15 @@ class Download {
     }
 
   public:
-    virtual ~Download() noexcept { }
+    virtual ~Listing() noexcept { }
 
     virtual Status Prepare() noexcept = 0;
 
-    virtual bool IsEof() noexcept = 0;
-
-    virtual int32_t Read(std::vector<uint8_t> &buf) noexcept = 0;
+    virtual bool Next(std::string &id, std::string &key) noexcept = 0;
 };
 
 } // namespace blob
-} // oio
+} // namespace api
+} // namespace oio
 
-
-#endif //OIO_API_DOWNLOAD_H
+#endif //OIO_API_LISTING_H

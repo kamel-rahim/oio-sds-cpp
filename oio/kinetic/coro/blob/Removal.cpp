@@ -7,7 +7,7 @@
 #include <cassert>
 #include <queue>
 #include <glog/logging.h>
-#include <oio/kinetic/rpc/Delete.h>
+#include <oio/kinetic/coro/rpc/Delete.h>
 #include "Listing.h"
 #include "Removal.h"
 
@@ -16,6 +16,8 @@ using oio::kinetic::client::ClientInterface;
 using oio::kinetic::client::ClientFactory;
 using oio::kinetic::blob::RemovalBuilder;
 using oio::kinetic::blob::ListingBuilder;
+
+namespace blob = ::oio::api::blob;
 
 struct PendingDelete {
     std::string k;
@@ -30,7 +32,7 @@ struct PendingDelete {
     }
 };
 
-class Removal : public oio::blob::Removal {
+class Removal : public blob::Removal {
     friend class RemovalBuilder;
   public:
     Removal(std::shared_ptr<ClientFactory> f,
@@ -41,7 +43,7 @@ class Removal : public oio::blob::Removal {
 
     virtual ~Removal() noexcept { }
 
-    virtual oio::blob::Removal::Status Prepare() noexcept;
+    virtual blob::Removal::Status Prepare() noexcept;
 
     virtual bool Commit() noexcept;
 
@@ -58,7 +60,7 @@ class Removal : public oio::blob::Removal {
     std::vector<PendingDelete> ops;
 };
 
-oio::blob::Removal::Status Removal::Prepare() noexcept {
+blob::Removal::Status Removal::Prepare() noexcept {
     ListingBuilder builder(factory);
     builder.Name(chunkid);
     for (const auto &to: targets)
@@ -67,14 +69,14 @@ oio::blob::Removal::Status Removal::Prepare() noexcept {
 
     auto rc = listing->Prepare();
     switch (rc) {
-        case oio::blob::Listing::Status::OK:
+        case blob::Listing::Status::OK:
             break;
-        case oio::blob::Listing::Status::NotFound:
-            return oio::blob::Removal::Status::NotFound;
-        case oio::blob::Listing::Status::NetworkError:
-            return oio::blob::Removal::Status::NetworkError;
-        case oio::blob::Listing::Status::ProtocolError:
-            return oio::blob::Removal::Status::ProtocolError;
+        case blob::Listing::Status::NotFound:
+            return blob::Removal::Status::NotFound;
+        case blob::Listing::Status::NetworkError:
+            return blob::Removal::Status::NetworkError;
+        case blob::Listing::Status::ProtocolError:
+            return blob::Removal::Status::ProtocolError;
     }
 
     std::string id, key;
@@ -87,7 +89,7 @@ oio::blob::Removal::Status Removal::Prepare() noexcept {
         ops.push_back(del);
     }
 
-    return oio::blob::Removal::Status::OK;
+    return blob::Removal::Status::OK;
 }
 
 bool Removal::Commit() noexcept {
@@ -136,7 +138,7 @@ void RemovalBuilder::Target(const char *to) noexcept {
     return Target(std::string(to));
 }
 
-std::unique_ptr<oio::blob::Removal> RemovalBuilder::Build() noexcept {
+std::unique_ptr<blob::Removal> RemovalBuilder::Build() noexcept {
     assert(!targets.empty());
     assert(!name.empty());
 

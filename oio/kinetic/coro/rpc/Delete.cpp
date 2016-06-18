@@ -5,7 +5,7 @@
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
 #include <kinetic.pb.h>
-#include <oio/kinetic/client/ClientInterface.h>
+#include <oio/kinetic/coro/client/ClientInterface.h>
 #include "Delete.h"
 #include "Request.h"
 

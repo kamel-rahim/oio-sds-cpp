@@ -8,8 +8,8 @@
 #define OIO_KINETIC_CLIENT_PENDINGEXCHANGE_H
 
 #include <cstdint>
-#include <oio/kinetic/rpc/Exchange.h>
-#include <oio/kinetic/rpc/Request.h>
+#include <oio/kinetic/coro/rpc/Exchange.h>
+#include <oio/kinetic/coro/rpc/Request.h>
 #include "ClientInterface.h"
 
 struct mill_chan;

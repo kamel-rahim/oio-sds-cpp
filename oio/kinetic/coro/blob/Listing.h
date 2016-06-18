@@ -10,8 +10,8 @@
 #include <memory>
 #include <string>
 #include <set>
-#include <oio/api/Listing.h>
-#include <oio/kinetic/client/ClientInterface.h>
+#include <oio/api/blob/Listing.h>
+#include <oio/kinetic/coro/client/ClientInterface.h>
 
 namespace oio {
 namespace kinetic {
@@ -31,7 +31,7 @@ class ListingBuilder {
 
     void Target(const char *to) noexcept;
 
-    std::unique_ptr<oio::blob::Listing> Build() noexcept;
+    std::unique_ptr<oio::api::blob::Listing> Build() noexcept;
 
   private:
     std::shared_ptr<oio::kinetic::client::ClientFactory> factory;

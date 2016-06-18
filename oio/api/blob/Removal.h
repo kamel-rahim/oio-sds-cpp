@@ -4,28 +4,14 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
-#ifndef OIO_API_LISTING_H
-#define OIO_API_LISTING_H
-
-#include <string>
+#ifndef OIO_API_REMOVAL_H
+#define OIO_API_REMOVAL_H
 
 namespace oio {
+namespace api {
 namespace blob {
 
-/**
- * Usage:
- * Listing *list = ...; // get an instance
- * auto rc = list->Prepare(); // mandatory step
- * if (rc != Listing::Status::Ok) {
- *   std::cerr << Listing::Status2Str(rc) << std::endl;
- * } else {
- *   std::string id, key;
- *   while (list->Next(id, key)) {
- *     std::cerr << id << " has " << key << std::endl;
- *   }
- * }
- */
-class Listing {
+class Removal {
   public:
     enum class Status {
         OK, NotFound, NetworkError, ProtocolError
@@ -47,14 +33,19 @@ class Listing {
     }
 
   public:
-    virtual ~Listing() noexcept { }
+    virtual ~Removal() noexcept { }
 
     virtual Status Prepare() noexcept = 0;
 
-    virtual bool Next(std::string &id, std::string &key) noexcept = 0;
+    virtual bool Commit() noexcept = 0;
+
+    virtual bool Abort() noexcept = 0;
+
+    virtual bool Ok() noexcept = 0;
 };
 
 } // namespace blob
+} // namespace api
 } // namespace oio
 
-#endif //OIO_API_LISTING_H
+#endif //OIO_API_REMOVAL_H

@@ -7,7 +7,7 @@
 #include <memory>
 
 #include <utils/utils.h>
-#include <oio/kinetic/client/ClientInterface.h>
+#include <oio/kinetic/coro/client/ClientInterface.h>
 #include "Put.h"
 
 using namespace oio::kinetic::client;

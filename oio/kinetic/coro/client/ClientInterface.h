@@ -11,8 +11,8 @@
 #include <string>
 #include <vector>
 #include <kinetic.pb.h>
-#include <oio/kinetic/rpc/Request.h>
-#include <oio/kinetic/rpc/Exchange.h>
+#include <oio/kinetic/coro/rpc/Request.h>
+#include <oio/kinetic/coro/rpc/Exchange.h>
 
 namespace oio {
 namespace kinetic {

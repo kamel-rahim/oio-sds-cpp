@@ -11,10 +11,10 @@
 #include <glog/logging.h>
 
 #include <utils/utils.h>
-#include <oio/kinetic/rpc/Put.h>
-#include <oio/kinetic/rpc/Get.h>
-#include <oio/kinetic/rpc/GetNext.h>
-#include <oio/kinetic/rpc/GetKeyRange.h>
+#include <oio/kinetic/coro/rpc/Put.h>
+#include <oio/kinetic/coro/rpc/Get.h>
+#include <oio/kinetic/coro/rpc/GetNext.h>
+#include <oio/kinetic/coro/rpc/GetKeyRange.h>
 #include "CoroutineClient.h"
 #include "CoroutineClientFactory.h"
 

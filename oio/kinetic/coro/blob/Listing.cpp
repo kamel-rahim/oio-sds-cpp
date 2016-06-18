@@ -6,9 +6,9 @@
 
 #include <string>
 #include <glog/logging.h>
-#include <oio/api/Listing.h>
-#include <oio/kinetic/client/ClientInterface.h>
-#include <oio/kinetic/rpc/GetKeyRange.h>
+#include <oio/api/blob/Listing.h>
+#include <oio/kinetic/coro/client/ClientInterface.h>
+#include <oio/kinetic/coro/rpc/GetKeyRange.h>
 #include "Listing.h"
 
 using oio::kinetic::blob::ListingBuilder;
@@ -17,7 +17,9 @@ using oio::kinetic::client::ClientFactory;
 using oio::kinetic::client::Sync;
 using oio::kinetic::rpc::GetKeyRange;
 
-class Listing : public oio::blob::Listing {
+namespace blob = ::oio::api::blob;
+
+class Listing : public blob::Listing {
     friend class ListingBuilder;
 
   public:
@@ -25,7 +27,7 @@ class Listing : public oio::blob::Listing {
 
     ~Listing() noexcept { }
 
-    oio::blob::Listing::Status Prepare() noexcept;
+    blob::Listing::Status Prepare() noexcept;
 
     bool Next(std::string &id, std::string &dst) noexcept;
 
@@ -55,7 +57,7 @@ bool Listing::Next(std::string &id, std::string &key) noexcept {
 
 // Concurrently get the lists on each node
 // TODO limit the parallelism to N (configurable) items
-oio::blob::Listing::Status Listing::Prepare() noexcept {
+blob::Listing::Status Listing::Prepare() noexcept {
 
     items.clear();
     std::vector<std::shared_ptr<GetKeyRange>> ops;
@@ -87,9 +89,9 @@ oio::blob::Listing::Status Listing::Prepare() noexcept {
     }
 
     if (items.empty())
-        return oio::blob::Listing::Status::NotFound;
+        return blob::Listing::Status::NotFound;
 
-    return oio::blob::Listing::Status::OK;
+    return blob::Listing::Status::OK;
 }
 
 ListingBuilder::~ListingBuilder() { }
@@ -115,7 +117,7 @@ void ListingBuilder::Target(const char *to) noexcept {
     return Target(std::string(to));
 }
 
-std::unique_ptr<oio::blob::Listing> ListingBuilder::Build() noexcept {
+std::unique_ptr<blob::Listing> ListingBuilder::Build() noexcept {
     assert(!targets.empty());
     assert(!name.empty());
 

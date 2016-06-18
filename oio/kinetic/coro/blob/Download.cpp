@@ -8,9 +8,9 @@
 #include <functional>
 #include <forward_list>
 #include <glog/logging.h>
-#include <oio/kinetic/rpc/Get.h>
-#include <oio/kinetic/rpc/GetKeyRange.h>
-#include "oio/kinetic/client/ClientInterface.h"
+#include <oio/kinetic/coro/rpc/Get.h>
+#include <oio/kinetic/coro/rpc/GetKeyRange.h>
+#include "oio/kinetic/coro/client/ClientInterface.h"
 #include "Download.h"
 #include "Listing.h"
 
@@ -21,6 +21,8 @@ using oio::kinetic::client::ClientInterface;
 using oio::kinetic::client::Sync;
 using oio::kinetic::blob::ListingBuilder;
 using oio::kinetic::blob::DownloadBuilder;
+
+namespace blob = ::oio::api::blob;
 
 struct PendingGet {
     uint32_t sequence;
@@ -37,7 +39,7 @@ struct PendingGetSorter {
     }
 };
 
-class Download : public oio::blob::Download {
+class Download : public blob::Download {
     friend class DownloadBuilder;
 
   public:
@@ -46,7 +48,7 @@ class Download : public oio::blob::Download {
 
     virtual ~Download() noexcept { }
 
-    virtual oio::blob::Download::Status Prepare() noexcept;
+    virtual blob::Download::Status Prepare() noexcept;
 
     virtual bool IsEof() noexcept;
 
@@ -70,7 +72,7 @@ Download::Download(const std::string &n,
         : chunkid{n}, targets(), factory{f}, running(), waiting(), done(),
           parallel_factor{4} { targets.swap(targets0); }
 
-oio::blob::Download::Status Download::Prepare() noexcept {
+blob::Download::Status Download::Prepare() noexcept {
 
     // List the chunks
     ListingBuilder builder(factory);
@@ -80,14 +82,14 @@ oio::blob::Download::Status Download::Prepare() noexcept {
 
     auto listing = builder.Build();
     switch (listing->Prepare()) {
-        case oio::blob::Listing::Status::OK:
+        case blob::Listing::Status::OK:
             break;
-        case oio::blob::Listing::Status::NotFound:
-            return oio::blob::Download::Status::NotFound;
-        case oio::blob::Listing::Status::NetworkError:
-            return oio::blob::Download::Status::NetworkError;
-        case oio::blob::Listing::Status::ProtocolError:
-            return oio::blob::Download::Status::ProtocolError;
+        case blob::Listing::Status::NotFound:
+            return blob::Download::Status::NotFound;
+        case blob::Listing::Status::NetworkError:
+            return blob::Download::Status::NetworkError;
+        case blob::Listing::Status::ProtocolError:
+            return blob::Download::Status::ProtocolError;
     }
 
     std::string id, key;
@@ -129,7 +131,7 @@ oio::blob::Download::Status Download::Prepare() noexcept {
     for (auto p: chunks)
         waiting.push(p);
 
-    return oio::blob::Download::Status::OK;
+    return blob::Download::Status::OK;
 }
 
 bool Download::IsEof() noexcept {
@@ -185,7 +187,7 @@ void DownloadBuilder::Target(const char *to) noexcept {
     return Target(std::string(to));
 }
 
-std::unique_ptr<oio::blob::Download> DownloadBuilder::Build() noexcept {
+std::unique_ptr<blob::Download> DownloadBuilder::Build() noexcept {
     assert(!targets.empty());
     assert(!name.empty());
 

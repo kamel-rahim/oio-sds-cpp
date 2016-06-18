@@ -15,10 +15,10 @@
 #include <utils/utils.h>
 #include <utils/MillSocket.h>
 #include <kinetic.pb.h>
-#include <oio/kinetic/rpc/Exchange.h>
-#include <oio/kinetic/rpc/Request.h>
-#include <oio/kinetic/client/ClientInterface.h>
-#include <oio/kinetic/client/PendingExchange.h>
+#include <oio/kinetic/coro/rpc/Exchange.h>
+#include <oio/kinetic/coro/rpc/Request.h>
+#include <oio/kinetic/coro/client/ClientInterface.h>
+#include <oio/kinetic/coro/client/PendingExchange.h>
 
 #define SIGNAL_AGENT_STOP 0
 #define SIGNAL_AGENT_DATA 1

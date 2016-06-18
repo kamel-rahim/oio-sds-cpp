@@ -23,25 +23,27 @@
 #include <http-parser/http_parser.h>
 #include <utils/utils.h>
 #include <utils/MillSocket.h>
-#include <oio/api/Upload.h>
-#include <oio/api/Download.h>
-#include <oio/api/Removal.h>
-#include <oio/kinetic/client/CoroutineClientFactory.h>
-#include <oio/kinetic/blob/Upload.h>
-#include <oio/kinetic/blob/Download.h>
-#include <oio/kinetic/blob/Removal.h>
+#include <oio/api/blob/Upload.h>
+#include <oio/api/blob/Download.h>
+#include <oio/api/blob/Removal.h>
+#include <oio/kinetic/coro/client/CoroutineClientFactory.h>
+#include <oio/kinetic/coro/blob/Upload.h>
+#include <oio/kinetic/coro/blob/Download.h>
+#include <oio/kinetic/coro/blob/Removal.h>
 
 #include "headers.h"
 
-using oio::blob::Upload;
-using oio::blob::Download;
-using oio::blob::Removal;
 
 using oio::kinetic::blob::RemovalBuilder;
 using oio::kinetic::blob::DownloadBuilder;
 using oio::kinetic::blob::UploadBuilder;
 using oio::kinetic::client::ClientFactory;
 using oio::kinetic::client::CoroutineClientFactory;
+
+namespace blob = oio::api::blob;
+using blob::Upload;
+using blob::Download;
+using blob::Removal;
 
 static volatile unsigned int flag_running = 1;
 
@@ -312,17 +314,17 @@ int _on_headers_complete_UPLOAD(http_parser *p) {
 
     auto rc = ctx->upload->Prepare();
     switch (rc) {
-        case oio::blob::Upload::Status::OK:
+        case Upload::Status::OK:
             for (const auto &e: ctx->xattrs)
                 ctx->upload->SetXattr(e.first, e.second);
             return 0;
-        case oio::blob::Upload::Status::Already:
+        case Upload::Status::Already:
             ctx->reply_error({406, 421, "blobs found"});
             return 1;
-        case oio::blob::Upload::Status::NetworkError:
+        case Upload::Status::NetworkError:
             ctx->reply_error({502, 500, "network error to devices"});
             return 1;
-        case oio::blob::Upload::Status::ProtocolError:
+        case Upload::Status::ProtocolError:
             ctx->reply_error({500, 500, "protocol error to devices"});
             return 1;
     }
@@ -379,17 +381,17 @@ int _on_headers_complete_DOWNLOAD(http_parser *p) {
 
     auto rc = ctx->download->Prepare();
     switch (rc) {
-        case oio::blob::Download::Status::OK:
+        case Download::Status::OK:
             ctx->reply_100();
             ctx->reply_stream();
             return 0;
-        case oio::blob::Download::Status::NotFound:
+        case Download::Status::NotFound:
             ctx->reply_error({404, 420, "blobs not found"});
             return 1;
-        case oio::blob::Download::Status::NetworkError:
+        case Download::Status::NetworkError:
             ctx->reply_error({503, 500, "devices unreachable"});
             return 1;
-        case oio::blob::Download::Status::ProtocolError:
+        case Download::Status::ProtocolError:
             ctx->reply_error({502, 500, "invalid reply from device"});
             return 1;
     }
@@ -434,16 +436,16 @@ int _on_headers_complete_REMOVAL(http_parser *p UNUSED) {
 
     auto rc = ctx->removal->Prepare();
     switch (rc) {
-        case oio::blob::Removal::Status::OK:
+        case Removal::Status::OK:
             ctx->reply_100();
             return 0;
-        case oio::blob::Removal::Status::NotFound:
+        case Removal::Status::NotFound:
             ctx->reply_error({404, 402, "no blob found"});
             return 1;
-        case oio::blob::Removal::Status::NetworkError:
+        case Removal::Status::NetworkError:
             ctx->reply_error({503, 500, "devices unreachable"});
             return 1;
-        case oio::blob::Removal::Status::ProtocolError:
+        case Removal::Status::ProtocolError:
             ctx->reply_error({502, 500, "invalid reply from devices"});
             return 1;
     }

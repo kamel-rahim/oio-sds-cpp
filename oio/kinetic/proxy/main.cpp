@@ -493,7 +493,7 @@ static std::string _http_url_field(const http_parser_url &u, int f,
 int _on_url_COMMON(http_parser *p, const char *buf, size_t len) {
     CnxContext *ctx = (CnxContext *) p->data;
 
-    // Get the chunk_id, this is common to al the requests
+    // Get the name, this is common to al the requests
     http_parser_url url;
     if (0 != http_parser_parse_url(buf, len, false, &url)) {
         ctx->save_header_error({400, 400, "URL parse error"});

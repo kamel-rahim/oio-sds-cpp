@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <sys/uio.h>
 
+#include <glog/logging.h>
 #include <libmill.h>
 
 #include "MillSocket.h"
@@ -22,10 +23,10 @@ std::string MillSocket::debug_string () const noexcept {
 }
 
 ssize_t MillSocket::read (uint8_t *buf, size_t len, int64_t dl) noexcept {
-    int64_t real_dl = dl>0 ? dl : (mill_now()+1000);
+    const int64_t real_dl = dl>0 ? dl : (mill_now()+1000);
     ssize_t rc;
 
-    retry:
+retry:
     rc = ::read(sock_.fileno(), buf, len);
     if (rc > 0)
         return rc;
@@ -38,6 +39,7 @@ ssize_t MillSocket::read (uint8_t *buf, size_t len, int64_t dl) noexcept {
     if (errno != EAGAIN)
         return -1;
 
+
     auto evt = fdwait(sock_.fileno(), FDW_IN, real_dl);
     if (evt & FDW_ERR)
         return -1;
@@ -48,17 +50,17 @@ ssize_t MillSocket::read (uint8_t *buf, size_t len, int64_t dl) noexcept {
 }
 
 bool MillSocket::read_exactly(uint8_t *buf, size_t len, int64_t dl) noexcept {
+    const int64_t real_dl = dl>0 ? dl : (mill_now()+5000);
     while (len > 0) {
         auto rc = ::read(sock_.fileno(), buf, len);
         if (rc < 0) {
             if (errno == EINTR)
                 continue;
             if (errno == EAGAIN) {
-                int64_t real_dl = dl>0 ? dl : (mill_now()+1000);
                 auto evt = fdwait(sock_.fileno(), FDW_IN, real_dl);
                 if (evt & FDW_ERR)
                     return false;
-                if (!evt)
+                if (!(evt & FDW_IN))
                     return false;
                 continue;
             }

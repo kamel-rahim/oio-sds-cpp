@@ -62,6 +62,10 @@ struct MillSocket {
     bool send (struct iovec *iov, unsigned int count, int64_t dl) noexcept;
 
     bool send (const uint8_t *buf, size_t len, int64_t dl) noexcept;
+
+    bool send (const char *str, size_t len, int64_t dl) noexcept {
+        return this->send(reinterpret_cast<const uint8_t *>(str), len, dl);
+    }
 };
 
 #endif

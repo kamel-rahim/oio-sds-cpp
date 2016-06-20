@@ -25,6 +25,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -pipe -fPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GNU_SOURCE")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector-all")
 
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -fno-inline")
 set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os")
@@ -43,6 +44,10 @@ add_custom_command(OUTPUT
 			-I${CMAKE_CURRENT_SOURCE_DIR}/kinetic-protocol
 			${CMAKE_CURRENT_SOURCE_DIR}/kinetic-protocol/kinetic.proto
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/kinetic-protocol/kinetic.proto)
+
+add_library(oio-http-parser SHARED
+		http-parser/http_parser.c
+		http-parser/http_parser.h)
 
 add_library(oio-kinetic-client SHARED
         utils/MillSocket.cpp
@@ -80,11 +85,13 @@ add_library(oio-kinetic-client SHARED
         oio/kinetic/coro/blob/Download.cpp
         oio/kinetic/coro/blob/Removal.cpp
         oio/kinetic/coro/blob/Listing.cpp
-		oio/http/coro/Upload.cpp
-		oio/http/coro/Upload.h)
+		oio/http/coro/blob/Upload.cpp
+		oio/http/coro/blob/Download.cpp
+		oio/http/coro/blob.h)
 
 target_link_libraries(oio-kinetic-client
-    protobuf mill_s ${CRYPTO_LIBRARIES} ${GLOG_LIBRARIES})
+		oio-http-parser
+		protobuf mill_s ${CRYPTO_LIBRARIES} ${GLOG_LIBRARIES})
 
 add_executable(test-rpc
         oio/kinetic/coro/client/TestExchange.cpp)
@@ -95,8 +102,8 @@ add_executable(test-client
 target_link_libraries(test-client oio-kinetic-client)
 
 add_executable(test-http
-        oio/http/coro/TestHttp.cpp)
-target_link_libraries(test-http oio-kinetic-client)
+		oio/http/coro/blob/TestHttp.cpp)
+target_link_libraries(test-http oio-kinetic-client oio-http-parser)
 
 add_custom_command(OUTPUT
         ${CMAKE_CURRENT_BINARY_DIR}/headers.cc
@@ -105,9 +112,9 @@ add_custom_command(OUTPUT
         DEPENDS oio/kinetic/proxy/headers.rl)
 
 add_executable(oio-kinetic-proxy
-        http-parser/http_parser.c
-        http-parser/http_parser.h
         ${CMAKE_CURRENT_BINARY_DIR}/headers.cc
         oio/kinetic/proxy/headers.h
         oio/kinetic/proxy/main.cpp)
-    target_link_libraries(oio-kinetic-proxy oio-kinetic-client ${GLOG_LIBRARIES})
+target_link_libraries(oio-kinetic-proxy
+		oio-http-parser oio-kinetic-client
+		${GLOG_LIBRARIES})

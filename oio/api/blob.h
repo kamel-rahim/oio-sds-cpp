@@ -4,8 +4,8 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
-#ifndef OIO_KINETIC_BLOB_H
-#define OIO_KINETIC_BLOB_H
+#ifndef OIO_KINETIC_OIO_API_BLOB_H
+#define OIO_KINETIC_OIO_API_BLOB_H
 
 #include <cstdint>
 #include <string>
@@ -177,4 +177,4 @@ class Download {
 } // namespace api
 } // namespace oio
 
-#endif //OIO_KINETIC_BLOB_H
+#endif //OIO_KINETIC_OIO_API_BLOB_H

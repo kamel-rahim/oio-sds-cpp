@@ -11,13 +11,13 @@
 #include <string>
 #include <cstdint>
 
-#define BUFLEN_IOV(B,L) {.iov_base=((void*)(B)),.iov_len=L}
+#define BUFLEN_IOV(B, L) {.iov_base=((void*)(B)),.iov_len=L}
 
 #define BUF_IOV(S) BUFLEN_IOV((S),sizeof(S)-1)
 #define STR_IOV(S) BUFLEN_IOV((S),strlen(S))
 #define STRING_IOV(S) BUFLEN_IOV((S).data(),(S).size())
 
-#define ON_ENUM(D,F) case D::F: return #F
+#define ON_ENUM(D, F) case D::F: return #F
 
 
 #if defined __GNUC__ || defined __clang__
@@ -27,11 +27,15 @@
 #error "Unsupported compiler!"
 #endif
 
-std::vector<uint8_t> compute_sha1 (const std::vector<uint8_t> &val) noexcept;
+std::vector<uint8_t> compute_sha1(const std::vector<uint8_t> &val) noexcept;
 
-std::vector<uint8_t> compute_sha1_hmac (const std::string &key, const std::string &val) noexcept;
+std::vector<uint8_t> compute_sha1_hmac(const std::string &key,
+                                       const std::string &val) noexcept;
 
 void append_string_random(std::string &dst, unsigned int len,
                           const std::string &chars) noexcept;
+
+std::string generate_string_random(unsigned int len,
+                                   const std::string &chars) noexcept;
 
 #endif //OIO_KINETIC_UTILS_H

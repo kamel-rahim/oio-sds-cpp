@@ -23,13 +23,9 @@
 #include <http-parser/http_parser.h>
 #include <utils/utils.h>
 #include <utils/MillSocket.h>
-#include <oio/api/blob/Upload.h>
-#include <oio/api/blob/Download.h>
-#include <oio/api/blob/Removal.h>
+#include <oio/api/blob.h>
+#include <oio/kinetic/coro/blob.h>
 #include <oio/kinetic/coro/client/CoroutineClientFactory.h>
-#include <oio/kinetic/coro/blob/Upload.h>
-#include <oio/kinetic/coro/blob/Download.h>
-#include <oio/kinetic/coro/blob/Removal.h>
 
 #include "headers.h"
 
@@ -322,10 +318,13 @@ int _on_headers_complete_UPLOAD(http_parser *p) {
             ctx->reply_error({406, 421, "blobs found"});
             return 1;
         case Upload::Status::NetworkError:
-            ctx->reply_error({502, 500, "network error to devices"});
+            ctx->reply_error({503, 503, "network error to devices"});
             return 1;
         case Upload::Status::ProtocolError:
-            ctx->reply_error({500, 500, "protocol error to devices"});
+            ctx->reply_error({502, 502, "protocol error to devices"});
+            return 1;
+        case Upload::Status::InternalError:
+            ctx->reply_error({500, 500, "Internal error"});
             return 1;
     }
 

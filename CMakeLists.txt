@@ -55,10 +55,7 @@ add_library(oio-kinetic-client SHARED
         utils/utils.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/kinetic.pb.cc
         ${CMAKE_CURRENT_BINARY_DIR}/kinetic.pb.h
-        oio/api/blob/Upload.h
-        oio/api/blob/Download.h
-        oio/api/blob/Removal.h
-        oio/api/blob/Listing.h
+        oio/api/blob.h
         oio/kinetic/coro/rpc/Request.h
         oio/kinetic/coro/rpc/Exchange.h
         oio/kinetic/coro/rpc/Put.cpp
@@ -78,14 +75,11 @@ add_library(oio-kinetic-client SHARED
         oio/kinetic/coro/client/CoroutineClientFactory.h
         oio/kinetic/coro/client/PendingExchange.cpp
         oio/kinetic/coro/client/PendingExchange.h
+        oio/kinetic/coro/blob.h
         oio/kinetic/coro/blob/Upload.cpp
-        oio/kinetic/coro/blob/Upload.h
         oio/kinetic/coro/blob/Download.cpp
-        oio/kinetic/coro/blob/Download.h
         oio/kinetic/coro/blob/Removal.cpp
-        oio/kinetic/coro/blob/Removal.h
         oio/kinetic/coro/blob/Listing.cpp
-        oio/kinetic/coro/blob/Listing.h
 		oio/http/coro/Upload.cpp
 		oio/http/coro/Upload.h)
 

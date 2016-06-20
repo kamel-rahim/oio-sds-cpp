@@ -8,8 +8,7 @@
 #include <queue>
 #include <glog/logging.h>
 #include <oio/kinetic/coro/rpc/Delete.h>
-#include "Listing.h"
-#include "Removal.h"
+#include <oio/kinetic/coro/blob.h>
 
 using oio::kinetic::client::Sync;
 using oio::kinetic::client::ClientInterface;

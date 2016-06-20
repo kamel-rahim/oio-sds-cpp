@@ -12,8 +12,10 @@
 #include <cstdint>
 
 #define BUFLEN_IOV(B,L) {.iov_base=((void*)(B)),.iov_len=L}
-#define BUF_IOV(S) BUFLEN_IOV((void*)(S),sizeof(S)-1)
-#define STR_IOV(S) BUFLEN_IOV((void*)(S),strlen(S))
+
+#define BUF_IOV(S) BUFLEN_IOV((S),sizeof(S)-1)
+#define STR_IOV(S) BUFLEN_IOV((S),strlen(S))
+#define STRING_IOV(S) BUFLEN_IOV((S).data(),(S).size())
 
 #define ON_ENUM(D,F) case D::F: return #F
 

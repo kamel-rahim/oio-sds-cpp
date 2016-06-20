@@ -9,14 +9,8 @@
 #include <utils/utils.h>
 #include "oio/kinetic/coro/client/ClientInterface.h"
 #include "oio/kinetic/coro/client/CoroutineClientFactory.h"
-#include "oio/api/blob/Upload.h"
-#include "oio/api/blob/Download.h"
-#include "oio/api/blob/Listing.h"
-#include "oio/api/blob/Removal.h"
-#include "Upload.h"
-#include "Download.h"
-#include "Listing.h"
-#include "Removal.h"
+#include "oio/api/blob.h"
+#include "oio/kinetic/coro/blob.h"
 
 using oio::kinetic::client::ClientFactory;
 using oio::kinetic::client::CoroutineClientFactory;

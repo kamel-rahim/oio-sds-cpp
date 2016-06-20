@@ -6,10 +6,10 @@
 
 #include <string>
 #include <glog/logging.h>
-#include <oio/api/blob/Listing.h>
+#include <oio/api/blob.h>
 #include <oio/kinetic/coro/client/ClientInterface.h>
 #include <oio/kinetic/coro/rpc/GetKeyRange.h>
-#include "Listing.h"
+#include <oio/kinetic/coro/blob.h>
 
 using oio::kinetic::blob::ListingBuilder;
 using oio::kinetic::client::ClientInterface;

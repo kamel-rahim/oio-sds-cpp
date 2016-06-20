@@ -14,7 +14,7 @@
 #include <oio/kinetic/coro/rpc/Put.h>
 #include <oio/kinetic/coro/rpc/GetKeyRange.h>
 #include <oio/kinetic/coro/client/ClientInterface.h>
-#include "Upload.h"
+#include <oio/kinetic/coro/blob.h>
 
 using oio::kinetic::blob::UploadBuilder;
 using oio::kinetic::client::ClientInterface;
@@ -42,8 +42,6 @@ public:
     bool Abort() noexcept;
 
     void Write(const uint8_t *buf, uint32_t len) noexcept;
-
-    void Write(const std::string &s) noexcept;
 
     void Flush() noexcept;
 
@@ -126,10 +124,6 @@ void Upload::Write(const uint8_t *buf, uint32_t len) noexcept {
         assert(action);
     }
     yield();
-}
-
-void Upload::Write(const std::string &s) noexcept {
-    return Write(reinterpret_cast<const uint8_t *>(s.data()), s.size());
 }
 
 void Upload::Flush() noexcept {

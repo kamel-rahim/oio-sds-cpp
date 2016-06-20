@@ -11,8 +11,7 @@
 #include <oio/kinetic/coro/rpc/Get.h>
 #include <oio/kinetic/coro/rpc/GetKeyRange.h>
 #include "oio/kinetic/coro/client/ClientInterface.h"
-#include "Download.h"
-#include "Listing.h"
+#include <oio/kinetic/coro/blob.h>
 
 using oio::kinetic::rpc::Get;
 using oio::kinetic::rpc::GetKeyRange;

@@ -5,6 +5,7 @@
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
 #include <cassert>
+#include <cstring>
 #include <sstream>
 #include <unistd.h>
 #include <sys/uio.h>
@@ -71,6 +72,10 @@ bool MillSocket::read_exactly(uint8_t *buf, size_t len, int64_t dl) noexcept {
 }
 
 bool MillSocket::send (struct iovec *iov, unsigned int count, int64_t dl) noexcept {
+
+    if (dl <= 0)
+        dl = mill_now() + 30000;
+
     size_t total = 0, sent = 0;
     for (unsigned int i=0; i<count ;++i)
         total += iov[i].iov_len;
@@ -81,12 +86,12 @@ bool MillSocket::send (struct iovec *iov, unsigned int count, int64_t dl) noexce
             if (errno == EINTR)
                 continue;
             if (errno == EAGAIN) {
-                const auto real_dl = dl>0 ? dl : mill_now()+1000;
-                auto evt = fdwait(sock_.fileno(), FDW_OUT, real_dl);
+                auto evt = fdwait(sock_.fileno(), FDW_OUT, dl);
                 if (evt & FDW_ERR)
                     return false;
                 continue;
             }
+            return false;
         }
         if (rc > 0) {
             sent += rc;
@@ -108,9 +113,29 @@ bool MillSocket::send (struct iovec *iov, unsigned int count, int64_t dl) noexce
     return true;
 }
 
-bool MillSocket::send (uint8_t *buf, size_t len, int64_t dl) noexcept {
-    struct iovec iov = {.iov_base=buf, .iov_len=len};
-    return send (&iov, 1, dl);
+bool MillSocket::send (const uint8_t *buf, size_t len, int64_t dl) noexcept {
+    if (dl <= 0)
+        dl = mill_now() + 30000;
+
+    while (len) {
+        ssize_t rc = ::write(sock_.fileno(), buf, len);
+        if (rc > 0) {
+            len -= rc, buf += rc;
+        } else if (rc == 0) {
+            /* nothing written */
+        } else {
+            if (errno == EINTR)
+                continue;
+            if (errno == EAGAIN) {
+                auto evt = fdwait(sock_.fileno(), FDW_OUT, dl);
+                if (evt & FDW_ERR)
+                    return false;
+                continue;
+            }
+            return false;
+        }
+    }
+    return true;
 }
 
 void MillSocket::close () noexcept {

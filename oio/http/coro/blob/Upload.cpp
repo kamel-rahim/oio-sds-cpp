@@ -8,17 +8,17 @@
 #include <sstream>
 #include <iomanip>
 #include <sys/uio.h>
+
 #include <glog/logging.h>
 #include <libmill.h>
+#include <http-parser/http_parser.h>
+
 #include <utils/MillSocket.h>
 #include <utils/utils.h>
-#include <http-parser/http_parser.h>
 #include "oio/http/coro/blob.h"
 
 using oio::api::blob::Upload;
 using oio::http::coro::UploadBuilder;
-
-#define RAWX_HDR_PREFIX "X-oio-chunk-meta-"
 
 class HttpUpload : public Upload {
     friend class UploadBuilder;

@@ -18,6 +18,10 @@ namespace oio {
 namespace http {
 namespace coro {
 
+#ifndef RAWX_HDR_PREFIX
+#define RAWX_HDR_PREFIX "X-oio-chunk-meta-"
+#endif
+
 class DownloadBuilder {
   public:
     DownloadBuilder();

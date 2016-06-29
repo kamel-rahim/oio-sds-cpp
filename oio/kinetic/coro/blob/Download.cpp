@@ -47,11 +47,11 @@ class Download : public blob::Download {
 
     virtual ~Download() noexcept { }
 
-    virtual blob::Download::Status Prepare() noexcept;
+    virtual blob::Download::Status Prepare() noexcept override;
 
-    virtual bool IsEof() noexcept;
+    virtual bool IsEof() noexcept override;
 
-    virtual int32_t Read(std::vector<uint8_t> &buf) noexcept;
+    virtual int32_t Read(std::vector<uint8_t> &buf) noexcept override;
 
   private:
     std::string chunkid;

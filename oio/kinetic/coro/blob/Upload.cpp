@@ -33,17 +33,17 @@ public:
 
     ~Upload() noexcept;
 
-    blob::Upload::Status Prepare() noexcept;
+    blob::Upload::Status Prepare() noexcept override;
 
-    void SetXattr (const std::string &k, const std::string &v) noexcept;
+    void SetXattr (const std::string &k, const std::string &v) noexcept override;
 
-    bool Commit() noexcept;
+    bool Commit() noexcept override;
 
-    bool Abort() noexcept;
+    bool Abort() noexcept override;
 
-    void Write(const uint8_t *buf, uint32_t len) noexcept;
+    void Write(const uint8_t *buf, uint32_t len) noexcept override;
 
-    void Flush() noexcept;
+    void Flush() noexcept override;
 
 private:
     void TriggerUpload() noexcept;

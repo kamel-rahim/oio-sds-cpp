@@ -42,13 +42,11 @@ class Removal : public blob::Removal {
 
     virtual ~Removal() noexcept { }
 
-    virtual blob::Removal::Status Prepare() noexcept;
+    virtual blob::Removal::Status Prepare() noexcept override;
 
-    virtual bool Commit() noexcept;
+    virtual bool Commit() noexcept override;
 
-    virtual bool Abort() noexcept;
-
-    virtual bool Ok() noexcept;
+    virtual bool Abort() noexcept override;
 
   private:
     unsigned int parallelism_factor;
@@ -109,10 +107,6 @@ bool Removal::Commit() noexcept {
 
 bool Removal::Abort() noexcept {
     return false;
-}
-
-bool Removal::Ok() noexcept {
-    return true;
 }
 
 RemovalBuilder::RemovalBuilder(std::shared_ptr<ClientFactory> f) noexcept

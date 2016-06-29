@@ -24,15 +24,15 @@ struct ReplyCtx {
 
 class HttpDownload : public Download {
   public:
-    HttpDownload();
+    HttpDownload() noexcept;
 
-    ~HttpDownload();
+    ~HttpDownload() noexcept;
 
-    bool IsEof() noexcept;
+    bool IsEof() noexcept override;
 
-    Download::Status Prepare() noexcept;
+    Download::Status Prepare() noexcept override;
 
-    int32_t Read(std::vector<uint8_t> &buf) noexcept;
+    int32_t Read(std::vector<uint8_t> &buf) noexcept override;
 
   private:
     std::shared_ptr<MillSocket> socket;
@@ -45,7 +45,7 @@ class HttpDownload : public Download {
     ReplyCtx ctx;
 };
 
-HttpDownload::HttpDownload() noexcept : socket() {
+HttpDownload::HttpDownload() noexcept: socket() {
     memset(&settings, 0, sizeof(settings));
     http_parser_init(&parser, HTTP_RESPONSE);
     parser.data = &ctx;
@@ -108,5 +108,6 @@ Download::Status HttpDownload::Prepare() noexcept {
 }
 
 int32_t HttpDownload::Read(std::vector<uint8_t> &buf) noexcept {
-
+    (void) buf;
+    return -1;
 }

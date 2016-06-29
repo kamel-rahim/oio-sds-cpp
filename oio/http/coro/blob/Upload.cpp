@@ -24,21 +24,21 @@ class HttpUpload : public Upload {
     friend class UploadBuilder;
 
   public:
-    HttpUpload();
+    HttpUpload() noexcept;
 
-    ~HttpUpload();
+    ~HttpUpload() noexcept;
 
-    void SetXattr(const std::string &k, const std::string &v);
+    void SetXattr(const std::string &k, const std::string &v) noexcept override;
 
-    Upload::Status Prepare();
+    Upload::Status Prepare() noexcept override;
 
-    bool Commit();
+    bool Commit() noexcept override;
 
-    bool Abort();
+    bool Abort() noexcept override;
 
-    void Flush();
+    void Flush() noexcept override;
 
-    void Write(const uint8_t *buf, uint32_t len);
+    void Write(const uint8_t *buf, uint32_t len) noexcept override;
 
   private:
     int64_t content_length;
@@ -51,18 +51,18 @@ class HttpUpload : public Upload {
     bool done;
 };
 
-HttpUpload::HttpUpload() : content_length{-1}, sent{0}, chunk_id(),
+HttpUpload::HttpUpload() noexcept: content_length{-1}, sent{0}, chunk_id(),
                            socket(nullptr), fields(), trailers() { }
 
-HttpUpload::~HttpUpload() { }
+HttpUpload::~HttpUpload() noexcept { }
 
-void HttpUpload::SetXattr(const std::string &k, const std::string &v) {
+void HttpUpload::SetXattr(const std::string &k, const std::string &v) noexcept {
     fields[k] = v;
 }
 
 struct ReplyContext {
     bool done;
-    ReplyContext(): done{false} {}
+    ReplyContext() noexcept: done{false} {}
 };
 
 static int on_reply_complete (struct http_parser *p) {
@@ -70,7 +70,7 @@ static int on_reply_complete (struct http_parser *p) {
     return 0;
 }
 
-bool HttpUpload::Commit() {
+bool HttpUpload::Commit() noexcept {
     int64_t dl_send = mill_now() + 2000;
     int64_t dl_recv = mill_now() + 4000;
     if (content_length >= 0) {
@@ -131,13 +131,11 @@ bool HttpUpload::Commit() {
     return parser.status_code / 100 == 2;
 }
 
-void HttpUpload::Flush() { }
+void HttpUpload::Flush() noexcept { }
 
-bool HttpUpload::Abort() {
-    return false;
-}
+bool HttpUpload::Abort() noexcept { return false; }
 
-Upload::Status HttpUpload::Prepare() {
+Upload::Status HttpUpload::Prepare() noexcept {
     std::vector<std::string> headers;
 
     /* first line */
@@ -194,7 +192,7 @@ Upload::Status HttpUpload::Prepare() {
     return Upload::Status::OK;
 }
 
-void HttpUpload::Write(const uint8_t *buf, uint32_t len) {
+void HttpUpload::Write(const uint8_t *buf, uint32_t len) noexcept {
     if (buf == nullptr || len == 0)
         return;
     int64_t dl = mill_now() + 1000;
@@ -217,28 +215,24 @@ void HttpUpload::Write(const uint8_t *buf, uint32_t len) {
     }
 }
 
-UploadBuilder::UploadBuilder() { }
+UploadBuilder::UploadBuilder() noexcept { }
 
-UploadBuilder::~UploadBuilder() { }
+UploadBuilder::~UploadBuilder() noexcept { }
 
-void UploadBuilder::Name(const std::string &s) {
-    name.assign(s);
-}
+void UploadBuilder::Name(const std::string &s) noexcept { name.assign(s); }
 
-void UploadBuilder::Host(const std::string &s) {
-    host.assign(s);
-}
+void UploadBuilder::Host(const std::string &s) noexcept { host.assign(s); }
 
-void UploadBuilder::Field(const std::string &k, const std::string &v) {
+void UploadBuilder::Field(const std::string &k, const std::string &v) noexcept {
     fields[k] = v;
 }
 
-void UploadBuilder::Trailer(const std::string &k) {
+void UploadBuilder::Trailer(const std::string &k) noexcept {
     trailers.emplace(k);
 }
 
 std::shared_ptr<oio::api::blob::Upload> UploadBuilder::Build(
-        std::shared_ptr<MillSocket> socket) {
+        std::shared_ptr<MillSocket> socket) noexcept {
     auto ul = new HttpUpload;
     ul->chunk_id.assign(name);
     ul->socket = socket;

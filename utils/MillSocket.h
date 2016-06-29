@@ -29,6 +29,10 @@ struct MillSocket {
 
     void close () noexcept;
 
+    /* Wraps libmill's fdwait().
+     * This wrapper copes with libmill's early stage and lack of API stability.
+     * In facts, functions (in their prefixed form) are still sometimes renamed,
+     * thus breaking calling code. */
     unsigned int poll(unsigned int what, int64_t dl) noexcept;
 
     bool connect (const char *u) noexcept {

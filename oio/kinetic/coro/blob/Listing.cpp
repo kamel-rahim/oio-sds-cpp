@@ -27,13 +27,10 @@ class Listing : public blob::Listing {
 
     ~Listing() noexcept { }
 
-    blob::Listing::Status Prepare() noexcept;
+    blob::Listing::Status Prepare() noexcept override;
 
-    bool Next(std::string &id, std::string &dst) noexcept;
-
-  private:
-    void lazy_init() noexcept;
-
+    bool Next(std::string &id, std::string &dst) noexcept override;
+    
   private:
     std::vector<std::shared_ptr<ClientInterface>> clients;
     std::string name;

@@ -20,11 +20,11 @@ namespace blob {
  * Listing *list = ...; // get an instance
  * auto rc = list->Prepare(); // mandatory step
  * if (rc != Listing::Status::Ok) {
- *   std::cerr << Listing::Status2Str(rc) << std::endl;
+ *   LOG(ERROR) << Listing::Status2Str(rc);
  * } else {
  *   std::string id, key;
  *   while (list->Next(id, key)) {
- *     std::cerr << id << " has " << key << std::endl;
+ *     LOG(INFO) << id << " has " << key;
  *   }
  * }
  */
@@ -57,6 +57,20 @@ class Listing {
     virtual bool Next(std::string &id, std::string &key) noexcept = 0;
 };
 
+/**
+ * Usage:
+ * Removal *rem = ...; // get an instance
+ * auto rc = rem->Prepare();
+ * if (rc != Removal::Status::Ok) {
+ *   LOG(ERROR) << Removal::Status2Str(rc);
+ * } else {
+ *   if (rem->Commit()) {
+ *     LOG(INFO) << "Blob removed";
+ *   } else {
+ *     LOG(ERROR) << "Blob removal failed";
+ *   }
+ * }
+ */
 class Removal {
   public:
     enum class Status {
@@ -86,10 +100,26 @@ class Removal {
     virtual bool Commit() noexcept = 0;
 
     virtual bool Abort() noexcept = 0;
-
-    virtual bool Ok() noexcept = 0;
 };
 
+/**
+ * Usage:
+ * Upload *up = ...; // get an instance
+ * auto rc = up->Prepare();
+ * if (rc != Upload::Status::Ok) {
+ *   LOG(ERROR) << "Upload impossible: " << Upload::Status2Str(rc);
+ * } else {
+ *   // Iterate on chunks of data as soon as they are ready
+ *   while (custom_condition)
+ *     up->Write("X", 1);
+ *   // Validate the whole upload
+ *   if (up->Commit()) {
+ *     LOG(INFO) << "Blob uploaded";
+ *   } else {
+ *     LOG(ERROR) << "Blob upload failed";
+ *   }
+ * }
+ */
 class Upload {
   public:
     enum class Status {
@@ -124,6 +154,8 @@ class Upload {
 
     virtual bool Abort() = 0;
 
+    virtual void Flush() = 0;
+
     // buffer copied
     virtual void Write(const uint8_t *buf, uint32_t len) = 0;
 
@@ -138,10 +170,22 @@ class Upload {
     void Write(const std::vector<uint8_t> &s) {
         return this->Write(s.data(), s.size());
     }
-
-    virtual void Flush() = 0;
 };
 
+/**
+ * Usage:
+ * Download *dl = ...; // get an instance
+ * auto rc = dl->Prepare();
+ * if (rc != Downpload::Status::Ok) {
+ *   LOG(ERROR) << "Download impossible: " << Download::Status2Str(rc);
+ * } else {
+ *   while (!dl->IsEof()) {
+ *     std::vector<uint8_t> chunk;
+ *     dl->Read(chunk);
+ *     LOG(INFO) << "Download: " << chunk.size() << " bytes received";
+ *   }
+ * }
+ */
 class Download {
   public:
     enum class Status {

@@ -4,8 +4,9 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
-#ifndef OIO_KINETIC_UTILS__SOCKET_H
-#define OIO_KINETIC_UTILS__SOCKET_H 1
+#ifndef OIO_BLOB__SRC__SOCKET_H
+#define OIO_BLOB__SRC__SOCKET_H 1
+
 #include <string>
 #include "Addr.h"
 
@@ -13,29 +14,42 @@ extern int default_backlog;
 extern bool default_reuse_port;
 
 class Socket {
-protected:
+  protected:
 	int fd_;
 	Addr peer_;
 	Addr local_;
-public:
+  public:
 
-	~Socket() noexcept {}
-    Socket () noexcept: fd_{-1} {}
-    Socket(Socket &&o) noexcept: fd_{o.fd_}, peer_{o.peer_}, local_{o.local_} { o.reset(); }
-    Socket(Socket &o) noexcept: fd_{o.fd_}, peer_{o.peer_}, local_{o.local_} {}
+	~Socket() noexcept { }
 
-    int fileno () const noexcept { return fd_; }
+	Socket() noexcept: fd_{-1} { }
 
-    void reset () noexcept;
-    void init (int family) noexcept;
-    void close () noexcept;
-    bool connect (const char *u) noexcept;
-    bool bind (const char *u) noexcept;
-    bool listen (int backlog) noexcept;
-    bool setopt (int dom, int opt, int val) noexcept;
+	Socket(Socket &&o) noexcept: fd_{o.fd_}, peer_{o.peer_}, local_{o.local_} {
+		o.reset();
+	}
 
-    bool accept(Socket &cli) noexcept;
-	std::string debug_string () const noexcept;
+	Socket(const Socket &o) noexcept: fd_{o.fd_}, peer_{o.peer_},
+									  local_{o.local_} { }
+
+	int fileno() const noexcept { return fd_; }
+
+	void reset() noexcept;
+
+	void init(int family) noexcept;
+
+	void close() noexcept;
+
+	bool connect(const char *u) noexcept;
+
+	bool bind(const char *u) noexcept;
+
+	bool listen(int backlog) noexcept;
+
+	bool setopt(int dom, int opt, int val) noexcept;
+
+	bool accept(Socket &cli) noexcept;
+
+	std::string debug_string() const noexcept;
 };
 
-#endif
+#endif // OIO_BLOB__SRC__SOCKET_H

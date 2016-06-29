@@ -4,19 +4,23 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
-#ifndef KINE_KINETIC_MILL_SOCKET_H
-#define KINE_KINETIC_MILL_SOCKET_H
+#ifndef OIO_BLOB__SRC__MILLSOCKET_H
+#define OIO_BLOB__SRC__MILLSOCKET_H
 #include <string>
 #include "Socket.h"
 
 struct iovec;
+
+#define MILLSOCKET_EVENT_OUT 1
+#define MILLSOCKET_EVENT_IN  2
+#define MILLSOCKET_EVENT_ERR 4
 
 struct MillSocket {
     Socket sock_;
 
     ~MillSocket() noexcept {}
     MillSocket () noexcept: sock_() {}
-    MillSocket(MillSocket &o) noexcept: sock_{o.sock_} {}
+    MillSocket(const MillSocket &o) noexcept: sock_{o.sock_} {}
 
     // move c'tor
     MillSocket(MillSocket &&o) noexcept: sock_{std::move(o.sock_)} {}
@@ -24,6 +28,8 @@ struct MillSocket {
     inline int fileno() const noexcept { return sock_.fileno(); }
 
     void close () noexcept;
+
+    unsigned int poll(unsigned int what, int64_t dl) noexcept;
 
     bool connect (const char *u) noexcept {
         return sock_.connect(u);
@@ -68,4 +74,4 @@ struct MillSocket {
     }
 };
 
-#endif
+#endif // OIO_BLOB__SRC__MILLSOCKET_H

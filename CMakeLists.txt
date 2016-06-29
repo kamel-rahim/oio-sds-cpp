@@ -87,7 +87,14 @@ add_library(oio-kinetic-client SHARED
         oio/kinetic/coro/blob/Listing.cpp
 		oio/http/coro/blob/Upload.cpp
 		oio/http/coro/blob/Download.cpp
-		oio/http/coro/blob.h)
+        oio/http/coro/blob/Removal.cpp
+        oio/http/coro/blob/Listing.cpp
+		oio/http/coro/blob.h
+        oio/local/blob/Upload.cpp
+        oio/local/blob/Download.cpp
+        oio/local/blob/Listing.cpp
+        oio/local/blob/Removal.cpp
+        oio/local/blob.h)
 
 target_link_libraries(oio-kinetic-client
 		oio-http-parser
@@ -108,13 +115,24 @@ target_link_libraries(test-http oio-kinetic-client oio-http-parser)
 add_custom_command(OUTPUT
         ${CMAKE_CURRENT_BINARY_DIR}/headers.cc
 		COMMAND ${RAGEL_EXE} -o ${CMAKE_CURRENT_BINARY_DIR}/headers.cc
-            ${CMAKE_CURRENT_SOURCE_DIR}/oio/kinetic/proxy/headers.rl
-        DEPENDS oio/kinetic/proxy/headers.rl)
+		${CMAKE_CURRENT_SOURCE_DIR}/bin/headers.rl
+        DEPENDS bin/headers.rl)
 
 add_executable(oio-kinetic-proxy
         ${CMAKE_CURRENT_BINARY_DIR}/headers.cc
-        oio/kinetic/proxy/headers.h
-        oio/kinetic/proxy/main.cpp)
+		bin/headers.h
+		bin/oio-kinetic-proxy.cpp)
+
 target_link_libraries(oio-kinetic-proxy
 		oio-http-parser oio-kinetic-client
 		${GLOG_LIBRARIES})
+
+add_executable(oio-rawx
+        ${CMAKE_CURRENT_BINARY_DIR}/headers.cc
+        bin/headers.h
+        bin/MillDaemon.h
+        bin/oio-rawx.cpp)
+
+target_link_libraries(oio-rawx
+        oio-http-parser oio-kinetic-client
+        ${GLOG_LIBRARIES})

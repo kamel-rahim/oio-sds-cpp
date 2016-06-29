@@ -147,3 +147,20 @@ void MillSocket::close () noexcept {
         sock_.close();
     }
 }
+
+unsigned int MillSocket::poll(unsigned int what, int64_t dl) noexcept {
+    int fdw = 0;
+    if (0 != (what & MILLSOCKET_EVENT_IN))
+        fdw |= FDW_IN;
+    if (0 != (what & MILLSOCKET_EVENT_OUT))
+        fdw |= FDW_OUT;
+    int events = fdwait(sock_.fileno(), fdw, dl);
+    unsigned int out = 0;
+    if (0 != (events & FDW_IN))
+        out |= MILLSOCKET_EVENT_IN;
+    if (0 != (events & FDW_OUT))
+        out |= MILLSOCKET_EVENT_OUT;
+    if (0 != (events & FDW_ERR))
+        out |= MILLSOCKET_EVENT_ERR;
+    return out;
+}

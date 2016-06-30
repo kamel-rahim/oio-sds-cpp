@@ -8,13 +8,21 @@
 #define OIO_KINETIC_MILLDAEMON_H
 
 #include <vector>
+#include <map>
+#include <limits>
+#include <memory>
 
-#include <libmill.h>
-#include <rapidjson/filereadstream.h>
+#include <sys/uio.h>
+
 #include <rapidjson/document.h>
-#include <glog/logging.h>
+#include <libmill.h>
+#include <http-parser/http_parser.h>
 
-#include "utils/MillSocket.h"
+#include <utils/MillSocket.h>
+#include <oio/api/blob.h>
+#include "headers.h"
+
+class BlobRepository;
 
 class BlobClient;
 
@@ -22,170 +30,134 @@ class BlobService;
 
 class BlobDaemon;
 
-class BlobClient {
+/* -------------------------------------------------------------------------- */
+
+struct SoftError {
+    int http, soft;
+    const char *why;
+
+    SoftError() noexcept: http{0}, soft{0}, why{nullptr} { }
+
+    SoftError(int http, int soft, const char *why) noexcept:
+            http(http), soft(soft), why(why) {
+    }
+
+    void Reset() noexcept { http = 0; soft = 0, why = nullptr; }
+
+    void Pack(std::string &dst) noexcept;
+};
+
+class BlobRepository {
   public:
-	BlobClient(const MillSocket &c) : client(c) {
-		DLOG(INFO) << __FUNCTION__;
-	}
+    virtual ~BlobRepository() {}
 
-	~BlobClient() {
-		DLOG(INFO) << __FUNCTION__;
-	}
+    virtual BlobRepository* Clone () = 0;
 
-	void Run() noexcept {
-		std::array<uint8_t, 1024> buf;
-		for (; ;) {
-			ssize_t r = client.read(buf.data(), buf.size(), mill_now() + 1000);
-			if (r > 0)
-				DLOG(INFO) << r << " bytes received";
-			if (r < 0) {
-				if (r == -2)
-					DLOG(INFO) << "EOF input";
-				break;
-			}
-		}
-	}
+    virtual bool Configure (const std::string &cfg) = 0;
 
-  private:
-	BlobClient() = delete;
+    virtual std::unique_ptr<oio::api::blob::Upload> GetUpload(
+            const BlobClient &client) noexcept = 0;
 
-	BlobClient(const BlobClient &o) = delete;
+    virtual std::unique_ptr<oio::api::blob::Download> GetDownload(
+            const BlobClient &client) noexcept = 0;
 
-	BlobClient(BlobClient &o) = delete;
+    virtual std::unique_ptr<oio::api::blob::Removal> GetRemoval(
+            const BlobClient &client) noexcept = 0;
+};
 
-	BlobClient(BlobClient &&o) = delete;
+struct BlobClient {
 
-  private:
-	MillSocket client;
+    FORBID_ALL_CTOR(BlobClient);
+
+    ~BlobClient() noexcept;
+
+    BlobClient(const MillSocket &c, std::shared_ptr<BlobRepository> r) noexcept;
+
+    void Run(volatile bool &flag_running) noexcept;
+
+    void Reset() noexcept;
+
+    void SaveError(SoftError err) noexcept;
+
+    void ReplyError(SoftError err) noexcept;
+
+    void ReplySuccess() noexcept;
+
+    void ReplyStream() noexcept;
+
+    void ReplyEndOfStream() noexcept;
+
+    void Reply100() noexcept;
+
+
+    MillSocket client;
+    std::shared_ptr<BlobRepository> repository;
+
+    struct http_parser parser;
+    struct http_parser_settings settings;
+
+    // Related to the current request
+    std::string chunk_id;
+    std::vector<std::string> targets;
+
+    SoftError defered_error;
+    std::unique_ptr<oio::api::blob::Upload> upload;
+    std::unique_ptr<oio::api::blob::Download> download;
+    std::unique_ptr<oio::api::blob::Removal> removal;
+
+    enum http_header_e last_field;
+    std::string last_field_name;
+    std::map<std::string, std::string> xattrs;
+    bool expect_100;
 };
 
 class BlobService {
-	friend class BlobDaemon;
+    friend class BlobDaemon;
 
   public:
+    FORBID_ALL_CTOR(BlobService);
 
-	BlobService() : front() {
-		done = chmake(uint32_t, 1);
-	}
+    BlobService(std::shared_ptr<BlobRepository> r) noexcept;
 
-	~BlobService() {
-		front.close();
-	}
+    ~BlobService() noexcept;
 
-	void Start(volatile bool &flag_running) noexcept {
-		mill_go(Run(flag_running));
-	}
+    void Start(volatile bool &flag_running) noexcept;
 
-	void Join() noexcept {
-		uint32_t s = chr(done, uint32_t);
-		(void) s;
-	}
+    void Join() noexcept;
+
+    bool Configure(const std::string &cfg) noexcept;
 
   private:
-	NOINLINE void Run(volatile bool &flag_running) noexcept {
-		bool input_ready = true;
-		while (flag_running) {
-			MillSocket client;
-			if (input_ready && front.accept(client)) {
-				mill_go(RunClient(client));
-			} else {
-				auto events = front.poll(MILLSOCKET_EVENT_IN,
-										 mill_now() + 1000);
-				if (events & MILLSOCKET_EVENT_ERR) {
-					DLOG(INFO) << "front.poll() error";
-					flag_running = false;
-				} else {
-					input_ready = events & MILLSOCKET_EVENT_IN;
-				}
-			}
-		}
-		chs(done, uint32_t, 0);
-	}
+    NOINLINE void Run(volatile bool &flag_running) noexcept;
 
-	NOINLINE void RunClient(MillSocket s0) noexcept {
-		BlobClient client(s0);
-		client.Run();
-	}
+    NOINLINE void RunClient(volatile bool &flag_running,
+            MillSocket s0) noexcept;
 
   private:
-	MillSocket front;
-	chan done;
+    MillSocket front;
+    std::shared_ptr<BlobRepository> repository;
+    chan done;
 };
 
 class BlobDaemon {
   public:
-	BlobDaemon() noexcept: services() {
-	}
+    FORBID_ALL_CTOR(BlobDaemon);
 
-	~BlobDaemon() noexcept {
-	}
+    BlobDaemon(std::shared_ptr<BlobRepository> rp) noexcept;
 
-	bool LoadFile(const std::string &path) noexcept {
-		std::stringstream ss;
-		std::ifstream ifs;
-		ifs.open(path, std::ios::binary);
-		ss << ifs.rdbuf();
-		ifs.close();
+    ~BlobDaemon() noexcept;
 
-		rapidjson::Document document;
-		if (document.Parse<0>(ss.str().c_str()).HasParseError()) {
-			LOG(ERROR) << "Invalid JSON in " << path;
-			return false;
-		}
-		if (!LoadJSON(document))
-			return false;
-		DLOG(INFO) << "Successfully loaded " << path;
-		return true;
-	}
+    bool LoadJsonFile(const std::string &path) noexcept;
 
-	void Start(volatile bool &flag_running) noexcept {
-		DLOG(INFO) << __FUNCTION__;
-		for (auto &srv: services)
-			srv.Start(flag_running);
-	}
+    bool LoadJson(const std::string &cfg) noexcept;
 
-	void Join() {
-		DLOG(INFO) << __FUNCTION__;
-		for (auto &srv: services)
-			srv.Join();
-	}
+    void Start(volatile bool &flag_running) noexcept;
+
+    void Join() noexcept;
 
   private:
-	bool LoadJSON(rapidjson::Document &doc) noexcept {
-		const char *key_srv = "service";
-		if (!doc.HasMember(key_srv)) {
-			LOG(INFO) << "Missing [" << key_srv << "] field";
-			return true;
-		}
-		if (!doc[key_srv].IsObject()) {
-			LOG(ERROR) << "Unexpected [" << key_srv << "] field: not an object";
-			return false;
-		}
-		if (!doc[key_srv].HasMember("bind")) {
-			LOG(ERROR) << "Missing [" << key_srv << "] field";
-			return false;
-		}
-		if (!doc[key_srv]["bind"].IsString()) {
-			LOG(ERROR) << "Unexpected [" << key_srv << ".bind] field: not a string";
-			return false;
-		}
-		const auto url = doc[key_srv]["bind"].GetString();
-		services.emplace_back();
-		auto &srv = services.back();
-		if (!srv.front.bind(url)) {
-			LOG(ERROR) << "Bind(" << url << ") error";
-			return false;
-		}
-		if (!srv.front.listen(8192)) {
-			LOG(ERROR) << "Listen(" << url << ") error";
-			return false;
-		}
-		LOG(INFO) << "Bind(" << url << ") done";
-		return true;
-	}
-
-  private:
-	std::vector<BlobService> services;
+    std::vector<std::shared_ptr<BlobService>> services;
+    std::shared_ptr<BlobRepository> repository_prototype;
 };
 
 #endif //OIO_KINETIC_MILLDAEMON_H

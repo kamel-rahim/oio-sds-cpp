@@ -121,6 +121,8 @@ add_custom_command(OUTPUT
 add_executable(oio-kinetic-proxy
         ${CMAKE_CURRENT_BINARY_DIR}/headers.cc
 		bin/headers.h
+		bin/MillDaemon.h
+		bin/MillDaemon.cpp
 		bin/oio-kinetic-proxy.cpp)
 
 target_link_libraries(oio-kinetic-proxy
@@ -131,7 +133,8 @@ add_executable(oio-rawx
         ${CMAKE_CURRENT_BINARY_DIR}/headers.cc
         bin/headers.h
         bin/MillDaemon.h
-        bin/oio-rawx.cpp)
+		bin/MillDaemon.cpp
+		bin/oio-rawx.cpp)
 
 target_link_libraries(oio-rawx
         oio-http-parser oio-kinetic-client

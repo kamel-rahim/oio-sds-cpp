@@ -17,11 +17,11 @@ namespace client {
 
 class CoroutineClientFactory : public ClientFactory {
   public:
-    CoroutineClientFactory() noexcept: cnx() { }
+    CoroutineClientFactory(): cnx() { }
 
-    ~CoroutineClientFactory() noexcept { }
+    ~CoroutineClientFactory() { }
 
-    std::shared_ptr<ClientInterface> Get(const std::string &url) noexcept;
+    std::shared_ptr<ClientInterface> Get(const std::string &url);
 
   private:
     std::map<std::string, std::shared_ptr<ClientInterface>> cnx;

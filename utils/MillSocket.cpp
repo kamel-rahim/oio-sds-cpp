@@ -16,13 +16,13 @@
 #include "MillSocket.h"
 #include "utils.h"
 
-std::string MillSocket::debug_string () const noexcept {
+std::string MillSocket::debug_string () const {
     std::stringstream ss;
     ss << "Mill{" << sock_.debug_string() << "}";
     return ss.str();
 }
 
-ssize_t MillSocket::read (uint8_t *buf, size_t len, int64_t dl) noexcept {
+ssize_t MillSocket::read (uint8_t *buf, size_t len, int64_t dl) {
     const int64_t real_dl = dl>0 ? dl : (mill_now()+1000);
     ssize_t rc;
 
@@ -49,7 +49,7 @@ retry:
     return 0;
 }
 
-bool MillSocket::read_exactly(uint8_t *buf, size_t len, int64_t dl) noexcept {
+bool MillSocket::read_exactly(uint8_t *buf, size_t len, int64_t dl) {
     const int64_t real_dl = dl>0 ? dl : (mill_now()+5000);
     while (len > 0) {
         auto rc = ::read(sock_.fileno(), buf, len);
@@ -73,7 +73,7 @@ bool MillSocket::read_exactly(uint8_t *buf, size_t len, int64_t dl) noexcept {
     return true;
 }
 
-bool MillSocket::send (struct iovec *iov, unsigned int count, int64_t dl) noexcept {
+bool MillSocket::send (struct iovec *iov, unsigned int count, int64_t dl) {
 
     if (dl <= 0)
         dl = mill_now() + 30000;
@@ -115,7 +115,7 @@ bool MillSocket::send (struct iovec *iov, unsigned int count, int64_t dl) noexce
     return true;
 }
 
-bool MillSocket::send (const uint8_t *buf, size_t len, int64_t dl) noexcept {
+bool MillSocket::send (const uint8_t *buf, size_t len, int64_t dl) {
     if (dl <= 0)
         dl = mill_now() + 30000;
 
@@ -140,7 +140,7 @@ bool MillSocket::send (const uint8_t *buf, size_t len, int64_t dl) noexcept {
     return true;
 }
 
-void MillSocket::close () noexcept {
+void MillSocket::close () {
     auto fd = sock_.fileno();
     if (fd > 0) {
         ::fdclean(fd);
@@ -148,7 +148,7 @@ void MillSocket::close () noexcept {
     }
 }
 
-unsigned int MillSocket::poll(unsigned int what, int64_t dl) noexcept {
+unsigned int MillSocket::poll(unsigned int what, int64_t dl) {
     int fdw = 0;
     if (0 != (what & MILLSOCKET_EVENT_IN))
         fdw |= FDW_IN;

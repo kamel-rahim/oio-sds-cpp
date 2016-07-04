@@ -18,30 +18,30 @@ namespace rpc {
 
 class Put : public oio::kinetic::rpc::Exchange {
   public:
-    Put() noexcept;
+    Put();
 
-    ~Put() noexcept;
+    ~Put();
 
-    void Key(const char *k) noexcept;
+    void Key(const char *k);
 
-    void Key(const std::string &k) noexcept;
+    void Key(const std::string &k);
 
-    void PreVersion(const char *p) noexcept;
+    void PreVersion(const char *p);
 
-    void PostVersion(const char *p) noexcept;
+    void PostVersion(const char *p);
 
-    void Value(const std::string &v) noexcept;
+    void Value(const std::string &v);
 
-    void Value(const std::vector<uint8_t> &v) noexcept; // copy
-    void Value(std::vector<uint8_t> &v) noexcept; // swap!
+    void Value(const std::vector<uint8_t> &v); // copy
+    void Value(std::vector<uint8_t> &v); // swap!
 
-    void SetSequence(int64_t s) noexcept;
+    void SetSequence(int64_t s);
 
-    std::shared_ptr<oio::kinetic::rpc::Request> MakeRequest() noexcept;
+    std::shared_ptr<oio::kinetic::rpc::Request> MakeRequest();
 
-    void ManageReply(oio::kinetic::rpc::Request &rep) noexcept;
+    void ManageReply(oio::kinetic::rpc::Request &rep);
 
-    bool Ok() const noexcept { return status_; }
+    bool Ok() const { return status_; }
 
   private:
     std::shared_ptr<oio::kinetic::rpc::Request> req_;

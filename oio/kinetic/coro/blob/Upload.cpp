@@ -29,26 +29,24 @@ class Upload : public blob::Upload {
     friend class UploadBuilder;
 
 public:
-    Upload() noexcept;
+    Upload();
 
-    ~Upload() noexcept;
+    ~Upload();
 
-    blob::Upload::Status Prepare() noexcept override;
+    blob::Upload::Status Prepare() override;
 
-    void SetXattr (const std::string &k, const std::string &v) noexcept override;
+    void SetXattr (const std::string &k, const std::string &v) override;
 
-    bool Commit() noexcept override;
+    bool Commit() override;
 
-    bool Abort() noexcept override;
+    bool Abort() override;
 
-    void Write(const uint8_t *buf, uint32_t len) noexcept override;
-
-    void Flush() noexcept override;
+    void Write(const uint8_t *buf, uint32_t len) override;
 
 private:
-    void TriggerUpload() noexcept;
+    void TriggerUpload();
 
-    void TriggerUpload(const std::string &suffix) noexcept;
+    void TriggerUpload(const std::string &suffix);
 
 private:
     std::vector<std::shared_ptr<ClientInterface>> clients;
@@ -62,19 +60,19 @@ private:
     std::map<std::string,std::string> xattr;
 };
 
-Upload::~Upload() noexcept {
+Upload::~Upload() {
     DLOG(INFO) << __FUNCTION__;
 }
 
-Upload::Upload() noexcept: clients(), next_client{0}, puts(), syncs() {
+Upload::Upload(): clients(), next_client{0}, puts(), syncs() {
     DLOG(INFO) << __FUNCTION__;
 }
 
-void Upload::SetXattr(const std::string &k, const std::string &v) noexcept {
+void Upload::SetXattr(const std::string &k, const std::string &v) {
     xattr[k] = v;
 }
 
-void Upload::TriggerUpload(const std::string &suffix) noexcept {
+void Upload::TriggerUpload(const std::string &suffix) {
     assert(!chunkid.empty());
     assert(clients.size() > 0);
 
@@ -94,7 +92,7 @@ void Upload::TriggerUpload(const std::string &suffix) noexcept {
     syncs.emplace_back(client->Start(put));
 }
 
-void Upload::TriggerUpload() noexcept {
+void Upload::TriggerUpload() {
     std::stringstream ss;
     ss << next_client;
     ss << '-';
@@ -102,7 +100,7 @@ void Upload::TriggerUpload() noexcept {
     return TriggerUpload(ss.str());
 }
 
-void Upload::Write(const uint8_t *buf, uint32_t len) noexcept {
+void Upload::Write(const uint8_t *buf, uint32_t len) {
     assert(clients.size() > 0);
 
     while (len > 0) {
@@ -126,16 +124,11 @@ void Upload::Write(const uint8_t *buf, uint32_t len) noexcept {
     yield();
 }
 
-void Upload::Flush() noexcept {
-    DLOG(INFO) << __FUNCTION__ << " of "<< buffer.size() << " bytes";
-    if (buffer.size() > 0)
-        TriggerUpload();
-}
-
-bool Upload::Commit() noexcept {
+bool Upload::Commit() {
 
     // Flush the internal buffer so that we don't mix payload with xattr
-    Flush();
+    if (buffer.size() > 0)
+        TriggerUpload();
 
     // Pack then send the xattr
     rapidjson::StringBuffer buf;
@@ -156,11 +149,11 @@ bool Upload::Commit() noexcept {
     return true;
 }
 
-bool Upload::Abort() noexcept {
+bool Upload::Abort() {
     return true;
 }
 
-blob::Upload::Status Upload::Prepare() noexcept {
+blob::Upload::Status Upload::Prepare() {
 
     // Send the same listing request to all the clients
     const std::string key_manifest(chunkid + "-#");
@@ -183,34 +176,34 @@ blob::Upload::Status Upload::Prepare() noexcept {
     return blob::Upload::Status::OK;
 }
 
-UploadBuilder::~UploadBuilder() noexcept { }
+UploadBuilder::~UploadBuilder() { }
 
-UploadBuilder::UploadBuilder(std::shared_ptr<ClientFactory> f) noexcept:
+UploadBuilder::UploadBuilder(std::shared_ptr<ClientFactory> f):
         factory(f), targets(), block_size{512 * 1024} { }
 
-void UploadBuilder::Target(const std::string &to) noexcept {
+void UploadBuilder::Target(const std::string &to) {
     targets.insert(to);
 }
 
-void UploadBuilder::Target(const char *to) noexcept {
+void UploadBuilder::Target(const char *to) {
     assert(to != nullptr);
     return Target(std::string(to));
 }
 
-void UploadBuilder::Name(const std::string &n) noexcept {
+void UploadBuilder::Name(const std::string &n) {
     name.assign(n);
 }
 
-void UploadBuilder::Name(const char *n) noexcept {
+void UploadBuilder::Name(const char *n) {
     assert(n != nullptr);
     return Name(std::string(n));
 }
 
-void UploadBuilder::BlockSize(uint32_t s) noexcept {
+void UploadBuilder::BlockSize(uint32_t s) {
     block_size = s;
 }
 
-std::unique_ptr<blob::Upload> UploadBuilder::Build() noexcept {
+std::unique_ptr<blob::Upload> UploadBuilder::Build() {
     assert(!name.empty());
 
     Upload *ul = new Upload();

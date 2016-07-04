@@ -18,31 +18,31 @@ class LocalRepository : public BlobRepository {
     LocalRepository() {}
     virtual ~LocalRepository() override {}
 
-    BlobRepository* Clone() noexcept override {
+    BlobRepository* Clone() override {
         return new LocalRepository;
     }
 
-    bool Configure (const std::string &cfg) noexcept override {
+    bool Configure (const std::string &cfg) override {
         (void) cfg;
         return false;
     }
 
     virtual std::unique_ptr<oio::api::blob::Upload> GetUpload(
-            const BlobClient &client) noexcept override {
+            const BlobClient &client) override {
         (void) client;
         std::unique_ptr<oio::api::blob::Upload> out(nullptr);
         return out;
     }
 
     virtual std::unique_ptr<oio::api::blob::Download> GetDownload(
-            const BlobClient &client) noexcept override {
+            const BlobClient &client) override {
         (void) client;
         std::unique_ptr<oio::api::blob::Download> out(nullptr);
         return out;
     }
 
     virtual std::unique_ptr<oio::api::blob::Removal> GetRemoval(
-            const BlobClient &client) noexcept override {
+            const BlobClient &client) override {
         (void) client;
         std::unique_ptr<oio::api::blob::Removal> out(nullptr);
         return out;
@@ -51,7 +51,7 @@ class LocalRepository : public BlobRepository {
 
 static volatile bool flag_running{true};
 
-static void _sighandler_stop(int s UNUSED) noexcept {
+static void _sighandler_stop(int s UNUSED) {
 	flag_running = 0;
 }
 

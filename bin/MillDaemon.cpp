@@ -329,25 +329,25 @@ int _on_headers_complete_COMMON(http_parser *p) {
 
 /* -------------------------------------------------------------------------- */
 
-BlobService::BlobService(std::shared_ptr<BlobRepository> r) noexcept
+BlobService::BlobService(std::shared_ptr<BlobRepository> r)
         : front(), repository{r} {
     done = chmake(uint32_t, 1);
 }
 
-BlobService::~BlobService() noexcept {
+BlobService::~BlobService() {
     front.close();
 }
 
-void BlobService::Start(volatile bool &flag_running) noexcept {
+void BlobService::Start(volatile bool &flag_running) {
     mill_go(Run(flag_running));
 }
 
-void BlobService::Join() noexcept {
+void BlobService::Join() {
     uint32_t s = chr(done, uint32_t);
     (void) s;
 }
 
-bool BlobService::Configure(const std::string &cfg) noexcept {
+bool BlobService::Configure(const std::string &cfg) {
     rapidjson::Document doc;
     if (doc.Parse<0>(cfg.c_str()).HasParseError()) {
         LOG(ERROR) << "Invalid JSON";
@@ -381,7 +381,7 @@ bool BlobService::Configure(const std::string &cfg) noexcept {
     return true;
 }
 
-NOINLINE void BlobService::Run(volatile bool &flag_running) noexcept {
+NOINLINE void BlobService::Run(volatile bool &flag_running) {
     bool input_ready = true;
     while (flag_running) {
         MillSocket client;
@@ -402,32 +402,32 @@ NOINLINE void BlobService::Run(volatile bool &flag_running) noexcept {
 }
 
 NOINLINE void BlobService::RunClient(volatile bool &flag_running,
-        MillSocket s0) noexcept {
+        MillSocket s0) {
     BlobClient client(s0, repository);
     client.Run(flag_running);
     s0.close();
 }
 
-BlobDaemon::BlobDaemon(std::shared_ptr<BlobRepository> rp) noexcept
+BlobDaemon::BlobDaemon(std::shared_ptr<BlobRepository> rp)
         : services(), repository_prototype{rp} {
 }
 
-BlobDaemon::~BlobDaemon() noexcept {
+BlobDaemon::~BlobDaemon() {
 }
 
-void BlobDaemon::Start(volatile bool &flag_running) noexcept {
+void BlobDaemon::Start(volatile bool &flag_running) {
     DLOG(INFO) << __FUNCTION__;
     for (auto srv: services)
         srv->Start(flag_running);
 }
 
-void BlobDaemon::Join() noexcept {
+void BlobDaemon::Join() {
     DLOG(INFO) << __FUNCTION__;
     for (auto srv: services)
         srv->Join();
 }
 
-bool BlobDaemon::LoadJsonFile(const std::string &path) noexcept {
+bool BlobDaemon::LoadJsonFile(const std::string &path) {
     std::stringstream ss;
     std::ifstream ifs;
     ifs.open(path, std::ios::binary);
@@ -437,7 +437,7 @@ bool BlobDaemon::LoadJsonFile(const std::string &path) noexcept {
     return LoadJson(ss.str());
 }
 
-bool BlobDaemon::LoadJson(const std::string &cfg) noexcept {
+bool BlobDaemon::LoadJson(const std::string &cfg) {
     const char *key_srv = "service";
     const char *key_repo = "repository";
     rapidjson::StringBuffer buf;
@@ -479,17 +479,17 @@ bool BlobDaemon::LoadJson(const std::string &cfg) noexcept {
     return true;
 }
 
-BlobClient::~BlobClient() noexcept {
+BlobClient::~BlobClient() {
     DLOG(INFO) << __FUNCTION__;
 }
 
 BlobClient::BlobClient(const MillSocket &c,
-        std::shared_ptr<BlobRepository> r) noexcept
+        std::shared_ptr<BlobRepository> r)
         : client(c), repository{r} {
     DLOG(INFO) << __FUNCTION__;
 }
 
-void BlobClient::Run(volatile bool &flag_running) noexcept {
+void BlobClient::Run(volatile bool &flag_running) {
 
     LOG(INFO) << "CLIENT fd " << client.fileno();
 
@@ -540,7 +540,7 @@ void BlobClient::Run(volatile bool &flag_running) noexcept {
     DLOG(INFO) << "CLIENT " << client.fileno() << " done";
 }
 
-void BlobClient::Reset() noexcept {
+void BlobClient::Reset() {
     settings.on_message_begin = _on_message_begin_COMMON;
     settings.on_url = _on_url_COMMON;
     settings.on_status = _on_data_IGNORE;
@@ -560,14 +560,14 @@ void BlobClient::Reset() noexcept {
     download.reset(nullptr);
 }
 
-void BlobClient::SaveError(SoftError err) noexcept {
+void BlobClient::SaveError(SoftError err) {
     defered_error = err;
     settings.on_header_field = _on_data_IGNORE;
     settings.on_header_value = _on_data_IGNORE;
     settings.on_body = _on_data_IGNORE;
 }
 
-void BlobClient::ReplyError(SoftError err) noexcept {
+void BlobClient::ReplyError(SoftError err) {
     char first[64], length[64];
     std::string payload;
 
@@ -587,7 +587,7 @@ void BlobClient::ReplyError(SoftError err) noexcept {
     client.send(iov, 5, mill_now() + 1000);
 }
 
-void BlobClient::ReplySuccess() noexcept {
+void BlobClient::ReplySuccess() {
     char first[] = "HTTP/1.0 200 OK\r\n";
     first[5] = '0' + parser.http_major;
     first[7] = '0' + parser.http_minor;
@@ -600,7 +600,7 @@ void BlobClient::ReplySuccess() noexcept {
     client.send(iov, 4, mill_now() + 1000);
 }
 
-void BlobClient::ReplyStream() noexcept {
+void BlobClient::ReplyStream() {
     char first[] = "HTTP/1.0 200 OK\r\n";
     first[5] = '0' + parser.http_major;
     first[7] = '0' + parser.http_minor;
@@ -613,12 +613,12 @@ void BlobClient::ReplyStream() noexcept {
     client.send(iov, 4, mill_now() + 1000);
 }
 
-void BlobClient::ReplyEndOfStream() noexcept {
+void BlobClient::ReplyEndOfStream() {
     struct iovec iov = BUF_IOV("0\r\n\r\n");
     client.send(&iov, 1, mill_now() + 1000);
 }
 
-void BlobClient::Reply100() noexcept {
+void BlobClient::Reply100() {
 
     if (!expect_100)
         return;
@@ -635,7 +635,7 @@ void BlobClient::Reply100() noexcept {
     client.send(iov, 3, mill_now() + 1000);
 }
 
-void SoftError::Pack(std::string &dst) noexcept {
+void SoftError::Pack(std::string &dst) {
     rapidjson::StringBuffer buf;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
     writer.StartObject();

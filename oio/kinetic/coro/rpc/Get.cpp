@@ -12,7 +12,7 @@ using namespace oio::kinetic::client;
 using namespace oio::kinetic::rpc;
 namespace proto = ::com::seagate::kinetic::proto;
 
-Get::Get() noexcept: req_(), val_(), status_{false} {
+Get::Get(): req_(), val_(), status_{false} {
     req_.reset(new Request);
     auto h = req_->cmd.mutable_header();
     h->set_messagetype(proto::Command_MessageType_GET);
@@ -22,16 +22,16 @@ Get::Get() noexcept: req_(), val_(), status_{false} {
 
 Get::~Get() { }
 
-void Get::SetSequence(int64_t s) noexcept {
+void Get::SetSequence(int64_t s) {
     req_->cmd.mutable_header()->set_sequence(s);
 }
 
-std::shared_ptr<Request> Get::MakeRequest() noexcept {
+std::shared_ptr<Request> Get::MakeRequest() {
     assert(nullptr != req_.get());
     return req_;
 }
 
-void Get::ManageReply(Request &rep) noexcept {
+void Get::ManageReply(Request &rep) {
     auto code = rep.cmd.status().code();
     status_ = code == proto::Command_Status_StatusCode_SUCCESS;
     val_.clear();
@@ -39,10 +39,10 @@ void Get::ManageReply(Request &rep) noexcept {
     DLOG(INFO) << val_.size();
 }
 
-void Get::Key(const char *k) noexcept {
+void Get::Key(const char *k) {
     req_->cmd.mutable_body()->mutable_keyvalue()->set_key(k);
 }
 
-void Get::Key(const std::string &k) noexcept {
+void Get::Key(const std::string &k) {
     req_->cmd.mutable_body()->mutable_keyvalue()->set_key(k);
 }

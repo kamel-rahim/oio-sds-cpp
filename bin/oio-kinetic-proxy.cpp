@@ -28,7 +28,7 @@ static volatile bool flag_running{true};
 
 static std::shared_ptr<ClientFactory> factory;
 
-static void _sighandler_stop(int s UNUSED) noexcept {
+static void _sighandler_stop(int s UNUSED) {
     flag_running = 0;
 }
 
@@ -38,16 +38,16 @@ class KineticRepository : public BlobRepository {
 
     virtual ~KineticRepository() override { }
 
-    BlobRepository *Clone() noexcept override {
+    BlobRepository *Clone() override {
         return new KineticRepository;
     }
 
-    bool Configure(const std::string &cfg UNUSED) noexcept override {
+    bool Configure(const std::string &cfg UNUSED) override {
         return true;
     }
 
     std::unique_ptr<oio::api::blob::Upload> GetUpload(
-            const BlobClient &client) noexcept override {
+            const BlobClient &client) override {
         auto builder = UploadBuilder(factory);
         builder.BlockSize(512 * 1024);
         builder.Name(client.chunk_id);
@@ -57,7 +57,7 @@ class KineticRepository : public BlobRepository {
     }
 
     std::unique_ptr<oio::api::blob::Download> GetDownload(
-            const BlobClient &client) noexcept override {
+            const BlobClient &client) override {
         DownloadBuilder builder(factory);
         builder.Name(client.chunk_id);
         for (const auto t: client.targets)
@@ -66,7 +66,7 @@ class KineticRepository : public BlobRepository {
     }
 
     std::unique_ptr<oio::api::blob::Removal> GetRemoval(
-            const BlobClient &client) noexcept override {
+            const BlobClient &client) override {
         RemovalBuilder builder(factory);
         builder.Name(client.chunk_id);
         for (const auto t: client.targets)
@@ -75,7 +75,7 @@ class KineticRepository : public BlobRepository {
     }
 };
 
-int main(int argc, char **argv) noexcept {
+int main(int argc, char **argv) {
     google::InitGoogleLogging(argv[0]);
     FLAGS_logtostderr = true;
 

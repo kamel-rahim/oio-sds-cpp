@@ -12,7 +12,7 @@
 #include "utils.h"
 
 std::vector<uint8_t>
-compute_sha1(const std::vector<uint8_t> &val) noexcept {
+compute_sha1(const std::vector<uint8_t> &val) {
     unsigned int len = SHA_DIGEST_LENGTH;
     std::vector<uint8_t> result(len);
 
@@ -21,7 +21,7 @@ compute_sha1(const std::vector<uint8_t> &val) noexcept {
 }
 
 std::vector<uint8_t>
-compute_sha1_hmac(const std::string &key, const std::string &val) noexcept {
+compute_sha1_hmac(const std::string &key, const std::string &val) {
     HMAC_CTX ctx;
     HMAC_CTX_init(&ctx);
     HMAC_Init_ex(&ctx, key.c_str(), key.length(), EVP_sha1(), NULL);
@@ -46,7 +46,7 @@ compute_sha1_hmac(const std::string &key, const std::string &val) noexcept {
 std::random_device rand_dev;
 
 void append_string_random(std::string &dst, unsigned int len,
-                          const std::string &chars) noexcept {
+                          const std::string &chars) {
     static std::random_device rand_dev;
     static std::default_random_engine prng(rand_dev());
 
@@ -56,7 +56,7 @@ void append_string_random(std::string &dst, unsigned int len,
 }
 
 std::string generate_string_random(unsigned int len,
-                                   const std::string &chars) noexcept {
+                                   const std::string &chars) {
     std::string s;
     append_string_random(s, len, chars);
     return s;

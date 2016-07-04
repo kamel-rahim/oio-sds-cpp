@@ -18,33 +18,33 @@ namespace rpc {
 
 class GetKeyRange : public oio::kinetic::rpc::Exchange {
   public:
-    GetKeyRange() noexcept;
+    GetKeyRange();
 
-    ~GetKeyRange() noexcept;
+    ~GetKeyRange();
 
-    void Start(const char *k) noexcept;
+    void Start(const char *k);
 
-    void Start(const std::string &k) noexcept;
+    void Start(const std::string &k);
 
-    void End(const char *k) noexcept;
+    void End(const char *k);
 
-    void End(const std::string &k) noexcept;
+    void End(const std::string &k);
 
-    void IncludeStart(bool v) noexcept;
+    void IncludeStart(bool v);
 
-    void IncludeEnd(bool v) noexcept;
+    void IncludeEnd(bool v);
 
-    void MaxItems(int32_t v) noexcept;
+    void MaxItems(int32_t v);
 
-    void Steal(std::vector<std::string> &v) noexcept;
+    void Steal(std::vector<std::string> &v);
 
-    void SetSequence(int64_t s) noexcept;
+    void SetSequence(int64_t s);
 
-    std::shared_ptr<oio::kinetic::rpc::Request> MakeRequest() noexcept;
+    std::shared_ptr<oio::kinetic::rpc::Request> MakeRequest();
 
-    void ManageReply(oio::kinetic::rpc::Request &rep) noexcept;
+    void ManageReply(oio::kinetic::rpc::Request &rep);
 
-    bool Ok() const noexcept { return status_; }
+    bool Ok() const { return status_; }
 
   private:
     std::shared_ptr<oio::kinetic::rpc::Request> req_;

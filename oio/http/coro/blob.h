@@ -24,18 +24,18 @@ namespace coro {
 
 class DownloadBuilder {
   public:
-    DownloadBuilder() noexcept;
+    DownloadBuilder();
 
-    ~DownloadBuilder() noexcept;
+    ~DownloadBuilder();
 
-    void Host(const std::string &s) noexcept ;
+    void Host(const std::string &s) ;
 
-    void Name(const std::string &s) noexcept;
+    void Name(const std::string &s);
 
-    void Field(const std::string &k, const std::string &v) noexcept;
+    void Field(const std::string &k, const std::string &v);
 
     std::shared_ptr<oio::api::blob::Download> Build(
-            std::shared_ptr<MillSocket> socket) noexcept;
+            std::shared_ptr<MillSocket> socket);
 
   private:
     std::string host;
@@ -46,20 +46,20 @@ class DownloadBuilder {
 
 class UploadBuilder {
   public:
-    UploadBuilder() noexcept;
+    UploadBuilder();
 
-    ~UploadBuilder() noexcept;
+    ~UploadBuilder();
 
-    void Host(const std::string &s) noexcept;
+    void Host(const std::string &s);
 
-    void Name(const std::string &s) noexcept;
+    void Name(const std::string &s);
 
-    void Field(const std::string &k, const std::string &v) noexcept;
+    void Field(const std::string &k, const std::string &v);
 
-    void Trailer(const std::string &k) noexcept;
+    void Trailer(const std::string &k);
 
     std::shared_ptr<oio::api::blob::Upload> Build(
-            std::shared_ptr<MillSocket> socket) noexcept;
+            std::shared_ptr<MillSocket> socket);
 
   private:
     std::string host;

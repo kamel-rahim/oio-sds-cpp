@@ -13,7 +13,7 @@ namespace proto = ::com::seagate::kinetic::proto;
 using oio::kinetic::rpc::Request;
 using oio::kinetic::rpc::Delete;
 
-Delete::Delete() noexcept: req_(), status_{false} {
+Delete::Delete(): req_(), status_{false} {
     req_.reset(new Request);
     auto h = req_->cmd.mutable_header();
     h->set_messagetype(proto::Command_MessageType_DELETE);
@@ -24,25 +24,25 @@ Delete::Delete() noexcept: req_(), status_{false} {
 
 Delete::~Delete() { }
 
-void Delete::SetSequence(int64_t s) noexcept {
+void Delete::SetSequence(int64_t s) {
     req_->cmd.mutable_header()->set_sequence(s);
 }
 
-std::shared_ptr<Request> Delete::MakeRequest() noexcept {
+std::shared_ptr<Request> Delete::MakeRequest() {
     assert(nullptr != req_.get());
     return req_;
 }
 
-void Delete::ManageReply(Request &rep) noexcept {
+void Delete::ManageReply(Request &rep) {
     const auto code = rep.cmd.status().code();
     status_ = code == proto::Command_Status_StatusCode_SUCCESS;
 }
 
-void Delete::Key (const char *k) noexcept {
+void Delete::Key (const char *k) {
     assert(k != nullptr);
     return Key(std::string(k));
 }
 
-void Delete::Key (const std::string &k) noexcept {
+void Delete::Key (const std::string &k) {
     req_->cmd.mutable_body()->mutable_keyvalue()->set_key(k);
 }

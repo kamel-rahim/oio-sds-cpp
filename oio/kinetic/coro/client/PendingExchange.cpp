@@ -10,45 +10,45 @@
 
 using oio::kinetic::client::PendingExchange;
 
-PendingExchange::PendingExchange(oio::kinetic::rpc::Exchange *e) noexcept:
+PendingExchange::PendingExchange(oio::kinetic::rpc::Exchange *e):
         exchange_(e), notification_{nullptr} {
     notification_ = chmake(int, 1);
 }
 
-PendingExchange::~PendingExchange() noexcept {
+PendingExchange::~PendingExchange() {
     assert(notification_ != nullptr);
     chclose(notification_);
 }
 
-void PendingExchange::SetSequence(int64_t s) noexcept {
+void PendingExchange::SetSequence(int64_t s) {
     assert(exchange_ != nullptr);
     seqid_ = s;
     exchange_->SetSequence(s);
 }
 
-int64_t PendingExchange::Sequence() const noexcept {
+int64_t PendingExchange::Sequence() const {
     return seqid_;
 }
 
-void PendingExchange::Signal() noexcept {
+void PendingExchange::Signal() {
     assert(notification_ != nullptr);
     chs(notification_, int, 0);
 }
 
-void PendingExchange::Wait() noexcept {
+void PendingExchange::Wait() {
     assert(notification_ != nullptr);
     int rc = chr(notification_, int);
     (void) rc;
 }
 
 void
-PendingExchange::ManageReply(oio::kinetic::rpc::Request &rep) noexcept {
+PendingExchange::ManageReply(oio::kinetic::rpc::Request &rep) {
     assert(exchange_ != nullptr);
     return exchange_->ManageReply(rep);
 }
 
 std::shared_ptr<oio::kinetic::rpc::Request>
-PendingExchange::MakeRequest() noexcept {
+PendingExchange::MakeRequest() {
     assert(exchange_ != nullptr);
     return exchange_->MakeRequest();
 

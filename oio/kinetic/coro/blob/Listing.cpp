@@ -23,13 +23,13 @@ class Listing : public blob::Listing {
     friend class ListingBuilder;
 
   public:
-    Listing() noexcept;
+    Listing();
 
-    ~Listing() noexcept { }
+    ~Listing() { }
 
-    blob::Listing::Status Prepare() noexcept override;
+    blob::Listing::Status Prepare() override;
 
-    bool Next(std::string &id, std::string &dst) noexcept override;
+    bool Next(std::string &id, std::string &dst) override;
     
   private:
     std::vector<std::shared_ptr<ClientInterface>> clients;
@@ -39,10 +39,10 @@ class Listing : public blob::Listing {
     unsigned int next_item;
 };
 
-Listing::Listing() noexcept
+Listing::Listing()
         : clients(), name(), items(), next_item{0} { }
 
-bool Listing::Next(std::string &id, std::string &key) noexcept {
+bool Listing::Next(std::string &id, std::string &key) {
     if (next_item >= items.size())
         return false;
 
@@ -54,7 +54,7 @@ bool Listing::Next(std::string &id, std::string &key) noexcept {
 
 // Concurrently get the lists on each node
 // TODO limit the parallelism to N (configurable) items
-blob::Listing::Status Listing::Prepare() noexcept {
+blob::Listing::Status Listing::Prepare() {
 
     items.clear();
     std::vector<std::shared_ptr<GetKeyRange>> ops;
@@ -93,28 +93,28 @@ blob::Listing::Status Listing::Prepare() noexcept {
 
 ListingBuilder::~ListingBuilder() { }
 
-ListingBuilder::ListingBuilder(std::shared_ptr<ClientFactory> f) noexcept
+ListingBuilder::ListingBuilder(std::shared_ptr<ClientFactory> f)
         : factory(f), targets(), name() { }
 
-void ListingBuilder::Name(const std::string &n) noexcept {
+void ListingBuilder::Name(const std::string &n) {
     name.assign(n);
 }
 
-void ListingBuilder::Name(const char *n) noexcept {
+void ListingBuilder::Name(const char *n) {
     assert(n != nullptr);
     return Name(std::string(n));
 }
 
-void ListingBuilder::Target(const std::string &to) noexcept {
+void ListingBuilder::Target(const std::string &to) {
     targets.insert(to);
 }
 
-void ListingBuilder::Target(const char *to) noexcept {
+void ListingBuilder::Target(const char *to) {
     assert(to != nullptr);
     return Target(std::string(to));
 }
 
-std::unique_ptr<blob::Listing> ListingBuilder::Build() noexcept {
+std::unique_ptr<blob::Listing> ListingBuilder::Build() {
     assert(!targets.empty());
     assert(!name.empty());
 

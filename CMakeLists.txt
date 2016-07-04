@@ -112,6 +112,10 @@ add_executable(test-http
 		oio/http/coro/blob/TestHttp.cpp)
 target_link_libraries(test-http oio-kinetic-client oio-http-parser)
 
+add_executable(test-local
+		oio/local/blob/TestLocal.cpp)
+target_link_libraries(test-local oio-kinetic-client)
+
 add_custom_command(OUTPUT
         ${CMAKE_CURRENT_BINARY_DIR}/headers.cc
 		COMMAND ${RAGEL_EXE} -o ${CMAKE_CURRENT_BINARY_DIR}/headers.cc

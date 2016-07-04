@@ -43,15 +43,15 @@ class Download : public blob::Download {
 
   public:
     Download(const std::string &n, std::shared_ptr<ClientFactory> f,
-             std::vector<std::string> t) noexcept;
+             std::vector<std::string> t);
 
-    virtual ~Download() noexcept { }
+    virtual ~Download() { }
 
-    virtual blob::Download::Status Prepare() noexcept override;
+    virtual blob::Download::Status Prepare() override;
 
-    virtual bool IsEof() noexcept override;
+    virtual bool IsEof() override;
 
-    virtual int32_t Read(std::vector<uint8_t> &buf) noexcept override;
+    virtual int32_t Read(std::vector<uint8_t> &buf) override;
 
   private:
     std::string chunkid;
@@ -67,11 +67,11 @@ class Download : public blob::Download {
 
 Download::Download(const std::string &n,
                    std::shared_ptr<ClientFactory> f,
-                   std::vector<std::string> targets0) noexcept
+                   std::vector<std::string> targets0)
         : chunkid{n}, targets(), factory{f}, running(), waiting(), done(),
           parallel_factor{4} { targets.swap(targets0); }
 
-blob::Download::Status Download::Prepare() noexcept {
+blob::Download::Status Download::Prepare() {
 
     // List the chunks
     ListingBuilder builder(factory);
@@ -133,11 +133,11 @@ blob::Download::Status Download::Prepare() noexcept {
     return blob::Download::Status::OK;
 }
 
-bool Download::IsEof() noexcept {
+bool Download::IsEof() {
     return waiting.empty() && running.empty();
 }
 
-int32_t Download::Read(std::vector<uint8_t> &buf) noexcept {
+int32_t Download::Read(std::vector<uint8_t> &buf) {
     DLOG(INFO) << "Currently " << running.size() <<
     " chunks downbloads running";
     while (running.size() < parallel_factor) {
@@ -163,30 +163,30 @@ int32_t Download::Read(std::vector<uint8_t> &buf) noexcept {
     return buf.size();
 }
 
-DownloadBuilder::DownloadBuilder(std::shared_ptr<ClientFactory> f) noexcept:
+DownloadBuilder::DownloadBuilder(std::shared_ptr<ClientFactory> f):
         name(), targets(), factory(f) { }
 
 DownloadBuilder::~DownloadBuilder() { }
 
-void DownloadBuilder::Name(const std::string &n) noexcept {
+void DownloadBuilder::Name(const std::string &n) {
     name.assign(n);
 }
 
-void DownloadBuilder::Name(const char *n) noexcept {
+void DownloadBuilder::Name(const char *n) {
     assert(n != nullptr);
     name.assign(std::string(n));
 }
 
-void DownloadBuilder::Target(const std::string &to) noexcept {
+void DownloadBuilder::Target(const std::string &to) {
     targets.insert(to);
 }
 
-void DownloadBuilder::Target(const char *to) noexcept {
+void DownloadBuilder::Target(const char *to) {
     assert(to != nullptr);
     return Target(std::string(to));
 }
 
-std::unique_ptr<blob::Download> DownloadBuilder::Build() noexcept {
+std::unique_ptr<blob::Download> DownloadBuilder::Build() {
     assert(!targets.empty());
     assert(!name.empty());
 

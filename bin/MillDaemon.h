@@ -36,15 +36,15 @@ struct SoftError {
     int http, soft;
     const char *why;
 
-    SoftError() noexcept: http{0}, soft{0}, why{nullptr} { }
+    SoftError(): http{0}, soft{0}, why{nullptr} { }
 
-    SoftError(int http, int soft, const char *why) noexcept:
+    SoftError(int http, int soft, const char *why):
             http(http), soft(soft), why(why) {
     }
 
-    void Reset() noexcept { http = 0; soft = 0, why = nullptr; }
+    void Reset() { http = 0; soft = 0, why = nullptr; }
 
-    void Pack(std::string &dst) noexcept;
+    void Pack(std::string &dst);
 };
 
 class BlobRepository {
@@ -56,38 +56,38 @@ class BlobRepository {
     virtual bool Configure (const std::string &cfg) = 0;
 
     virtual std::unique_ptr<oio::api::blob::Upload> GetUpload(
-            const BlobClient &client) noexcept = 0;
+            const BlobClient &client) = 0;
 
     virtual std::unique_ptr<oio::api::blob::Download> GetDownload(
-            const BlobClient &client) noexcept = 0;
+            const BlobClient &client) = 0;
 
     virtual std::unique_ptr<oio::api::blob::Removal> GetRemoval(
-            const BlobClient &client) noexcept = 0;
+            const BlobClient &client) = 0;
 };
 
 struct BlobClient {
 
     FORBID_ALL_CTOR(BlobClient);
 
-    ~BlobClient() noexcept;
+    ~BlobClient();
 
-    BlobClient(const MillSocket &c, std::shared_ptr<BlobRepository> r) noexcept;
+    BlobClient(const MillSocket &c, std::shared_ptr<BlobRepository> r);
 
-    void Run(volatile bool &flag_running) noexcept;
+    void Run(volatile bool &flag_running);
 
-    void Reset() noexcept;
+    void Reset();
 
-    void SaveError(SoftError err) noexcept;
+    void SaveError(SoftError err);
 
-    void ReplyError(SoftError err) noexcept;
+    void ReplyError(SoftError err);
 
-    void ReplySuccess() noexcept;
+    void ReplySuccess();
 
-    void ReplyStream() noexcept;
+    void ReplyStream();
 
-    void ReplyEndOfStream() noexcept;
+    void ReplyEndOfStream();
 
-    void Reply100() noexcept;
+    void Reply100();
 
 
     MillSocket client;
@@ -117,21 +117,21 @@ class BlobService {
   public:
     FORBID_ALL_CTOR(BlobService);
 
-    BlobService(std::shared_ptr<BlobRepository> r) noexcept;
+    BlobService(std::shared_ptr<BlobRepository> r);
 
-    ~BlobService() noexcept;
+    ~BlobService();
 
-    void Start(volatile bool &flag_running) noexcept;
+    void Start(volatile bool &flag_running);
 
-    void Join() noexcept;
+    void Join();
 
-    bool Configure(const std::string &cfg) noexcept;
+    bool Configure(const std::string &cfg);
 
   private:
-    NOINLINE void Run(volatile bool &flag_running) noexcept;
+    NOINLINE void Run(volatile bool &flag_running);
 
     NOINLINE void RunClient(volatile bool &flag_running,
-            MillSocket s0) noexcept;
+            MillSocket s0);
 
   private:
     MillSocket front;
@@ -143,17 +143,17 @@ class BlobDaemon {
   public:
     FORBID_ALL_CTOR(BlobDaemon);
 
-    BlobDaemon(std::shared_ptr<BlobRepository> rp) noexcept;
+    BlobDaemon(std::shared_ptr<BlobRepository> rp);
 
-    ~BlobDaemon() noexcept;
+    ~BlobDaemon();
 
-    bool LoadJsonFile(const std::string &path) noexcept;
+    bool LoadJsonFile(const std::string &path);
 
-    bool LoadJson(const std::string &cfg) noexcept;
+    bool LoadJson(const std::string &cfg);
 
-    void Start(volatile bool &flag_running) noexcept;
+    void Start(volatile bool &flag_running);
 
-    void Join() noexcept;
+    void Join();
 
   private:
     std::vector<std::shared_ptr<BlobService>> services;

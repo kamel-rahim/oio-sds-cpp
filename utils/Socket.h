@@ -20,36 +20,36 @@ class Socket {
 	Addr local_;
   public:
 
-	~Socket() noexcept { }
+	~Socket() { }
 
-	Socket() noexcept: fd_{-1} { }
+	Socket(): fd_{-1} { }
 
-	Socket(Socket &&o) noexcept: fd_{o.fd_}, peer_{o.peer_}, local_{o.local_} {
+	Socket(Socket &&o): fd_{o.fd_}, peer_{o.peer_}, local_{o.local_} {
 		o.reset();
 	}
 
-	Socket(const Socket &o) noexcept: fd_{o.fd_}, peer_{o.peer_},
+	Socket(const Socket &o): fd_{o.fd_}, peer_{o.peer_},
 									  local_{o.local_} { }
 
-	int fileno() const noexcept { return fd_; }
+	int fileno() const { return fd_; }
 
-	void reset() noexcept;
+	void reset();
 
-	void init(int family) noexcept;
+	void init(int family);
 
-	void close() noexcept;
+	void close();
 
-	bool connect(const char *u) noexcept;
+	bool connect(const char *u);
 
-	bool bind(const char *u) noexcept;
+	bool bind(const char *u);
 
-	bool listen(int backlog) noexcept;
+	bool listen(int backlog);
 
-	bool setopt(int dom, int opt, int val) noexcept;
+	bool setopt(int dom, int opt, int val);
 
-	bool accept(Socket &cli) noexcept;
+	bool accept(Socket &cli);
 
-	std::string debug_string() const noexcept;
+	std::string debug_string() const;
 };
 
 #endif // OIO_BLOB__SRC__SOCKET_H

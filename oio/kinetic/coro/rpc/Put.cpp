@@ -14,7 +14,7 @@ using namespace oio::kinetic::client;
 using namespace oio::kinetic::rpc;
 namespace proto = ::com::seagate::kinetic::proto;
 
-Put::Put() noexcept: req_(nullptr) {
+Put::Put(): req_(nullptr) {
     req_.reset(new Request);
     auto h = req_->cmd.mutable_header();
     h->set_messagetype(proto::Command_MessageType_PUT);
@@ -24,11 +24,11 @@ Put::Put() noexcept: req_(nullptr) {
     kv->set_force(true);
 }
 
-Put::~Put() noexcept {
+Put::~Put() {
     assert(nullptr != req_.get());
 }
 
-std::shared_ptr<Request> Put::MakeRequest() noexcept {
+std::shared_ptr<Request> Put::MakeRequest() {
     assert(nullptr != req_.get());
     auto kv = req_->cmd.mutable_body()->mutable_keyvalue();
     kv->set_algorithm(proto::Command_Algorithm_SHA1);
@@ -36,26 +36,26 @@ std::shared_ptr<Request> Put::MakeRequest() noexcept {
     return std::shared_ptr<Request>(req_);
 }
 
-void Put::ManageReply(Request &rep) noexcept {
+void Put::ManageReply(Request &rep) {
     assert(nullptr != req_.get());
     status_ = (rep.cmd.status().code() == proto::Command_Status::SUCCESS);
 }
 
-void Put::SetSequence(int64_t s) noexcept {
+void Put::SetSequence(int64_t s) {
     req_->cmd.mutable_header()->set_sequence(s);
 }
 
-void Put::Key(const char *k) noexcept {
+void Put::Key(const char *k) {
     assert(nullptr != req_.get());
     req_->cmd.mutable_body()->mutable_keyvalue()->set_key(k);
 }
 
-void Put::Key(const std::string &k) noexcept {
+void Put::Key(const std::string &k) {
     assert(nullptr != req_.get());
     req_->cmd.mutable_body()->mutable_keyvalue()->set_key(k);
 }
 
-void Put::PreVersion(const char *p) noexcept {
+void Put::PreVersion(const char *p) {
     assert(nullptr != req_.get());
     auto kv = req_->cmd.mutable_body()->mutable_keyvalue();
     bool empty = (p != nullptr) || (*p != 0);
@@ -64,7 +64,7 @@ void Put::PreVersion(const char *p) noexcept {
         kv->set_dbversion(p);
 }
 
-void Put::PostVersion(const char *p) noexcept {
+void Put::PostVersion(const char *p) {
     assert(nullptr != req_.get());
     auto kv = req_->cmd.mutable_body()->mutable_keyvalue();
     bool empty = (p != nullptr) || (*p != 0);
@@ -72,17 +72,17 @@ void Put::PostVersion(const char *p) noexcept {
         kv->set_newversion(p);
 }
 
-void Put::Value(const std::string &v) noexcept {
+void Put::Value(const std::string &v) {
     assert(nullptr != req_.get());
     req_->value.assign(v.cbegin(), v.cend());
 }
 
-void Put::Value(const std::vector<uint8_t> &v) noexcept {
+void Put::Value(const std::vector<uint8_t> &v) {
     assert(nullptr != req_.get());
     req_->value.assign(v.cbegin(), v.cend());
 }
 
-void Put::Value(std::vector<uint8_t> &v) noexcept {
+void Put::Value(std::vector<uint8_t> &v) {
     assert(nullptr != req_.get());
     req_->value.swap(v);
 }

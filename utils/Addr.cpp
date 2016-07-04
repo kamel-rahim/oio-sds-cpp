@@ -13,7 +13,7 @@
 #include "Addr.h"
 
 static bool
-_port_parse (const char *start, uint16_t *res) noexcept {
+_port_parse (const char *start, uint16_t *res) {
     char *_end{nullptr};
     uint64_t u64port = ::strtoull(start, &_end, 10);
 
@@ -36,22 +36,22 @@ _port_parse (const char *start, uint16_t *res) noexcept {
 
 //-----------------------------------------------------------------------------
 
-Addr::Addr (const Addr &o) noexcept: len_{o.len_} {
+Addr::Addr (const Addr &o): len_{o.len_} {
     ::memcpy(&ss_, &o.ss_, sizeof(ss_));
 }
 
-Addr::Addr (Addr &&o) noexcept: len_{o.len_} {
+Addr::Addr (Addr &&o): len_{o.len_} {
     ::memcpy(&ss_, &o.ss_, sizeof(ss_));
 }
 
 void
-Addr::reset() noexcept {
+Addr::reset() {
     ::memset(&ss_, 0, sizeof(ss_));
     len_ = sizeof(ss_);
 }
 
 bool
-Addr::parse (const char *url) noexcept {
+Addr::parse (const char *url) {
     assert (url != NULL);
     assert (*url != '\0');
 

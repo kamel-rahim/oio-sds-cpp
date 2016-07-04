@@ -19,23 +19,23 @@ namespace rpc {
 
 class Get : public oio::kinetic::rpc::Exchange {
   public:
-    Get() noexcept;
+    Get();
 
-    ~Get() noexcept;
+    ~Get();
 
-    void Key(const char *k) noexcept;
+    void Key(const char *k);
 
-    void Key(const std::string &k) noexcept;
+    void Key(const std::string &k);
 
-    void Steal(std::vector<uint8_t> &v) noexcept { v.swap(val_); }
+    void Steal(std::vector<uint8_t> &v) { v.swap(val_); }
 
-    void SetSequence(int64_t s) noexcept;
+    void SetSequence(int64_t s);
 
-    std::shared_ptr<oio::kinetic::rpc::Request> MakeRequest() noexcept;
+    std::shared_ptr<oio::kinetic::rpc::Request> MakeRequest();
 
-    void ManageReply(oio::kinetic::rpc::Request &rep) noexcept;
+    void ManageReply(oio::kinetic::rpc::Request &rep);
 
-    bool Ok() const noexcept { return status_; }
+    bool Ok() const { return status_; }
 
   private:
     std::shared_ptr<oio::kinetic::rpc::Request> req_;

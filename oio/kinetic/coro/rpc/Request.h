@@ -20,13 +20,13 @@ struct Request {
     ::com::seagate::kinetic::proto::Message msg;
     std::vector<uint8_t> value;
 
-    Request() noexcept : cmd(), msg(), value() { }
+    Request() : cmd(), msg(), value() { }
 
-    Request(Request &o) noexcept = delete;
+    Request(Request &o) = delete;
 
-    Request(const Request &o) noexcept = delete;
+    Request(const Request &o) = delete;
 
-    Request(Request &&o) noexcept = delete;
+    Request(Request &&o) = delete;
 };
 
 } // namespace rpc

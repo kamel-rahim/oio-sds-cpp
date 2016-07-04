@@ -29,9 +29,9 @@ class Sync {
 class ClientInterface {
   public:
     virtual std::shared_ptr<Sync> Start(
-            oio::kinetic::rpc::Exchange *ex) noexcept = 0;
+            oio::kinetic::rpc::Exchange *ex) = 0;
 
-    virtual std::string Id() const noexcept = 0;
+    virtual std::string Id() const = 0;
 };
 
 class ClientFactory {
@@ -39,7 +39,7 @@ class ClientFactory {
     ~ClientFactory() { }
 
     virtual std::shared_ptr<ClientInterface> Get(
-            const std::string &url) noexcept = 0;
+            const std::string &url) = 0;
 };
 
 } // namespace client

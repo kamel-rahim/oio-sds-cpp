@@ -18,62 +18,62 @@ struct iovec;
 struct MillSocket {
     Socket sock_;
 
-    ~MillSocket() noexcept {}
-    MillSocket () noexcept: sock_() {}
-    MillSocket(const MillSocket &o) noexcept: sock_{o.sock_} {}
+    ~MillSocket() {}
+    MillSocket (): sock_() {}
+    MillSocket(const MillSocket &o): sock_{o.sock_} {}
 
     // move c'tor
-    MillSocket(MillSocket &&o) noexcept: sock_{std::move(o.sock_)} {}
+    MillSocket(MillSocket &&o): sock_{std::move(o.sock_)} {}
 
-    inline int fileno() const noexcept { return sock_.fileno(); }
+    inline int fileno() const { return sock_.fileno(); }
 
-    void close () noexcept;
+    void close ();
 
     /* Wraps libmill's fdwait().
      * This wrapper copes with libmill's early stage and lack of API stability.
      * In facts, functions (in their prefixed form) are still sometimes renamed,
      * thus breaking calling code. */
-    unsigned int poll(unsigned int what, int64_t dl) noexcept;
+    unsigned int poll(unsigned int what, int64_t dl);
 
-    bool connect (const char *u) noexcept {
+    bool connect (const char *u) {
         return sock_.connect(u);
     }
 
-    bool connect (const std::string &u) noexcept {
+    bool connect (const std::string &u) {
         return connect(u.c_str());
     }
 
-    bool bind (const char *u) noexcept  {
+    bool bind (const char *u)  {
         return sock_.bind(u);
     }
 
-    bool listen (int backlog) noexcept {
+    bool listen (int backlog) {
         return sock_.listen(backlog);
     }
 
-    void setopt (int dom, int opt, int val) noexcept {
+    void setopt (int dom, int opt, int val) {
         sock_.setopt(dom, opt, val);
     }
 
-    bool accept (MillSocket &cli) noexcept {
+    bool accept (MillSocket &cli) {
         return sock_.accept(cli.sock_);
     }
 
-    std::string debug_string () const noexcept;
+    std::string debug_string () const;
 
     // Returns -2 in case of connection closed
     // Returns -1 in case of error
     // Returns the number of bytes written in the delay
-    ssize_t read (uint8_t *buf, size_t len, int64_t dl) noexcept;
+    ssize_t read (uint8_t *buf, size_t len, int64_t dl);
 
     /* Reads exactly max bytes from the current Socket */
-    bool read_exactly(uint8_t *buf, size_t len, int64_t dl) noexcept;
+    bool read_exactly(uint8_t *buf, size_t len, int64_t dl);
 
-    bool send (struct iovec *iov, unsigned int count, int64_t dl) noexcept;
+    bool send (struct iovec *iov, unsigned int count, int64_t dl);
 
-    bool send (const uint8_t *buf, size_t len, int64_t dl) noexcept;
+    bool send (const uint8_t *buf, size_t len, int64_t dl);
 
-    bool send (const char *str, size_t len, int64_t dl) noexcept {
+    bool send (const char *str, size_t len, int64_t dl) {
         return this->send(reinterpret_cast<const uint8_t *>(str), len, dl);
     }
 };

@@ -11,7 +11,7 @@
 using namespace oio::kinetic::client;
 
 std::shared_ptr<ClientInterface>
-CoroutineClientFactory::Get(const std::string &url) noexcept {
+CoroutineClientFactory::Get(const std::string &url) {
     auto it = cnx.find(url);
     if (it != cnx.end())
         return it->second;

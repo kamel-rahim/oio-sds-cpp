@@ -21,21 +21,21 @@ namespace blob {
 class UploadBuilder {
   public:
     UploadBuilder(
-            std::shared_ptr<oio::kinetic::client::ClientFactory> f) noexcept;
+            std::shared_ptr<oio::kinetic::client::ClientFactory> f);
 
-    ~UploadBuilder() noexcept;
+    ~UploadBuilder();
 
-    void Target(const char *to) noexcept;
+    void Target(const char *to);
 
-    void Target(const std::string &to) noexcept;
+    void Target(const std::string &to);
 
-    void Name(const char *n) noexcept;
+    void Name(const char *n);
 
-    void Name(const std::string &n) noexcept;
+    void Name(const std::string &n);
 
-    void BlockSize(uint32_t s) noexcept;
+    void BlockSize(uint32_t s);
 
-    std::unique_ptr<oio::api::blob::Upload> Build() noexcept;
+    std::unique_ptr<oio::api::blob::Upload> Build();
 
   private:
     std::shared_ptr<oio::kinetic::client::ClientFactory> factory;
@@ -47,19 +47,19 @@ class UploadBuilder {
 class DownloadBuilder {
   public:
     DownloadBuilder(
-            std::shared_ptr<oio::kinetic::client::ClientFactory> f) noexcept;
+            std::shared_ptr<oio::kinetic::client::ClientFactory> f);
 
-    ~DownloadBuilder() noexcept;
+    ~DownloadBuilder();
 
-    void Name(const char *n) noexcept;
+    void Name(const char *n);
 
-    void Name(const std::string &n) noexcept;
+    void Name(const std::string &n);
 
-    void Target(const char *to) noexcept;
+    void Target(const char *to);
 
-    void Target(const std::string &to) noexcept;
+    void Target(const std::string &to);
 
-    std::unique_ptr<oio::api::blob::Download> Build() noexcept;
+    std::unique_ptr<oio::api::blob::Download> Build();
 
   private:
     std::string name;
@@ -70,17 +70,17 @@ class DownloadBuilder {
 class RemovalBuilder {
   public:
     RemovalBuilder(
-            std::shared_ptr<oio::kinetic::client::ClientFactory> f) noexcept;
+            std::shared_ptr<oio::kinetic::client::ClientFactory> f);
 
-    void Name(const std::string &n) noexcept;
+    void Name(const std::string &n);
 
-    void Name(const char *n) noexcept;
+    void Name(const char *n);
 
-    void Target(const std::string &to) noexcept;
+    void Target(const std::string &to);
 
-    void Target(const char *to) noexcept;
+    void Target(const char *to);
 
-    std::unique_ptr<oio::api::blob::Removal> Build() noexcept;
+    std::unique_ptr<oio::api::blob::Removal> Build();
 
   private:
     std::shared_ptr<oio::kinetic::client::ClientFactory> factory;
@@ -91,19 +91,19 @@ class RemovalBuilder {
 class ListingBuilder {
   public:
     ListingBuilder(
-            std::shared_ptr<oio::kinetic::client::ClientFactory> f) noexcept;
+            std::shared_ptr<oio::kinetic::client::ClientFactory> f);
 
-    ~ListingBuilder() noexcept;
+    ~ListingBuilder();
 
-    void Name(const std::string &n) noexcept;
+    void Name(const std::string &n);
 
-    void Name(const char *n) noexcept;
+    void Name(const char *n);
 
-    void Target(const std::string &to) noexcept;
+    void Target(const std::string &to);
 
-    void Target(const char *to) noexcept;
+    void Target(const char *to);
 
-    std::unique_ptr<oio::api::blob::Listing> Build() noexcept;
+    std::unique_ptr<oio::api::blob::Listing> Build();
 
   private:
     std::shared_ptr<oio::kinetic::client::ClientFactory> factory;

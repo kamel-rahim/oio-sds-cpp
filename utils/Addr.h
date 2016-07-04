@@ -20,12 +20,12 @@ struct Addr {
     NetAddr ss_;
     uint32_t len_;
 
-    Addr () noexcept { reset(); }
-    Addr (const Addr &o) noexcept; // copy
-    Addr (Addr &&o) noexcept; // move
+    Addr () { reset(); }
+    Addr (const Addr &o); // copy
+    Addr (Addr &&o); // move
 
-    bool parse (const char *url) noexcept;
-    void reset () noexcept;
+    bool parse (const char *url);
+    void reset ();
 };
 
 

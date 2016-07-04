@@ -28,7 +28,7 @@ using oio::kinetic::rpc::GetKeyRange;
 using oio::kinetic::rpc::GetNext;
 
 static void test_single_upload(
-        std::shared_ptr<ClientInterface> client) noexcept {
+        std::shared_ptr<ClientInterface> client) {
     Put put;
     put.Key("k");
     put.Value("v");
@@ -38,7 +38,7 @@ static void test_single_upload(
 }
 
 static void test_sequential_uploads(
-        std::shared_ptr<ClientInterface> client) noexcept {
+        std::shared_ptr<ClientInterface> client) {
     for (int i = 0; i < 5; ++i) {
         Put put;
         put.Key("k");
@@ -50,7 +50,7 @@ static void test_sequential_uploads(
 }
 
 static void test_multi_upload(
-        std::shared_ptr<ClientInterface> client) noexcept {
+        std::shared_ptr<ClientInterface> client) {
     Put put0;
     put0.Key("k");
     put0.Value("v");
@@ -78,7 +78,7 @@ static void test_multi_upload(
 }
 
 static void test_array_upload(
-        std::shared_ptr<ClientInterface> client) noexcept {
+        std::shared_ptr<ClientInterface> client) {
     std::vector<std::shared_ptr<Exchange>> puts;
     for (int i = 0; i < 5; ++i) {
         auto ex = new Put();
@@ -99,7 +99,7 @@ static void test_array_upload(
         assert(p->Ok());
 }
 
-static void test_single_get(std::shared_ptr<ClientInterface> client) noexcept {
+static void test_single_get(std::shared_ptr<ClientInterface> client) {
     Get get;
     get.Key("k");
     auto op = client->Start(&get);
@@ -111,7 +111,7 @@ static void test_single_get(std::shared_ptr<ClientInterface> client) noexcept {
 }
 
 static void test_single_keyrange(
-        std::shared_ptr<ClientInterface> client) noexcept {
+        std::shared_ptr<ClientInterface> client) {
     GetKeyRange op;
     op.Start("a");
     op.End("z");
@@ -121,7 +121,7 @@ static void test_single_keyrange(
 }
 
 static void test_single_getnext(
-        std::shared_ptr<ClientInterface> client) noexcept {
+        std::shared_ptr<ClientInterface> client) {
     GetNext op;
     op.Key("a");
     auto sync = client->Start(&op);

@@ -17,25 +17,25 @@
 bool default_reuse_port = true;
 int default_backlog = 8192;
 
-std::string Socket::debug_string () const noexcept {
+std::string Socket::debug_string () const {
     std::stringstream ss;
     ss << "Socket{fd:" << fd_ << '}';
     return ss.str();
 }
 
-void Socket::reset() noexcept {
+void Socket::reset() {
 	peer_.reset();
 	local_.reset();
 	fd_ = -1;
 }
 
-void Socket::close() noexcept {
+void Socket::close() {
 	if (fd_ >= 0)
 		::close(fd_);
 	this->reset();
 }
 
-void Socket::init (int family) noexcept {
+void Socket::init (int family) {
     assert (fd_ < 0);
 
     fd_ = ::socket (family, SOCK_STREAM|SOCK_NONBLOCK|SOCK_CLOEXEC, 0);
@@ -47,18 +47,18 @@ void Socket::init (int family) noexcept {
 #endif
 }
 
-bool Socket::setopt (int dom, int opt, int val) noexcept {
+bool Socket::setopt (int dom, int opt, int val) {
 	int rc = ::setsockopt (fd_, dom, opt, (void*)&val, sizeof (val));
 	return (rc == 0);
 }
 
-bool Socket::listen(int backlog) noexcept {
+bool Socket::listen(int backlog) {
     assert(fd_ >= 0);
     auto rc = ::listen(fd_, backlog);
     return rc == 0;
 }
 
-bool Socket::bind (const char *url) noexcept {
+bool Socket::bind (const char *url) {
     assert(fd_ < 0);
     if (!local_.parse(url))
         return false;
@@ -76,7 +76,7 @@ bool Socket::bind (const char *url) noexcept {
 	return true;
 }
 
-bool Socket::connect (const char *url) noexcept {
+bool Socket::connect (const char *url) {
     assert(fd_ < 0);
     if (!peer_.parse(url)) {
         return false;
@@ -95,7 +95,7 @@ bool Socket::connect (const char *url) noexcept {
     return true;
 }
 
-bool Socket::accept(Socket &cli) noexcept {
+bool Socket::accept(Socket &cli) {
     assert(fd_ >= 0);
     assert(cli.fd_ < 0);
     cli.fd_ = ::accept4(fd_,

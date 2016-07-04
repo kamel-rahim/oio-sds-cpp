@@ -36,15 +36,15 @@
 #error "Unsupported compiler!"
 #endif
 
-std::vector<uint8_t> compute_sha1(const std::vector<uint8_t> &val) noexcept;
+std::vector<uint8_t> compute_sha1(const std::vector<uint8_t> &val);
 
 std::vector<uint8_t> compute_sha1_hmac(const std::string &key,
-                                       const std::string &val) noexcept;
+                                       const std::string &val);
 
 void append_string_random(std::string &dst, unsigned int len,
-                          const std::string &chars) noexcept;
+                          const std::string &chars);
 
 std::string generate_string_random(unsigned int len,
-                                   const std::string &chars) noexcept;
+                                   const std::string &chars);
 
 #endif //OIO_KINETIC_UTILS_H

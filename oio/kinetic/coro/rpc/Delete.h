@@ -16,21 +16,21 @@ namespace rpc {
 
 class Delete : public oio::kinetic::rpc::Exchange {
   public:
-    Delete() noexcept;
+    Delete();
 
-    ~Delete() noexcept;
+    ~Delete();
 
-    void SetSequence(int64_t s) noexcept;
+    void SetSequence(int64_t s);
 
-    std::shared_ptr<oio::kinetic::rpc::Request> MakeRequest() noexcept;
+    std::shared_ptr<oio::kinetic::rpc::Request> MakeRequest();
 
-    void ManageReply(oio::kinetic::rpc::Request &rep) noexcept;
+    void ManageReply(oio::kinetic::rpc::Request &rep);
 
-    bool Ok() const noexcept { return status_; }
+    bool Ok() const { return status_; }
 
-    void Key (const char *k) noexcept;
+    void Key (const char *k);
 
-    void Key (const std::string &k) noexcept;
+    void Key (const std::string &k);
 
   private:
     std::shared_ptr<oio::kinetic::rpc::Request> req_;

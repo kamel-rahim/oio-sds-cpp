@@ -21,7 +21,7 @@ using oio::kinetic::rpc::Exchange;
 using oio::kinetic::client::CoroutineClient;
 using oio::kinetic::client::Sync;
 
-CoroutineClient::CoroutineClient(const std::string &u) noexcept:
+CoroutineClient::CoroutineClient(const std::string &u):
         url_{u}, sock_(), cnxid_{0}, seqid_{2},
         waiting_(), pending_(),
         to_agent_{nullptr}, stopped_{nullptr}, running_{false} {
@@ -29,7 +29,7 @@ CoroutineClient::CoroutineClient(const std::string &u) noexcept:
     stopped_ = chmake(int, 2);
 }
 
-CoroutineClient::~CoroutineClient() noexcept {
+CoroutineClient::~CoroutineClient() {
     if (running_) {
         running_ = false;
         chs(to_agent_, int, SIGNAL_AGENT_STOP);
@@ -39,17 +39,17 @@ CoroutineClient::~CoroutineClient() noexcept {
     chclose(to_agent_);
 }
 
-std::string CoroutineClient::Id() const noexcept {
+std::string CoroutineClient::Id() const {
     return url_;
 }
 
-std::string CoroutineClient::debug_string() const noexcept {
+std::string CoroutineClient::debug_string() const {
     std::stringstream ss;
     ss << "CoroKC{sock:" << sock_.debug_string() << '}';
     return ss.str();
 }
 
-int CoroutineClient::recv(Frame &frame, int64_t dl) noexcept {
+int CoroutineClient::recv(Frame &frame, int64_t dl) {
 
     constexpr uint32_t max = 1024 * 1024;
     uint8_t hdr[9];
@@ -74,7 +74,7 @@ int CoroutineClient::recv(Frame &frame, int64_t dl) noexcept {
     return 0;
 }
 
-bool CoroutineClient::manage(Frame &frame) noexcept {
+bool CoroutineClient::manage(Frame &frame) {
     Request req;
 
     req.msg.ParseFromArray(frame.msg.data(), frame.msg.size());
@@ -102,7 +102,7 @@ bool CoroutineClient::manage(Frame &frame) noexcept {
     return true;
 }
 
-bool CoroutineClient::forward(Frame &frame) noexcept {
+bool CoroutineClient::forward(Frame &frame) {
     uint8_t hdr[9] = {'F', 0, 0, 0, 0, 0, 0, 0, 0};
     *((uint32_t *) (hdr + 1)) = ::htonl(frame.msg.size());
     *((uint32_t *) (hdr + 5)) = ::htonl(frame.val.size());
@@ -115,7 +115,7 @@ bool CoroutineClient::forward(Frame &frame) noexcept {
 }
 
 int CoroutineClient::pack(std::shared_ptr<Request> &req,
-                                 Frame &frame) noexcept {
+                                 Frame &frame) {
     assert (req != nullptr);
 
     // Finish the command
@@ -144,7 +144,7 @@ int CoroutineClient::pack(std::shared_ptr<Request> &req,
     return 0;
 }
 
-coroutine void CoroutineClient::run_agent_consumer(chan done) noexcept {
+coroutine void CoroutineClient::run_agent_consumer(chan done) {
 
     assert (sock_.fileno() < 0);
     int64_t handshake_deadline = mill_now() + 5000;
@@ -200,7 +200,7 @@ coroutine void CoroutineClient::run_agent_consumer(chan done) noexcept {
     chs(done, int, SIGNAL_AGENT_STOP);
 }
 
-coroutine void CoroutineClient::run_agent_producer(chan done) noexcept {
+coroutine void CoroutineClient::run_agent_producer(chan done) {
     Frame frame;
     while (running_) {
         frame.msg.clear();
@@ -230,7 +230,7 @@ coroutine void CoroutineClient::run_agent_producer(chan done) noexcept {
     chs(done, int, SIGNAL_AGENT_STOP);
 }
 
-coroutine void CoroutineClient::run_agents() noexcept {
+coroutine void CoroutineClient::run_agents() {
     while (running_) {
         chan from_consumer = chmake(int, 0);
         mill_go(run_agent_consumer(from_consumer));
@@ -242,7 +242,7 @@ coroutine void CoroutineClient::run_agents() noexcept {
     chs(stopped_, int, SIGNAL_AGENT_STOP);
 }
 
-std::shared_ptr<Sync> CoroutineClient::Start(Exchange *ei) noexcept {
+std::shared_ptr<Sync> CoroutineClient::Start(Exchange *ei) {
     // Ensure the agents are running
     if (!running_) {
         running_ = true;

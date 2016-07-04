@@ -20,21 +20,21 @@ namespace client {
 
 class PendingExchange : public Sync {
   public:
-    PendingExchange(oio::kinetic::rpc::Exchange *e) noexcept;
+    PendingExchange(oio::kinetic::rpc::Exchange *e);
 
-    ~PendingExchange() noexcept;
+    ~PendingExchange();
 
-    void SetSequence(int64_t s) noexcept;
+    void SetSequence(int64_t s);
 
-    int64_t Sequence() const noexcept;
+    int64_t Sequence() const;
 
-    void ManageReply (oio::kinetic::rpc::Request &rep) noexcept;
+    void ManageReply (oio::kinetic::rpc::Request &rep);
 
-    std::shared_ptr<oio::kinetic::rpc::Request> MakeRequest() noexcept;
+    std::shared_ptr<oio::kinetic::rpc::Request> MakeRequest();
 
-    void Signal() noexcept;
+    void Signal();
 
-    void Wait() noexcept;
+    void Wait();
 
   private:
     oio::kinetic::rpc::Exchange *exchange_;

@@ -63,32 +63,32 @@ class CoroutineClient : public ClientInterface {
 
     CoroutineClient(const CoroutineClient &&o) = delete;
 
-    std::string Id () const noexcept;
+    std::string Id () const;
 
-    std::shared_ptr<Sync> Start(oio::kinetic::rpc::Exchange *ex) noexcept;
+    std::shared_ptr<Sync> Start(oio::kinetic::rpc::Exchange *ex);
 
     // returns errno
-    int recv(Frame &frame, int64_t dl) noexcept;
+    int recv(Frame &frame, int64_t dl);
 
-    bool manage(Frame &frame) noexcept;
+    bool manage(Frame &frame);
 
-    bool forward(Frame &frame) noexcept;
+    bool forward(Frame &frame);
 
     // Packs req in frame, and return errno
-    int pack(std::shared_ptr<oio::kinetic::rpc::Request> &req, Frame &frame) noexcept;
+    int pack(std::shared_ptr<oio::kinetic::rpc::Request> &req, Frame &frame);
 
-    NOINLINE void run_agent_consumer(struct mill_chan *done) noexcept;
+    NOINLINE void run_agent_consumer(struct mill_chan *done);
 
-    NOINLINE void run_agent_producer(struct mill_chan *done) noexcept;
+    NOINLINE void run_agent_producer(struct mill_chan *done);
 
-    NOINLINE void run_agents() noexcept;
+    NOINLINE void run_agents();
 
   public:
-    ~CoroutineClient() noexcept;
+    ~CoroutineClient();
 
-    CoroutineClient(const std::string &u) noexcept;
+    CoroutineClient(const std::string &u);
 
-    std::string debug_string() const noexcept;
+    std::string debug_string() const;
 };
 
 } // namespace client

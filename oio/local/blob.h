@@ -17,13 +17,13 @@ namespace blob {
 
 class UploadBuilder {
   public:
-    UploadBuilder() noexcept;
+    UploadBuilder();
 
-    ~UploadBuilder() noexcept;
+    ~UploadBuilder();
 
-    void Path(const std::string &path) noexcept;
+    void Path(const std::string &path);
 
-    std::unique_ptr<oio::api::blob::Upload> Build() noexcept;
+    std::unique_ptr<oio::api::blob::Upload> Build();
 
   private:
     std::string path;
@@ -31,13 +31,13 @@ class UploadBuilder {
 
 class DownloadBuilder {
   public:
-    DownloadBuilder() noexcept;
+    DownloadBuilder();
 
-    ~DownloadBuilder() noexcept;
+    ~DownloadBuilder();
 
-    void Path(const std::string &path) noexcept;
+    void Path(const std::string &path);
 
-    std::unique_ptr<oio::api::blob::Download> Build() noexcept;
+    std::unique_ptr<oio::api::blob::Download> Build();
 
   private:
     std::string path;
@@ -45,13 +45,13 @@ class DownloadBuilder {
 
 class RemovalBuilder {
   public:
-    RemovalBuilder() noexcept;
+    RemovalBuilder();
 
-    ~RemovalBuilder() noexcept;
+    ~RemovalBuilder();
 
-    void Path(const std::string &path) noexcept;
+    void Path(const std::string &path);
 
-    std::unique_ptr<oio::api::blob::Removal> Build() noexcept;
+    std::unique_ptr<oio::api::blob::Removal> Build();
 
   private:
     std::string path;
@@ -59,15 +59,15 @@ class RemovalBuilder {
 
 class ListingBuilder {
   public:
-    ListingBuilder() noexcept;
+    ListingBuilder();
 
-    ~ListingBuilder() noexcept;
+    ~ListingBuilder();
 
-    void Start(const std::string &path) noexcept;
+    void Start(const std::string &path);
 
-    void End(const std::string &path) noexcept;
+    void End(const std::string &path);
 
-    std::unique_ptr<oio::api::blob::Listing> Build() noexcept;
+    std::unique_ptr<oio::api::blob::Listing> Build();
 
   private:
     std::string start, end;

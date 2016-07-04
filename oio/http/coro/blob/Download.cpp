@@ -24,15 +24,15 @@ struct ReplyCtx {
 
 class HttpDownload : public Download {
   public:
-    HttpDownload() noexcept;
+    HttpDownload();
 
-    ~HttpDownload() noexcept;
+    ~HttpDownload();
 
-    bool IsEof() noexcept override;
+    bool IsEof() override;
 
-    Download::Status Prepare() noexcept override;
+    Download::Status Prepare() override;
 
-    int32_t Read(std::vector<uint8_t> &buf) noexcept override;
+    int32_t Read(std::vector<uint8_t> &buf) override;
 
   private:
     std::shared_ptr<MillSocket> socket;
@@ -45,19 +45,19 @@ class HttpDownload : public Download {
     ReplyCtx ctx;
 };
 
-HttpDownload::HttpDownload() noexcept: socket() {
+HttpDownload::HttpDownload(): socket() {
     memset(&settings, 0, sizeof(settings));
     http_parser_init(&parser, HTTP_RESPONSE);
     parser.data = &ctx;
 }
 
-HttpDownload::~HttpDownload() noexcept { }
+HttpDownload::~HttpDownload() { }
 
-bool HttpDownload::IsEof() noexcept {
+bool HttpDownload::IsEof() {
     return ctx.step == ReplyCtx::DONE;
 }
 
-Download::Status HttpDownload::Prepare() noexcept {
+Download::Status HttpDownload::Prepare() {
     std::vector<std::string> headers;
 
     // first line
@@ -107,7 +107,7 @@ Download::Status HttpDownload::Prepare() noexcept {
     return Download::Status::OK;
 }
 
-int32_t HttpDownload::Read(std::vector<uint8_t> &buf) noexcept {
+int32_t HttpDownload::Read(std::vector<uint8_t> &buf) {
     (void) buf;
     return -1;
 }

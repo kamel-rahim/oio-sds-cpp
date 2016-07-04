@@ -18,13 +18,13 @@ namespace rpc {
 /* Represents any RPC to a kinetic drive */
 class Exchange {
   public:
-    virtual void SetSequence(int64_t s) noexcept = 0;
+    virtual void SetSequence(int64_t s) = 0;
 
-    virtual std::shared_ptr<oio::kinetic::rpc::Request> MakeRequest() noexcept = 0;
+    virtual std::shared_ptr<oio::kinetic::rpc::Request> MakeRequest() = 0;
 
-    virtual void ManageReply(oio::kinetic::rpc::Request &rep) noexcept = 0;
+    virtual void ManageReply(oio::kinetic::rpc::Request &rep) = 0;
 
-    virtual bool Ok() const noexcept = 0;
+    virtual bool Ok() const = 0;
 };
 
 } // namespace rpc

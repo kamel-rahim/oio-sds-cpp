@@ -35,18 +35,18 @@ class Removal : public blob::Removal {
     friend class RemovalBuilder;
   public:
     Removal(std::shared_ptr<ClientFactory> f,
-            std::vector<std::string> tv) noexcept
+            std::vector<std::string> tv)
             : parallelism_factor{8}, chunkid(), targets(), factory(f), ops() {
         targets.swap(tv);
     }
 
-    virtual ~Removal() noexcept { }
+    virtual ~Removal() { }
 
-    virtual blob::Removal::Status Prepare() noexcept override;
+    virtual blob::Removal::Status Prepare() override;
 
-    virtual bool Commit() noexcept override;
+    virtual bool Commit() override;
 
-    virtual bool Abort() noexcept override;
+    virtual bool Abort() override;
 
   private:
     unsigned int parallelism_factor;
@@ -57,7 +57,7 @@ class Removal : public blob::Removal {
     std::vector<PendingDelete> ops;
 };
 
-blob::Removal::Status Removal::Prepare() noexcept {
+blob::Removal::Status Removal::Prepare() {
     ListingBuilder builder(factory);
     builder.Name(chunkid);
     for (const auto &to: targets)
@@ -89,7 +89,7 @@ blob::Removal::Status Removal::Prepare() noexcept {
     return blob::Removal::Status::OK;
 }
 
-bool Removal::Commit() noexcept {
+bool Removal::Commit() {
     DLOG(INFO) << __FUNCTION__ << " of " << ops.size() << " ops";
     // Pre-start as many parallel operations as the configured parallelism
     for (unsigned int i = 0; i < parallelism_factor && i < ops.size(); ++i)
@@ -105,33 +105,33 @@ bool Removal::Commit() noexcept {
     return true;
 }
 
-bool Removal::Abort() noexcept {
+bool Removal::Abort() {
     return false;
 }
 
-RemovalBuilder::RemovalBuilder(std::shared_ptr<ClientFactory> f) noexcept
+RemovalBuilder::RemovalBuilder(std::shared_ptr<ClientFactory> f)
         : factory(f), targets(), name() {
 }
 
-void RemovalBuilder::Name(const std::string &n) noexcept {
+void RemovalBuilder::Name(const std::string &n) {
     name.assign(n);
 }
 
-void RemovalBuilder::Name(const char *n) noexcept {
+void RemovalBuilder::Name(const char *n) {
     assert(n != nullptr);
     return Name(std::string(n));
 }
 
-void RemovalBuilder::Target(const std::string &to) noexcept {
+void RemovalBuilder::Target(const std::string &to) {
     targets.insert(to);
 }
 
-void RemovalBuilder::Target(const char *to) noexcept {
+void RemovalBuilder::Target(const char *to) {
     assert(to != nullptr);
     return Target(std::string(to));
 }
 
-std::unique_ptr<blob::Removal> RemovalBuilder::Build() noexcept {
+std::unique_ptr<blob::Removal> RemovalBuilder::Build() {
     assert(!targets.empty());
     assert(!name.empty());
 

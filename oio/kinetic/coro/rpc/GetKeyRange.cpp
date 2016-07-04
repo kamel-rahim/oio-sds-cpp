@@ -11,7 +11,7 @@ namespace proto = ::com::seagate::kinetic::proto;
 using oio::kinetic::rpc::Request;
 using oio::kinetic::rpc::GetKeyRange;
 
-GetKeyRange::GetKeyRange() noexcept: req_(), status_{false} {
+GetKeyRange::GetKeyRange(): req_(), status_{false} {
     req_.reset(new Request);
     auto h = req_->cmd.mutable_header();
     h->set_messagetype(proto::Command_MessageType_GETKEYRANGE);
@@ -23,15 +23,15 @@ GetKeyRange::GetKeyRange() noexcept: req_(), status_{false} {
 
 GetKeyRange::~GetKeyRange() { }
 
-void GetKeyRange::SetSequence(int64_t s) noexcept {
+void GetKeyRange::SetSequence(int64_t s) {
     req_->cmd.mutable_header()->set_sequence(s);
 }
 
-std::shared_ptr<Request> GetKeyRange::MakeRequest() noexcept {
+std::shared_ptr<Request> GetKeyRange::MakeRequest() {
     return req_;
 }
 
-void GetKeyRange::ManageReply(Request &rep) noexcept {
+void GetKeyRange::ManageReply(Request &rep) {
     auto code = rep.cmd.status().code();
     status_ = code == proto::Command_Status_StatusCode_SUCCESS;
     if (!status_)
@@ -40,34 +40,34 @@ void GetKeyRange::ManageReply(Request &rep) noexcept {
         out_.push_back(k);
 }
 
-void GetKeyRange::Start(const char *k) noexcept {
+void GetKeyRange::Start(const char *k) {
     req_->cmd.mutable_body()->mutable_range()->set_startkey(k);
 }
 
-void GetKeyRange::Start(const std::string &k) noexcept {
+void GetKeyRange::Start(const std::string &k) {
     req_->cmd.mutable_body()->mutable_range()->set_startkey(k);
 }
 
-void GetKeyRange::End(const char *k) noexcept {
+void GetKeyRange::End(const char *k) {
     req_->cmd.mutable_body()->mutable_range()->set_endkey(k);
 }
 
-void GetKeyRange::End(const std::string &k) noexcept {
+void GetKeyRange::End(const std::string &k) {
     req_->cmd.mutable_body()->mutable_range()->set_endkey(k);
 }
 
-void GetKeyRange::IncludeStart(bool v) noexcept {
+void GetKeyRange::IncludeStart(bool v) {
     req_->cmd.mutable_body()->mutable_range()->set_startkeyinclusive(v);
 }
 
-void GetKeyRange::IncludeEnd(bool v) noexcept {
+void GetKeyRange::IncludeEnd(bool v) {
     req_->cmd.mutable_body()->mutable_range()->set_endkeyinclusive(v);
 }
 
-void GetKeyRange::MaxItems(int32_t v) noexcept {
+void GetKeyRange::MaxItems(int32_t v) {
     req_->cmd.mutable_body()->mutable_range()->set_maxreturned(v);
 }
 
-void GetKeyRange::Steal (std::vector<std::string> &v) noexcept {
+void GetKeyRange::Steal (std::vector<std::string> &v) {
     out_.swap(v);
 }

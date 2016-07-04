@@ -50,11 +50,11 @@ class Listing {
     }
 
   public:
-    virtual ~Listing() noexcept { }
+    virtual ~Listing() { }
 
-    virtual Status Prepare() noexcept = 0;
+    virtual Status Prepare() = 0;
 
-    virtual bool Next(std::string &id, std::string &key) noexcept = 0;
+    virtual bool Next(std::string &id, std::string &key) = 0;
 };
 
 /**
@@ -93,13 +93,13 @@ class Removal {
     }
 
   public:
-    virtual ~Removal() noexcept { }
+    virtual ~Removal() { }
 
-    virtual Status Prepare() noexcept = 0;
+    virtual Status Prepare() = 0;
 
-    virtual bool Commit() noexcept = 0;
+    virtual bool Commit() = 0;
 
-    virtual bool Abort() noexcept = 0;
+    virtual bool Abort() = 0;
 };
 
 /**
@@ -154,8 +154,6 @@ class Upload {
 
     virtual bool Abort() = 0;
 
-    virtual void Flush() = 0;
-
     // buffer copied
     virtual void Write(const uint8_t *buf, uint32_t len) = 0;
 
@@ -208,13 +206,13 @@ class Download {
     }
 
   public:
-    virtual ~Download() noexcept { }
+    virtual ~Download() { }
 
-    virtual Status Prepare() noexcept = 0;
+    virtual Status Prepare() = 0;
 
-    virtual bool IsEof() noexcept = 0;
+    virtual bool IsEof() = 0;
 
-    virtual int32_t Read(std::vector<uint8_t> &buf) noexcept = 0;
+    virtual int32_t Read(std::vector<uint8_t> &buf) = 0;
 };
 
 } // namespace blob

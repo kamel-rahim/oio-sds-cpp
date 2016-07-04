@@ -187,7 +187,7 @@ class Upload {
 class Download {
   public:
     enum class Status {
-        OK, NotFound, NetworkError, ProtocolError
+        OK, NotFound, NetworkError, ProtocolError, InternalError
     };
 
     static inline const char *Status2Str(Status s) {
@@ -200,6 +200,8 @@ class Download {
                 return "Network error";
             case Status::ProtocolError:
                 return "Protocol error";
+            case Status::InternalError:
+                return "Internal error";
             default:
                 return "***invalid status***";
         }

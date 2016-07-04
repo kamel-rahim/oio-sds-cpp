@@ -113,6 +113,7 @@ static int _on_headers_complete_DOWNLOAD(http_parser *p) {
             ctx->ReplyError({503, 500, "devices unreachable"});
             return 1;
         case Download::Status::ProtocolError:
+        case Download::Status::InternalError:
             ctx->ReplyError({502, 500, "invalid reply from device"});
             return 1;
     }

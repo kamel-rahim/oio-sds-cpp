@@ -8,9 +8,15 @@
 
 using oio::local::blob::UploadBuilder;
 
-static void test_upload (void) {
+static std::string path("/tmp/blob");
+
+static void test_download(void) {
+
+}
+
+static void test_upload(void) {
     UploadBuilder builder;
-    builder.Path("/tmp/plop");
+    builder.Path(path);
     auto ul = builder.Build();
     auto rc = ul->Prepare();
     if (rc == oio::api::blob::Upload::Status::OK) {
@@ -23,11 +29,11 @@ static void test_upload (void) {
     }
 }
 
-int main (int argc, char **argv) {
+int main(int argc, char **argv) {
     (void) argc;
     google::InitGoogleLogging(argv[0]);
     FLAGS_logtostderr = true;
-
     test_upload();
+    test_download();
     return 0;
 }

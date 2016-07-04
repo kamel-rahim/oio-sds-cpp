@@ -16,7 +16,7 @@
 
 using oio::local::blob::UploadBuilder;
 
-class LocalUpload : public oio::api::blob::Upload {
+class Upload : public oio::api::blob::Upload {
     friend class UploadBuilder;
 
   public:
@@ -84,16 +84,16 @@ class LocalUpload : public oio::api::blob::Upload {
         }
     }
 
-    ~LocalUpload() {
+    ~Upload() {
         DLOG(INFO) << __FUNCTION__;
     }
 
   private:
-    FORBID_COPY_CTOR(LocalUpload);
+    FORBID_COPY_CTOR(Upload);
 
-    FORBID_MOVE_CTOR(LocalUpload);
+    FORBID_MOVE_CTOR(Upload);
 
-    LocalUpload() : path_final(), path_temp(), fd{-1} {
+    Upload() : path_final(), path_temp(), fd{-1} {
         DLOG(INFO) << __FUNCTION__;
     }
 
@@ -122,8 +122,8 @@ void UploadBuilder::Path(const std::string &p) {
 }
 
 std::unique_ptr<oio::api::blob::Upload> UploadBuilder::Build() {
-    LocalUpload *ul = new LocalUpload();
+    Upload *ul = new Upload();
     ul->path_final.assign(path);
     ul->path_temp.assign(path + ".pending");
-    return std::unique_ptr<LocalUpload>(ul);
+    return std::unique_ptr<Upload>(ul);
 }

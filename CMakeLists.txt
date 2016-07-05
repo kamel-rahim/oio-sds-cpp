@@ -25,7 +25,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -pipe -fPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GNU_SOURCE")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector-all")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector-all")
 
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -fno-inline")
 set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os")
@@ -90,8 +90,8 @@ add_library(oio-kinetic-client SHARED
         oio/http/coro/blob/Removal.cpp
         oio/http/coro/blob/Listing.cpp
 		oio/http/coro/blob.h
-        oio/local/blob/Upload.cpp
-        oio/local/blob/Download.cpp
+		oio/local/blob/Upload.cpp
+		oio/local/blob/Download.cpp
         oio/local/blob/Listing.cpp
         oio/local/blob/Removal.cpp
         oio/local/blob.h)

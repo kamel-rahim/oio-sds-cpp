@@ -92,7 +92,7 @@ static int _on_message_complete_UPLOAD(http_parser *p) {
     if (upload_rc)
         ctx->ReplySuccess();
     else
-        ctx->ReplyError({500, 400, "Upload commit failed"});
+        ctx->ReplyError({500, 400, "LocalUpload commit failed"});
 
     return 0;
 }
@@ -113,11 +113,12 @@ static int _on_headers_complete_DOWNLOAD(http_parser *p) {
             ctx->ReplyError({503, 500, "devices unreachable"});
             return 1;
         case Download::Status::ProtocolError:
-        case Download::Status::InternalError:
             ctx->ReplyError({502, 500, "invalid reply from device"});
             return 1;
+        case Download::Status::InternalError:
+            ctx->ReplyError({500, 500, "invalid reply from device"});
+            return 1;
     }
-
     abort();
     return 1;
 }
@@ -162,8 +163,10 @@ static int _on_headers_complete_REMOVAL(http_parser *p UNUSED) {
         case Removal::Status::ProtocolError:
             ctx->ReplyError({502, 500, "invalid reply from devices"});
             return 1;
+        case Removal::Status::InternalError:
+            ctx->ReplyError({500, 500, "invalid reply from devices"});
+            return 1;
     }
-
     abort();
     return 1;
 }

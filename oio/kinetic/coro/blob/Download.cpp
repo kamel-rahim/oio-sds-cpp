@@ -38,20 +38,108 @@ struct PendingGetSorter {
     }
 };
 
-class Download : public blob::Download {
+class KineticDownload : public blob::Download {
     friend class DownloadBuilder;
 
   public:
-    Download(const std::string &n, std::shared_ptr<ClientFactory> f,
-             std::vector<std::string> t);
+    KineticDownload(const std::string &n, std::shared_ptr<ClientFactory> f,
+             std::vector<std::string> t)
+            : chunkid{n}, targets(), factory{f}, running(), waiting(), done(),
+              parallel_factor{4} { targets.swap(t); };
 
-    virtual ~Download() { }
+    virtual ~KineticDownload() { }
 
-    virtual blob::Download::Status Prepare() override;
+    blob::Download::Status Prepare() override {
 
-    virtual bool IsEof() override;
+        // List the chunks
+        ListingBuilder builder(factory);
+        builder.Name(chunkid);
+        for (const auto &to: targets)
+            builder.Target(to);
 
-    virtual int32_t Read(std::vector<uint8_t> &buf) override;
+        auto listing = builder.Build();
+        switch (listing->Prepare()) {
+            case blob::Listing::Status::OK:
+                break;
+            case blob::Listing::Status::NotFound:
+                return blob::Download::Status::NotFound;
+            case blob::Listing::Status::NetworkError:
+                return blob::Download::Status::NetworkError;
+            case blob::Listing::Status::ProtocolError:
+                return blob::Download::Status::ProtocolError;
+        }
+
+        std::string id, key;
+        std::forward_list<PendingGet> chunks;
+        while (listing->Next(id, key)) {
+            std::string k(key);
+            auto dash = k.rfind('-');
+            if (dash == std::string::npos) {
+                // malformed
+                DLOG(INFO) << "Malformed [" << k << "]";
+            } else if (k[dash + 1] == '#') {
+                // Manifest
+                DLOG(INFO) << "Manifest [" << key << "]";
+            } else {
+                int size = std::stoi(k.substr(dash + 1));
+                k.resize(dash);
+                dash = k.rfind('-');
+                if (dash == std::string::npos) {
+                    // malformed
+                    DLOG(INFO) << "Malformed [" << k << "]";
+                } else {
+                    int seq = std::stoi(k.substr(dash + 1));
+                    k.resize(dash);
+                    PendingGet pg;
+                    pg.op.Key(key);
+                    pg.size = size;
+                    pg.sequence = seq;
+                    pg.client = factory->Get(id);
+                    DLOG(INFO) << "Chunk [" << key << "] seq=" << pg.sequence <<
+                    " size=" << pg.size;
+                    chunks.push_front(pg);
+                }
+            }
+        }
+        chunks.sort([](const PendingGet &p0, const PendingGet &p1) -> bool {
+            return p0.sequence < p1.sequence;
+        });
+
+        for (auto p: chunks)
+            waiting.push(p);
+
+        return blob::Download::Status::OK;
+    }
+
+    bool IsEof() override {
+        return waiting.empty() && running.empty();
+    }
+
+    int32_t Read(std::vector<uint8_t> &buf) override {
+        DLOG(INFO) << "Currently " << running.size() <<
+        " chunks downbloads running";
+        while (running.size() < parallel_factor) {
+            if (waiting.empty()) {
+                DLOG(INFO) << "No chunks in the waiting queue";
+                break;
+            } else {
+                auto pg = waiting.front();
+                pg.sync = pg.client->Start(&pg.op);
+                running.push(pg);
+                waiting.pop();
+                DLOG(INFO) << "chunk download started";
+            }
+        }
+
+        if (running.empty())
+            return 0;
+
+        auto pg = running.front();
+        running.pop();
+        pg.sync->Wait();
+        pg.op.Steal(buf);
+        return buf.size();
+    }
 
   private:
     std::string chunkid;
@@ -64,104 +152,6 @@ class Download : public blob::Download {
 
     unsigned int parallel_factor;
 };
-
-Download::Download(const std::string &n,
-                   std::shared_ptr<ClientFactory> f,
-                   std::vector<std::string> targets0)
-        : chunkid{n}, targets(), factory{f}, running(), waiting(), done(),
-          parallel_factor{4} { targets.swap(targets0); }
-
-blob::Download::Status Download::Prepare() {
-
-    // List the chunks
-    ListingBuilder builder(factory);
-    builder.Name(chunkid);
-    for (const auto &to: targets)
-        builder.Target(to);
-
-    auto listing = builder.Build();
-    switch (listing->Prepare()) {
-        case blob::Listing::Status::OK:
-            break;
-        case blob::Listing::Status::NotFound:
-            return blob::Download::Status::NotFound;
-        case blob::Listing::Status::NetworkError:
-            return blob::Download::Status::NetworkError;
-        case blob::Listing::Status::ProtocolError:
-            return blob::Download::Status::ProtocolError;
-    }
-
-    std::string id, key;
-    std::forward_list<PendingGet> chunks;
-    while (listing->Next(id, key)) {
-        std::string k(key);
-        auto dash = k.rfind('-');
-        if (dash == std::string::npos) {
-            // malformed
-            DLOG(INFO) << "Malformed [" << k << "]";
-        } else if (k[dash + 1] == '#') {
-            // Manifest
-            DLOG(INFO) << "Manifest [" << key << "]";
-        } else {
-            int size = std::stoi(k.substr(dash + 1));
-            k.resize(dash);
-            dash = k.rfind('-');
-            if (dash == std::string::npos) {
-                // malformed
-                DLOG(INFO) << "Malformed [" << k << "]";
-            } else {
-                int seq = std::stoi(k.substr(dash + 1));
-                k.resize(dash);
-                PendingGet pg;
-                pg.op.Key(key);
-                pg.size = size;
-                pg.sequence = seq;
-                pg.client = factory->Get(id);
-                DLOG(INFO) << "Chunk [" << key << "] seq=" << pg.sequence <<
-                " size=" << pg.size;
-                chunks.push_front(pg);
-            }
-        }
-    }
-    chunks.sort([](const PendingGet &p0, const PendingGet &p1) -> bool {
-        return p0.sequence < p1.sequence;
-    });
-
-    for (auto p: chunks)
-        waiting.push(p);
-
-    return blob::Download::Status::OK;
-}
-
-bool Download::IsEof() {
-    return waiting.empty() && running.empty();
-}
-
-int32_t Download::Read(std::vector<uint8_t> &buf) {
-    DLOG(INFO) << "Currently " << running.size() <<
-    " chunks downbloads running";
-    while (running.size() < parallel_factor) {
-        if (waiting.empty()) {
-            DLOG(INFO) << "No chunks in the waiting queue";
-            break;
-        } else {
-            auto pg = waiting.front();
-            pg.sync = pg.client->Start(&pg.op);
-            running.push(pg);
-            waiting.pop();
-            DLOG(INFO) << "chunk download started";
-        }
-    }
-
-    if (running.empty())
-        return 0;
-
-    auto pg = running.front();
-    running.pop();
-    pg.sync->Wait();
-    pg.op.Steal(buf);
-    return buf.size();
-}
 
 DownloadBuilder::DownloadBuilder(std::shared_ptr<ClientFactory> f):
         name(), targets(), factory(f) { }
@@ -193,5 +183,5 @@ std::unique_ptr<blob::Download> DownloadBuilder::Build() {
     std::vector<std::string> v;
     for (const auto &t: targets)
         v.emplace_back(t);
-    return std::unique_ptr<Download>(new Download(name, factory, std::move(v)));
+    return std::unique_ptr<KineticDownload>(new KineticDownload(name, factory, std::move(v)));
 }

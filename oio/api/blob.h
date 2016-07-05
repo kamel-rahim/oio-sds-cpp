@@ -74,7 +74,7 @@ class Listing {
 class Removal {
   public:
     enum class Status {
-        OK, NotFound, NetworkError, ProtocolError
+        OK, NotFound, NetworkError, ProtocolError, InternalError
     };
 
     static inline const char *Status2Str(Status s) {
@@ -87,6 +87,8 @@ class Removal {
                 return "Network error";
             case Status::ProtocolError:
                 return "Protocol error";
+            case Status::InternalError:
+                return "Internal error";
             default:
                 return "***invalid status***";
         }
@@ -104,10 +106,10 @@ class Removal {
 
 /**
  * Usage:
- * Upload *up = ...; // get an instance
+ * LocalUpload *up = ...; // get an instance
  * auto rc = up->Prepare();
- * if (rc != Upload::Status::Ok) {
- *   LOG(ERROR) << "Upload impossible: " << Upload::Status2Str(rc);
+ * if (rc != LocalUpload::Status::Ok) {
+ *   LOG(ERROR) << "LocalUpload impossible: " << LocalUpload::Status2Str(rc);
  * } else {
  *   // Iterate on chunks of data as soon as they are ready
  *   while (custom_condition)
@@ -172,15 +174,15 @@ class Upload {
 
 /**
  * Usage:
- * Download *dl = ...; // get an instance
+ * LocalDownload *dl = ...; // get an instance
  * auto rc = dl->Prepare();
  * if (rc != Downpload::Status::Ok) {
- *   LOG(ERROR) << "Download impossible: " << Download::Status2Str(rc);
+ *   LOG(ERROR) << "LocalDownload impossible: " << LocalDownload::Status2Str(rc);
  * } else {
  *   while (!dl->IsEof()) {
  *     std::vector<uint8_t> chunk;
  *     dl->Read(chunk);
- *     LOG(INFO) << "Download: " << chunk.size() << " bytes received";
+ *     LOG(INFO) << "LocalDownload: " << chunk.size() << " bytes received";
  *   }
  * }
  */

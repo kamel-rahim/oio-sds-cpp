@@ -19,17 +19,60 @@ using oio::kinetic::rpc::GetKeyRange;
 
 namespace blob = ::oio::api::blob;
 
-class Listing : public blob::Listing {
+class KineticListing : public blob::Listing {
     friend class ListingBuilder;
 
   public:
-    Listing();
+    KineticListing(): clients(), name(), items(), next_item{0} { }
 
-    ~Listing() { }
+    ~KineticListing() { }
 
-    blob::Listing::Status Prepare() override;
+    // Concurrently get the lists on each node
+    // TODO limit the parallelism to N (configurable) items
+    blob::Listing::Status Prepare() override {
+        items.clear();
+        std::vector<std::shared_ptr<GetKeyRange>> ops;
+        std::vector<std::shared_ptr<Sync>> syncs;
 
-    bool Next(std::string &id, std::string &dst) override;
+        for (auto cli: clients) {
+            auto gkr = new GetKeyRange;
+            gkr->Start(name + "-#");
+            gkr->End(name + "-X");
+            gkr->IncludeStart(true);
+            gkr->IncludeEnd(false);
+            ops.emplace_back(gkr);
+            syncs.emplace_back(cli->Start(gkr));
+        }
+        for (auto sync: syncs)
+            sync->Wait();
+
+        for (unsigned int i = 0; i < ops.size(); ++i) {
+            std::vector<std::string> keys;
+            ops[i]->Steal(keys);
+            for (auto &k: keys) {
+                // We try here to avoid copies
+                std::string s;
+                s.swap(k);
+                items.emplace_back(i, std::move(s));
+                assert(s.size() == 0);
+                assert(k.size() == 0);
+            }
+        }
+
+        if (items.empty())
+            return blob::Listing::Status::NotFound;
+        return blob::Listing::Status::OK;
+    }
+
+    bool Next(std::string &id, std::string &key) override {
+        if (next_item >= items.size())
+            return false;
+
+        const auto &item = items[next_item++];
+        id.assign(clients[std::get<0>(item)]->Id());
+        key.assign(std::get<1>(item));
+        return true;
+    }
     
   private:
     std::vector<std::shared_ptr<ClientInterface>> clients;
@@ -38,58 +81,6 @@ class Listing : public blob::Listing {
     std::vector<std::pair<int, std::string>> items;
     unsigned int next_item;
 };
-
-Listing::Listing()
-        : clients(), name(), items(), next_item{0} { }
-
-bool Listing::Next(std::string &id, std::string &key) {
-    if (next_item >= items.size())
-        return false;
-
-    const auto &item = items[next_item++];
-    id.assign(clients[std::get<0>(item)]->Id());
-    key.assign(std::get<1>(item));
-    return true;
-}
-
-// Concurrently get the lists on each node
-// TODO limit the parallelism to N (configurable) items
-blob::Listing::Status Listing::Prepare() {
-
-    items.clear();
-    std::vector<std::shared_ptr<GetKeyRange>> ops;
-    std::vector<std::shared_ptr<Sync>> syncs;
-
-    for (auto cli: clients) {
-        auto gkr = new GetKeyRange;
-        gkr->Start(name + "-#");
-        gkr->End(name + "-X");
-        gkr->IncludeStart(true);
-        gkr->IncludeEnd(false);
-        ops.emplace_back(gkr);
-        syncs.emplace_back(cli->Start(gkr));
-    }
-    for (auto sync: syncs)
-        sync->Wait();
-
-    for (unsigned int i = 0; i < ops.size(); ++i) {
-        std::vector<std::string> keys;
-        ops[i]->Steal(keys);
-        for (auto &k: keys) {
-            // We try here to avoid copies
-            std::string s;
-            s.swap(k);
-            items.emplace_back(i, std::move(s));
-            assert(s.size() == 0);
-            assert(k.size() == 0);
-        }
-    }
-
-    if (items.empty())
-        return blob::Listing::Status::NotFound;
-
-    return blob::Listing::Status::OK;
-}
 
 ListingBuilder::~ListingBuilder() { }
 
@@ -118,9 +109,9 @@ std::unique_ptr<blob::Listing> ListingBuilder::Build() {
     assert(!targets.empty());
     assert(!name.empty());
 
-    auto listing = new Listing;
+    auto listing = new KineticListing;
     listing->name.assign(name);
     for (auto to: targets)
         listing->clients.emplace_back(factory->Get(to));
-    return std::unique_ptr<Listing>(listing);
+    return std::unique_ptr<KineticListing>(listing);
 }

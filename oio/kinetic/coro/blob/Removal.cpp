@@ -31,22 +31,65 @@ struct PendingDelete {
     }
 };
 
-class Removal : public blob::Removal {
+class KineticRemoval : public blob::Removal {
     friend class RemovalBuilder;
   public:
-    Removal(std::shared_ptr<ClientFactory> f,
+    KineticRemoval(std::shared_ptr<ClientFactory> f,
             std::vector<std::string> tv)
             : parallelism_factor{8}, chunkid(), targets(), factory(f), ops() {
         targets.swap(tv);
     }
 
-    virtual ~Removal() { }
+    ~KineticRemoval() { }
 
-    virtual blob::Removal::Status Prepare() override;
+    blob::Removal::Status Prepare() override {
+        ListingBuilder builder(factory);
+        builder.Name(chunkid);
+        for (const auto &to: targets)
+            builder.Target(to);
+        auto listing = builder.Build();
 
-    virtual bool Commit() override;
+        auto rc = listing->Prepare();
+        switch (rc) {
+            case blob::Listing::Status::OK:
+                break;
+            case blob::Listing::Status::NotFound:
+                return blob::Removal::Status::NotFound;
+            case blob::Listing::Status::NetworkError:
+                return blob::Removal::Status::NetworkError;
+            case blob::Listing::Status::ProtocolError:
+                return blob::Removal::Status::ProtocolError;
+        }
 
-    virtual bool Abort() override;
+        std::string id, key;
+        while (listing->Next(id, key)) {
+            PendingDelete del;
+            del.k.assign(key);
+            del.op.Key(key);
+            del.client = factory->Get(id);
+            DLOG(INFO) << "rem("<< id << ","<< key <<")";
+            ops.push_back(del);
+        }
+
+        return blob::Removal::Status::OK;
+    }
+
+    bool Commit() override {
+        DLOG(INFO) << __FUNCTION__ << " of " << ops.size() << " ops";
+        // Pre-start as many parallel operations as the configured parallelism
+        for (unsigned int i = 0; i < parallelism_factor && i < ops.size(); ++i)
+            ops[i].Start();
+
+        for (unsigned int i = 0; i < ops.size(); ++i) {
+            ops[i].sync->Wait();
+            // an operation finished, pre-start another one
+            if (i + parallelism_factor + 1 < ops.size())
+                ops[i + parallelism_factor + 1].Start();
+        }
+        return true;
+    }
+
+    bool Abort() override { return false; }
 
   private:
     unsigned int parallelism_factor;
@@ -56,58 +99,6 @@ class Removal : public blob::Removal {
 
     std::vector<PendingDelete> ops;
 };
-
-blob::Removal::Status Removal::Prepare() {
-    ListingBuilder builder(factory);
-    builder.Name(chunkid);
-    for (const auto &to: targets)
-        builder.Target(to);
-    auto listing = builder.Build();
-
-    auto rc = listing->Prepare();
-    switch (rc) {
-        case blob::Listing::Status::OK:
-            break;
-        case blob::Listing::Status::NotFound:
-            return blob::Removal::Status::NotFound;
-        case blob::Listing::Status::NetworkError:
-            return blob::Removal::Status::NetworkError;
-        case blob::Listing::Status::ProtocolError:
-            return blob::Removal::Status::ProtocolError;
-    }
-
-    std::string id, key;
-    while (listing->Next(id, key)) {
-        PendingDelete del;
-        del.k.assign(key);
-        del.op.Key(key);
-        del.client = factory->Get(id);
-        DLOG(INFO) << "rem("<< id << ","<< key <<")";
-        ops.push_back(del);
-    }
-
-    return blob::Removal::Status::OK;
-}
-
-bool Removal::Commit() {
-    DLOG(INFO) << __FUNCTION__ << " of " << ops.size() << " ops";
-    // Pre-start as many parallel operations as the configured parallelism
-    for (unsigned int i = 0; i < parallelism_factor && i < ops.size(); ++i)
-        ops[i].Start();
-
-    for (unsigned int i = 0; i < ops.size(); ++i) {
-        ops[i].sync->Wait();
-        // an operation finished, pre-start another one
-        if (i + parallelism_factor + 1 < ops.size())
-            ops[i + parallelism_factor + 1].Start();
-    }
-
-    return true;
-}
-
-bool Removal::Abort() {
-    return false;
-}
 
 RemovalBuilder::RemovalBuilder(std::shared_ptr<ClientFactory> f)
         : factory(f), targets(), name() {
@@ -138,7 +129,7 @@ std::unique_ptr<blob::Removal> RemovalBuilder::Build() {
     std::vector<std::string> tv;
     for (const auto &t : targets)
         tv.push_back(t);
-    auto rem = new Removal(factory, std::move(tv));
+    auto rem = new KineticRemoval(factory, std::move(tv));
     rem->chunkid.assign(name);
-    return std::unique_ptr<Removal>(rem);
+    return std::unique_ptr<KineticRemoval>(rem);
 }

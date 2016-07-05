@@ -71,16 +71,16 @@ int main (int argc, char **argv) {
         builder.Field("chunk-size", std::to_string(0));
         builder.Field("chunk-hash", generate_string_random(32, hexa));
         if (ul->Commit()) {
-            DLOG(INFO) << "Upload succeeded";
+            DLOG(INFO) << "LocalUpload succeeded";
         } else {
-            LOG(ERROR) << "Upload failed (commit)";
+            LOG(ERROR) << "LocalUpload failed (commit)";
         }
     } else {
         LOG(FATAL) << "Request error (prepare): " << Upload::Status2Str(rc_prepare);
         if (ul->Abort()) {
-            DLOG(INFO) << "Upload aborted";
+            DLOG(INFO) << "LocalUpload aborted";
         } else {
-            LOG(ERROR) << "Upload abortion failed";
+            LOG(ERROR) << "LocalUpload abortion failed";
         }
     }
 

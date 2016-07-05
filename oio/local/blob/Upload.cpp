@@ -13,10 +13,11 @@
 
 #include <oio/local/blob.h>
 #include <utils/utils.h>
+#include <libmill.h>
 
 using oio::local::blob::UploadBuilder;
 
-class Upload : public oio::api::blob::Upload {
+class LocalUpload : public oio::api::blob::Upload {
     friend class UploadBuilder;
 
   public:
@@ -33,7 +34,7 @@ class Upload : public oio::api::blob::Upload {
         if (fd >= 0)
             return oio::api::blob::Upload::Status::InternalError;
 
-        fd = ::open(path_temp.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0644);
+        fd = ::open(path_temp.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_NONBLOCK, 0644);
         if (fd < 0) {
             if (errno == ENOENT) {
                 // TODO Lazy directory creation
@@ -77,23 +78,38 @@ class Upload : public oio::api::blob::Upload {
     }
 
     void Write(const uint8_t *buf, uint32_t len) override {
-        ssize_t rc = ::write(fd, buf, len);
+        ssize_t rc;
+        retry:
+        rc = ::write(fd, buf, len);
         if (rc < 0) {
-            LOG(ERROR) << "write(" << len << ") error: (" << errno << ") " <<
-            ::strerror(errno);
+            if (errno == EINTR)
+                goto retry;
+            if (errno == EAGAIN) {
+                int evt = fdwait(fd, FDW_OUT, mill_now()+1000);
+                if (evt & FDW_OUT)
+                    goto retry;
+                LOG(ERROR) << "write failed, polled mentions an error";
+            } else {
+                LOG(ERROR) << "write(" << len << ") error: (" << errno << ") " <<
+                ::strerror(errno);
+            }
+        } else if (rc < len){
+            buf += rc;
+            len -= rc;
+            goto retry;
         }
     }
 
-    ~Upload() {
+    ~LocalUpload() {
         DLOG(INFO) << __FUNCTION__;
     }
 
   private:
-    FORBID_COPY_CTOR(Upload);
+    FORBID_COPY_CTOR(LocalUpload);
 
-    FORBID_MOVE_CTOR(Upload);
+    FORBID_MOVE_CTOR(LocalUpload);
 
-    Upload() : path_final(), path_temp(), fd{-1} {
+    LocalUpload() : path_final(), path_temp(), fd{-1} {
         DLOG(INFO) << __FUNCTION__;
     }
 
@@ -122,8 +138,8 @@ void UploadBuilder::Path(const std::string &p) {
 }
 
 std::unique_ptr<oio::api::blob::Upload> UploadBuilder::Build() {
-    Upload *ul = new Upload();
+    auto ul = new LocalUpload();
     ul->path_final.assign(path);
     ul->path_temp.assign(path + ".pending");
-    return std::unique_ptr<Upload>(ul);
+    return std::unique_ptr<LocalUpload>(ul);
 }

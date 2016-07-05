@@ -25,13 +25,13 @@ using oio::kinetic::rpc::GetKeyRange;
 
 namespace blob = ::oio::api::blob;
 
-class Upload : public blob::Upload {
+class KineticUpload : public blob::Upload {
     friend class UploadBuilder;
 
 public:
-    Upload();
+    KineticUpload();
 
-    ~Upload();
+    ~KineticUpload();
 
     blob::Upload::Status Prepare() override;
 
@@ -60,19 +60,19 @@ private:
     std::map<std::string,std::string> xattr;
 };
 
-Upload::~Upload() {
+KineticUpload::~KineticUpload() {
     DLOG(INFO) << __FUNCTION__;
 }
 
-Upload::Upload(): clients(), next_client{0}, puts(), syncs() {
+KineticUpload::KineticUpload(): clients(), next_client{0}, puts(), syncs() {
     DLOG(INFO) << __FUNCTION__;
 }
 
-void Upload::SetXattr(const std::string &k, const std::string &v) {
+void KineticUpload::SetXattr(const std::string &k, const std::string &v) {
     xattr[k] = v;
 }
 
-void Upload::TriggerUpload(const std::string &suffix) {
+void KineticUpload::TriggerUpload(const std::string &suffix) {
     assert(!chunkid.empty());
     assert(clients.size() > 0);
 
@@ -92,7 +92,7 @@ void Upload::TriggerUpload(const std::string &suffix) {
     syncs.emplace_back(client->Start(put));
 }
 
-void Upload::TriggerUpload() {
+void KineticUpload::TriggerUpload() {
     std::stringstream ss;
     ss << next_client;
     ss << '-';
@@ -100,7 +100,7 @@ void Upload::TriggerUpload() {
     return TriggerUpload(ss.str());
 }
 
-void Upload::Write(const uint8_t *buf, uint32_t len) {
+void KineticUpload::Write(const uint8_t *buf, uint32_t len) {
     assert(clients.size() > 0);
 
     while (len > 0) {
@@ -124,7 +124,7 @@ void Upload::Write(const uint8_t *buf, uint32_t len) {
     yield();
 }
 
-bool Upload::Commit() {
+bool KineticUpload::Commit() {
 
     // Flush the internal buffer so that we don't mix payload with xattr
     if (buffer.size() > 0)
@@ -149,11 +149,11 @@ bool Upload::Commit() {
     return true;
 }
 
-bool Upload::Abort() {
+bool KineticUpload::Abort() {
     return true;
 }
 
-blob::Upload::Status Upload::Prepare() {
+blob::Upload::Status KineticUpload::Prepare() {
 
     // Send the same listing request to all the clients
     const std::string key_manifest(chunkid + "-#");
@@ -206,11 +206,11 @@ void UploadBuilder::BlockSize(uint32_t s) {
 std::unique_ptr<blob::Upload> UploadBuilder::Build() {
     assert(!name.empty());
 
-    Upload *ul = new Upload();
+    KineticUpload *ul = new KineticUpload();
     ul->buffer_limit = block_size;
     ul->chunkid.assign(name);
     for (const auto &to: targets)
         ul->clients.emplace_back(factory->Get(to.c_str()));
     DLOG(INFO) << __FUNCTION__ << " with " << static_cast<int>(ul->clients.size());
-    return std::unique_ptr<Upload>(ul);
+    return std::unique_ptr<KineticUpload>(ul);
 }

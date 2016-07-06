@@ -15,8 +15,8 @@
 #include <oio/kinetic/coro/rpc/Get.h>
 #include <oio/kinetic/coro/rpc/GetNext.h>
 #include <oio/kinetic/coro/rpc/GetKeyRange.h>
-#include "CoroutineClient.h"
-#include "CoroutineClientFactory.h"
+#include "oio/kinetic/coro/client/CoroutineClient.h"
+#include "oio/kinetic/coro/client/CoroutineClientFactory.h"
 
 using oio::kinetic::client::ClientInterface;
 using oio::kinetic::client::CoroutineClientFactory;

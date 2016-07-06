@@ -50,14 +50,16 @@ add_library(oio-http-parser SHARED
 		http-parser/http_parser.h)
 
 add_library(oio-kinetic-client SHARED
-        utils/MillSocket.cpp
-        utils/MillSocket.h
-        utils/Socket.cpp
-        utils/Socket.h
-        utils/Addr.cpp
-        utils/Addr.h
         utils/utils.h
         utils/utils.cpp
+        utils/Addr.h
+        utils/Addr.cpp
+        utils/Socket.h
+        utils/Socket.cpp
+        utils/MillSocket.h
+        utils/MillSocket.cpp
+        utils/Http.h
+        utils/Http.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/kinetic.pb.cc
         ${CMAKE_CURRENT_BINARY_DIR}/kinetic.pb.h
         oio/api/blob.h
@@ -101,20 +103,30 @@ target_link_libraries(oio-kinetic-client
 		protobuf mill_s ${CRYPTO_LIBRARIES} ${GLOG_LIBRARIES})
 
 add_executable(test-rpc
-        oio/kinetic/coro/client/TestExchange.cpp)
+		tests/TestKineticExchange.cpp)
 target_link_libraries(test-rpc oio-kinetic-client)
 
 add_executable(test-client
-        oio/kinetic/coro/blob/TestClient.cpp)
+		tests/TestBlobKinetic.cpp)
 target_link_libraries(test-client oio-kinetic-client)
 
 add_executable(test-http
-		oio/http/coro/blob/TestHttp.cpp)
+		tests/TestBlobHttp.cpp)
 target_link_libraries(test-http oio-kinetic-client oio-http-parser)
 
 add_executable(test-local
-		oio/local/blob/TestLocal.cpp)
+		tests/TestBlobLocal.cpp)
 target_link_libraries(test-local oio-kinetic-client)
+
+add_executable(test-http-client
+		tests/TestHttpClient.cpp)
+target_link_libraries(test-http-client oio-kinetic-client)
+
+add_executable(oio-kinetic-listener
+		bin/oio-kinetic-listener.cpp)
+target_link_libraries(oio-kinetic-listener
+		oio-kinetic-client
+        ${GLOG_LIBRARIES} mill_s)
 
 add_custom_command(OUTPUT
         ${CMAKE_CURRENT_BINARY_DIR}/headers.cc

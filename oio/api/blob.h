@@ -18,7 +18,7 @@ namespace blob {
 /**
  * Usage:
  * Listing *list = ...; // get an instance
- * auto rc = list->Prepare(); // mandatory step
+ * auto rc = list->WriteHeaders(); // mandatory step
  * if (rc != Listing::Status::Ok) {
  *   LOG(ERROR) << Listing::Status2Str(rc);
  * } else {
@@ -60,7 +60,7 @@ class Listing {
 /**
  * Usage:
  * Removal *rem = ...; // get an instance
- * auto rc = rem->Prepare();
+ * auto rc = rem->WriteHeaders();
  * if (rc != Removal::Status::Ok) {
  *   LOG(ERROR) << Removal::Status2Str(rc);
  * } else {
@@ -107,7 +107,7 @@ class Removal {
 /**
  * Usage:
  * LocalUpload *up = ...; // get an instance
- * auto rc = up->Prepare();
+ * auto rc = up->WriteHeaders();
  * if (rc != LocalUpload::Status::Ok) {
  *   LOG(ERROR) << "LocalUpload impossible: " << LocalUpload::Status2Str(rc);
  * } else {
@@ -175,7 +175,7 @@ class Upload {
 /**
  * Usage:
  * LocalDownload *dl = ...; // get an instance
- * auto rc = dl->Prepare();
+ * auto rc = dl->WriteHeaders();
  * if (rc != Downpload::Status::Ok) {
  *   LOG(ERROR) << "LocalDownload impossible: " << LocalDownload::Status2Str(rc);
  * } else {

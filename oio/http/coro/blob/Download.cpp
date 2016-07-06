@@ -7,22 +7,16 @@
 #include <cstring>
 #include <string>
 #include <sstream>
-#include <sys/uio.h>
-#include <libmill.h>
-#include <http-parser/http_parser.h>
-#include <utils/MillSocket.h>
 #include <utils/utils.h>
-#include <libmill.h>
+#include <utils/Http.h>
 #include "oio/http/coro/blob.h"
 
 using oio::api::blob::Download;
-
-struct ReplyCtx {
-    enum { BEGIN, HEADERS, BODY, DONE} step = BEGIN;
-    std::vector<uint8_t> data;
-};
+using oio::http::coro::DownloadBuilder;
 
 class HttpDownload : public Download {
+    friend class DownloadBuilder;
+
   public:
     HttpDownload();
 
@@ -35,79 +29,82 @@ class HttpDownload : public Download {
     int32_t Read(std::vector<uint8_t> &buf) override;
 
   private:
-    std::shared_ptr<MillSocket> socket;
-    http_parser parser;
-    http_parser_settings settings;
-    std::string host;
-    std::string selector;
-    std::map<std::string,std::string> query;
-    std::map<std::string,std::string> fields;
-    ReplyCtx ctx;
+    http::Request request;
+    http::Reply reply;
 };
 
-HttpDownload::HttpDownload(): socket() {
-    memset(&settings, 0, sizeof(settings));
-    http_parser_init(&parser, HTTP_RESPONSE);
-    parser.data = &ctx;
+HttpDownload::HttpDownload() : request(), reply() {
 }
 
-HttpDownload::~HttpDownload() { }
+HttpDownload::~HttpDownload() {
+}
 
 bool HttpDownload::IsEof() {
-    return ctx.step == ReplyCtx::DONE;
+    return reply.Get().step == http::Reply::Step::Done;
 }
 
 Download::Status HttpDownload::Prepare() {
-    std::vector<std::string> headers;
 
-    // first line
-    do {
-        std::stringstream ss;
-        ss << "GET " << selector;
-        if (!query.empty()) {
-            bool first = true;
-            for (const auto &e: query) {
-                ss << (first ? "?" : "&") << e.first << "=" << e.second;
-                first = false;
-            }
-        }
-        ss << " HTTP/1.1\r\n";
-        headers.emplace_back(ss.str());
-    } while (0);
-
-    do {
-        std::stringstream ss;
-        ss << "Host: " << host << "\r\n";
-        headers.emplace_back(ss.str());
-    } while (0);
-
-    headers.emplace_back("Content-Length: 0\r\n");
-
-    // Headers
-    if (!fields.empty()) {
-        for (const auto &e: fields) {
-            std::stringstream ss;
-            ss << RAWX_HDR_PREFIX << e.first << ": " << e.second << "\r\n";
-            headers.emplace_back(ss.str());
-        }
+    auto rc = request.WriteHeaders();
+    if (rc != http::Code::OK && rc != http::Code::Done) {
+        if (rc == http::Code::NetworkError)
+            return Download::Status::NetworkError;
+        return Download::Status::InternalError;
     }
 
-    headers.emplace_back("\r\n");
-
-    std::vector<iovec> iov;
-    for (auto &h: headers) {
-        struct iovec item = STRING_IOV(h);
-        iov.emplace_back(item);
+    rc = request.FinishRequest();
+    if (rc != http::Code::OK && rc != http::Code::Done) {
+        if (rc == http::Code::NetworkError)
+            return Download::Status::NetworkError;
+        return Download::Status::InternalError;
     }
 
-    bool rc_send = socket->send(iov.data(), iov.size(), mill_now()+1000);
-    if (!rc_send)
-        return Download::Status::NetworkError;
+    rc = reply.ReadHeaders();
+    if (rc != http::Code::OK && rc != http::Code::Done) {
+        if (rc == http::Code::NetworkError)
+            return Download::Status::NetworkError;
+        return Download::Status::InternalError;
+    }
 
     return Download::Status::OK;
 }
 
 int32_t HttpDownload::Read(std::vector<uint8_t> &buf) {
-    (void) buf;
-    return -1;
+    buf.clear();
+    reply.AppendBody(buf);
+    return buf.size();
+}
+
+DownloadBuilder::DownloadBuilder() {
+}
+
+DownloadBuilder::~DownloadBuilder() {
+}
+
+void DownloadBuilder::Field(const std::string &k, const std::string &v) {
+    fields[k] = v;
+}
+
+void DownloadBuilder::Host(const std::string &s) {
+    host.assign(s);
+}
+
+void DownloadBuilder::Name(const std::string &s) {
+    name.assign(s);
+}
+
+std::shared_ptr<oio::api::blob::Download> DownloadBuilder::Build(
+        std::shared_ptr<MillSocket> socket) {
+    auto dl = new HttpDownload;
+    dl->request.Socket(socket);
+    dl->request.Method("GET");
+    dl->request.Selector(name);
+    dl->request.Field("Host", host);
+    for (const auto &e: fields)
+        dl->request.Field(e.first, e.second);
+
+    dl->reply.Socket(socket);
+
+    std::shared_ptr<Download> shared(dl);
+    return shared;
 }

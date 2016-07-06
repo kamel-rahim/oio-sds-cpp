@@ -28,7 +28,7 @@ class LocalDownload : public oio::api::blob::Download {
 
     Status Prepare() override {
         if (fd >= 0) {
-            LOG(ERROR) << "Calling Prepare() on a ready object";
+            LOG(ERROR) << "Calling WriteHeaders() on a ready object";
             return oio::api::blob::Download::Status::InternalError;
         }
 

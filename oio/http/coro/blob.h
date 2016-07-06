@@ -18,10 +18,6 @@ namespace oio {
 namespace http {
 namespace coro {
 
-#ifndef RAWX_HDR_PREFIX
-#define RAWX_HDR_PREFIX "X-oio-chunk-meta-"
-#endif
-
 class DownloadBuilder {
   public:
     DownloadBuilder();
@@ -65,6 +61,30 @@ class UploadBuilder {
     std::string host;
     std::string name;
     int64_t content_length;
+    std::map<std::string, std::string> fields;
+    std::set<std::string> trailers;
+};
+
+class RemovalBuilder {
+  public:
+    RemovalBuilder();
+
+    ~RemovalBuilder();
+
+    void Host(const std::string &s);
+
+    void Name(const std::string &s);
+
+    void Field(const std::string &k, const std::string &v);
+
+    void Trailer(const std::string &k);
+
+    std::shared_ptr<oio::api::blob::Removal> Build(
+            std::shared_ptr<MillSocket> socket);
+
+  private:
+    std::string host;
+    std::string name;
     std::map<std::string, std::string> fields;
     std::set<std::string> trailers;
 };

@@ -52,12 +52,8 @@ add_library(oio-http-parser SHARED
 add_library(oio-kinetic-client SHARED
         utils/utils.h
         utils/utils.cpp
-        utils/Addr.h
-        utils/Addr.cpp
-        utils/Socket.h
-        utils/Socket.cpp
-        utils/MillSocket.h
-        utils/MillSocket.cpp
+        utils/net.h
+        utils/net.cpp
         utils/Http.h
         utils/Http.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/kinetic.pb.cc

@@ -91,7 +91,7 @@ Request::Request()
           socket(nullptr), content_length{-1}, sent{0} {
 }
 
-Request::Request(std::shared_ptr<MillSocket> s)
+Request::Request(std::shared_ptr<net::Socket> s)
         : method("GET"), selector("/"), fields(), query(), trailers(),
           socket(s), content_length{-1}, sent{0} {
 }
@@ -240,7 +240,7 @@ void Reply::init() {
 
 Reply::Reply() : socket(nullptr), ctx() { init(); }
 
-Reply::Reply(std::shared_ptr<MillSocket> s) : socket(s), ctx() { init(); }
+Reply::Reply(std::shared_ptr<net::Socket> s) : socket(s), ctx() { init(); }
 
 Reply::~Reply() {
 }
@@ -331,7 +331,7 @@ Code Reply::AppendBody(std::vector<uint8_t> &out) {
 Call::Call(): request(nullptr), reply(nullptr) {
 }
 
-Call::Call(std::shared_ptr<MillSocket> s) : request(s), reply(s) {
+Call::Call(std::shared_ptr<net::Socket> s) : request(s), reply(s) {
 }
 
 Call::~Call() {

@@ -13,7 +13,7 @@
 #include <queue>
 #include <cassert>
 #include <utils/utils.h>
-#include <utils/MillSocket.h>
+#include <utils/net.h>
 #include <kinetic.pb.h>
 #include <oio/kinetic/coro/rpc/Exchange.h>
 #include <oio/kinetic/coro/rpc/Request.h>
@@ -44,7 +44,7 @@ class CoroutineClient : public ClientInterface {
 
   private:
     std::string url_;
-    MillSocket sock_;
+    std::shared_ptr<net::Socket> sock_;
     int64_t cnxid_;
     uint64_t seqid_;
 

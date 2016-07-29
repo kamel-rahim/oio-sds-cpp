@@ -12,7 +12,7 @@
 #include <glog/logging.h>
 #include <http-parser/http_parser.h>
 
-#include <utils/MillSocket.h>
+#include <utils/net.h>
 #include <utils/Http.h>
 #include "oio/http/coro/blob.h"
 
@@ -103,7 +103,7 @@ void UploadBuilder::Trailer(const std::string &k) {
 }
 
 std::shared_ptr<oio::api::blob::Upload> UploadBuilder::Build(
-        std::shared_ptr<MillSocket> socket) {
+        std::shared_ptr<net::Socket> socket) {
     auto ul = new HttpUpload;
     ul->request.Socket(socket);
     ul->request.Method("PUT");

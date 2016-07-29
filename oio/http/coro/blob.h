@@ -11,7 +11,7 @@
 #include <memory>
 #include <map>
 #include <set>
-#include <utils/MillSocket.h>
+#include <utils/net.h>
 #include <oio/api/blob.h>
 
 namespace oio {
@@ -31,7 +31,7 @@ class DownloadBuilder {
     void Field(const std::string &k, const std::string &v);
 
     std::shared_ptr<oio::api::blob::Download> Build(
-            std::shared_ptr<MillSocket> socket);
+            std::shared_ptr<net::Socket> socket);
 
   private:
     std::string host;
@@ -55,7 +55,7 @@ class UploadBuilder {
     void Trailer(const std::string &k);
 
     std::shared_ptr<oio::api::blob::Upload> Build(
-            std::shared_ptr<MillSocket> socket);
+            std::shared_ptr<net::Socket> socket);
 
   private:
     std::string host;
@@ -80,7 +80,7 @@ class RemovalBuilder {
     void Trailer(const std::string &k);
 
     std::shared_ptr<oio::api::blob::Removal> Build(
-            std::shared_ptr<MillSocket> socket);
+            std::shared_ptr<net::Socket> socket);
 
   private:
     std::string host;

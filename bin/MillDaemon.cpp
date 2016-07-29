@@ -138,7 +138,7 @@ static int _on_message_complete_DOWNLOAD(http_parser *p UNUSED) {
                     BUFLEN_IOV(buf.data(), buf.size()),
                     BUF_IOV("\r\n")
             };
-            ctx->client.send(iov, 3, mill_now() + 1000);
+            ctx->client->send(iov, 3, mill_now() + 1000);
         }
     }
 
@@ -388,28 +388,30 @@ bool BlobService::Configure(const std::string &cfg) {
 NOINLINE void BlobService::Run(volatile bool &flag_running) {
     bool input_ready = true;
     while (flag_running) {
-        MillSocket client;
-        if (input_ready && front.accept(client)) {
-            mill_go(RunClient(flag_running, client));
-        } else {
-            auto events = front.poll(MILLSOCKET_EVENT_IN,
-                                     mill_now() + 1000);
-            if (events & MILLSOCKET_EVENT_ERR) {
-                DLOG(INFO) << "front.poll() error";
-                flag_running = false;
-            } else {
-                input_ready = events & MILLSOCKET_EVENT_IN;
+        net::MillSocket client;
+        if (input_ready) {
+            auto cli = front.accept();
+            if (cli->fileno() >= 0) {
+                mill_go(RunClient(flag_running, std::move(cli)));
+                continue;
             }
+        }
+        input_ready = false;
+        auto events = front.PollIn(mill_now() + 1000);
+        if (events & MILLSOCKET_ERROR) {
+            DLOG(INFO) << "front.poll() error";
+            flag_running = false;
+        } else {
+            input_ready = 0 != (events & MILLSOCKET_EVENT);
         }
     }
     chs(done, uint32_t, 0);
 }
 
 NOINLINE void BlobService::RunClient(volatile bool &flag_running,
-        MillSocket s0) {
-    BlobClient client(s0, repository);
+        std::unique_ptr<net::Socket> s0) {
+    BlobClient client(std::move(s0), repository);
     client.Run(flag_running);
-    s0.close();
 }
 
 BlobDaemon::BlobDaemon(std::shared_ptr<BlobRepository> rp)
@@ -487,15 +489,15 @@ BlobClient::~BlobClient() {
     DLOG(INFO) << __FUNCTION__;
 }
 
-BlobClient::BlobClient(const MillSocket &c,
+BlobClient::BlobClient(std::unique_ptr<net::Socket> c,
         std::shared_ptr<BlobRepository> r)
-        : client(c), repository{r} {
+        : client(std::move(c)), repository{r} {
     DLOG(INFO) << __FUNCTION__;
 }
 
 void BlobClient::Run(volatile bool &flag_running) {
 
-    LOG(INFO) << "CLIENT fd " << client.fileno();
+    LOG(INFO) << "CLIENT fd " << client->fileno();
 
     http_parser_init(&parser, HTTP_REQUEST);
     parser.data = this;
@@ -506,7 +508,7 @@ void BlobClient::Run(volatile bool &flag_running) {
     while (flag_running) {
 
         errno = EAGAIN;
-        ssize_t sr = client.read(buffer.data(), buffer.size(),
+        ssize_t sr = client->read(buffer.data(), buffer.size(),
                                  mill_now() + 1000);
 
         if (sr == -2) {
@@ -541,7 +543,7 @@ void BlobClient::Run(volatile bool &flag_running) {
         }
     }
     out:
-    DLOG(INFO) << "CLIENT " << client.fileno() << " done";
+    DLOG(INFO) << "CLIENT " << client->fileno() << " done";
 }
 
 void BlobClient::Reset() {
@@ -588,7 +590,7 @@ void BlobClient::ReplyError(SoftError err) {
             BUF_IOV("\r\n"),
             BUFLEN_IOV(payload.data(), payload.size())
     };
-    client.send(iov, 5, mill_now() + 1000);
+    client->send(iov, 5, mill_now() + 1000);
 }
 
 void BlobClient::ReplySuccess() {
@@ -601,7 +603,7 @@ void BlobClient::ReplySuccess() {
             BUF_IOV("Content-Length: 0\r\n"),
             BUF_IOV("\r\n"),
     };
-    client.send(iov, 4, mill_now() + 1000);
+    client->send(iov, 4, mill_now() + 1000);
 }
 
 void BlobClient::ReplyStream() {
@@ -614,12 +616,12 @@ void BlobClient::ReplyStream() {
             BUF_IOV("Transfer-Encoding: chunked\r\n"),
             BUF_IOV("\r\n"),
     };
-    client.send(iov, 4, mill_now() + 1000);
+    client->send(iov, 4, mill_now() + 1000);
 }
 
 void BlobClient::ReplyEndOfStream() {
     struct iovec iov = BUF_IOV("0\r\n\r\n");
-    client.send(&iov, 1, mill_now() + 1000);
+    client->send(&iov, 1, mill_now() + 1000);
 }
 
 void BlobClient::Reply100() {
@@ -636,7 +638,7 @@ void BlobClient::Reply100() {
     };
     first[5] = '0' + parser.http_major;
     first[7] = '0' + parser.http_minor;
-    client.send(iov, 3, mill_now() + 1000);
+    client->send(iov, 3, mill_now() + 1000);
 }
 
 void SoftError::Pack(std::string &dst) {

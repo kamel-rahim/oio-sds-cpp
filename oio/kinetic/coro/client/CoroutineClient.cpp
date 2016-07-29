@@ -45,7 +45,7 @@ std::string CoroutineClient::Id() const {
 
 std::string CoroutineClient::debug_string() const {
     std::stringstream ss;
-    ss << "CoroKC{sock:" << sock_.debug_string() << '}';
+    ss << "CoroKC{sock:" << sock_->Debug() << '}';
     return ss.str();
 }
 
@@ -54,7 +54,7 @@ int CoroutineClient::recv(Frame &frame, int64_t dl) {
     constexpr uint32_t max = 1024 * 1024;
     uint8_t hdr[9];
 
-    if (!sock_.read_exactly(hdr, 9, dl))
+    if (!sock_->read_exactly(hdr, 9, dl))
         return EAGAIN;
     if (hdr[0] != 'F')
         return EBADMSG;
@@ -67,9 +67,9 @@ int CoroutineClient::recv(Frame &frame, int64_t dl) {
     frame.msg.resize(lenmsg);
     frame.val.resize(lenval);
 
-    if (!sock_.read_exactly(frame.msg.data(), frame.msg.size(), dl))
+    if (!sock_->read_exactly(frame.msg.data(), frame.msg.size(), dl))
         return errno;
-    if (!sock_.read_exactly(frame.val.data(), frame.val.size(), dl))
+    if (!sock_->read_exactly(frame.val.data(), frame.val.size(), dl))
         return errno;
     return 0;
 }
@@ -111,7 +111,7 @@ bool CoroutineClient::forward(Frame &frame) {
             BUFLEN_IOV(frame.msg.data(), frame.msg.size()),
             BUFLEN_IOV(frame.val.data(), frame.val.size())
     };
-    return sock_.send(iov, 3, mill_now() + 5000);
+    return sock_->send(iov, 3, mill_now() + 5000);
 }
 
 int CoroutineClient::pack(std::shared_ptr<Request> &req,
@@ -146,15 +146,15 @@ int CoroutineClient::pack(std::shared_ptr<Request> &req,
 
 coroutine void CoroutineClient::run_agent_consumer(chan done) {
 
-    assert (sock_.fileno() < 0);
+    assert (sock_->fileno() < 0);
     int64_t handshake_deadline = mill_now() + 5000;
 
     // Wait for an established connection
-    if (0 > (sock_.connect(url_)))
+    if (0 > (sock_->connect(url_.c_str())))
         goto out;
 
     while (running_) {
-        int evt = fdwait(sock_.fileno(), FDW_OUT | FDW_IN, handshake_deadline);
+        int evt = fdwait(sock_->fileno(), FDW_OUT | FDW_IN, handshake_deadline);
         if (evt & FDW_ERR)
             goto out;
         if (evt & FDW_OUT)
@@ -209,7 +209,7 @@ coroutine void CoroutineClient::run_agent_producer(chan done) {
                 mill_in(to_agent_, int, sig):
                         if (SIGNAL_AGENT_STOP == sig) {
                             // TODO make shutdown available as a socket method
-                            ::shutdown(sock_.fileno(), SHUT_RDWR);
+                            ::shutdown(sock_->fileno(), SHUT_RDWR);
                             break;
                         } else {
                             std::shared_ptr<PendingExchange> pe(
@@ -235,7 +235,7 @@ coroutine void CoroutineClient::run_agents() {
         chan from_consumer = chmake(int, 0);
         mill_go(run_agent_consumer(from_consumer));
         (void) chr(from_consumer, int);
-        sock_.close();
+        sock_->close();
         chclose(from_consumer);
         if (running_) msleep(mill_now() + 500);
     }

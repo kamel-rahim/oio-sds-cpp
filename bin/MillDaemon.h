@@ -18,7 +18,7 @@
 #include <libmill.h>
 #include <http-parser/http_parser.h>
 
-#include <utils/MillSocket.h>
+#include <utils/net.h>
 #include <oio/api/blob.h>
 #include "headers.h"
 
@@ -71,7 +71,7 @@ struct BlobClient {
 
     ~BlobClient();
 
-    BlobClient(const MillSocket &c, std::shared_ptr<BlobRepository> r);
+    BlobClient(std::unique_ptr<net::Socket> c, std::shared_ptr<BlobRepository> r);
 
     void Run(volatile bool &flag_running);
 
@@ -90,7 +90,7 @@ struct BlobClient {
     void Reply100();
 
 
-    MillSocket client;
+    std::unique_ptr<net::Socket> client;
     std::shared_ptr<BlobRepository> repository;
 
     struct http_parser parser;
@@ -131,10 +131,10 @@ class BlobService {
     NOINLINE void Run(volatile bool &flag_running);
 
     NOINLINE void RunClient(volatile bool &flag_running,
-            MillSocket s0);
+            std::unique_ptr<net::Socket> s0);
 
   private:
-    MillSocket front;
+    net::MillSocket front;
     std::shared_ptr<BlobRepository> repository;
     chan done;
 };

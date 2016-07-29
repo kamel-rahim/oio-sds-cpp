@@ -18,7 +18,7 @@
 #include <libmill.h>
 
 #include <utils/utils.h>
-#include <utils/MillSocket.h>
+#include <utils/net.h>
 #include <utils/Http.h>
 
 #ifndef PERIOD_REG
@@ -98,7 +98,7 @@ static void push() {
     tmp.swap(REGISTRATIONS);
 
     // then forward them to the proxy
-    std::shared_ptr<MillSocket> client(new MillSocket);
+    std::shared_ptr<net::Socket> client(new net::MillSocket);
     client->connect(url_proxy);
 
     for (const auto reg: tmp) {

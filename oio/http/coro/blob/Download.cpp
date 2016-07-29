@@ -94,7 +94,7 @@ void DownloadBuilder::Name(const std::string &s) {
 }
 
 std::shared_ptr<oio::api::blob::Download> DownloadBuilder::Build(
-        std::shared_ptr<MillSocket> socket) {
+        std::shared_ptr<net::Socket> socket) {
     auto dl = new HttpDownload;
     dl->request.Socket(socket);
     dl->request.Method("GET");

@@ -16,7 +16,7 @@
 #include <http-parser/http_parser.h>
 #include <queue>
 
-#include "MillSocket.h"
+#include "net.h"
 #include "utils.h"
 
 namespace http {
@@ -40,7 +40,7 @@ class Request {
      *
      * @param s
      */
-    Request(std::shared_ptr<MillSocket> s);
+    Request(std::shared_ptr<net::Socket> s);
 
     /**
      * Destructor
@@ -75,7 +75,7 @@ class Request {
      * Replaces the underlying socket.
      * @param s the new socket.
      */
-    inline void Socket(std::shared_ptr<MillSocket> s) {
+    inline void Socket(std::shared_ptr<net::Socket> s) {
         socket = s;
     }
 
@@ -106,7 +106,7 @@ class Request {
     std::map<std::string, std::string> fields;
     std::map<std::string, std::string> query;
     std::set<std::string> trailers;
-    std::shared_ptr<MillSocket> socket;
+    std::shared_ptr<net::Socket> socket;
     int64_t content_length;
     int64_t sent;
 };
@@ -184,7 +184,7 @@ class Reply {
      *
      * @param s an established socket.
      */
-    Reply(std::shared_ptr<MillSocket> s);
+    Reply(std::shared_ptr<net::Socket> s);
 
     /**
      * Destructor.
@@ -197,7 +197,7 @@ class Reply {
      * Replaces the underlying socket.
      * @param s the new socket.
      */
-    inline void Socket(std::shared_ptr<MillSocket> s) {
+    inline void Socket(std::shared_ptr<net::Socket> s) {
         socket = s;
     }
 
@@ -250,7 +250,7 @@ class Reply {
     void init();
 
   private:
-    std::shared_ptr<MillSocket> socket;
+    std::shared_ptr<net::Socket> socket;
     Context ctx;
     http_parser_settings settings;
 };
@@ -268,7 +268,7 @@ class Call {
      * Constructor of a HTTP call linked with a specific socket.
      * @param s the socket to be used
      */
-    Call(std::shared_ptr<MillSocket> s);
+    Call(std::shared_ptr<net::Socket> s);
 
     FORBID_COPY_CTOR(Call);
     FORBID_MOVE_CTOR(Call);
@@ -278,7 +278,7 @@ class Call {
      */
     ~Call();
 
-    Call &Socket(std::shared_ptr<MillSocket> s) {
+    Call &Socket(std::shared_ptr<net::Socket> s) {
         request.Socket(s);
         reply.Socket(s);
 		return *this;

@@ -7,7 +7,7 @@
 #include <glog/logging.h>
 #include <libmill.h>
 #include <utils/utils.h>
-#include <utils/MillSocket.h>
+#include <utils/net.h>
 #include <oio/http/coro/blob.h>
 
 using oio::http::coro::UploadBuilder;
@@ -58,8 +58,8 @@ int main (int argc, char **argv) {
     builder.Trailer("chunk-size");
     builder.Trailer("chunk-hash");
 
-    std::shared_ptr<MillSocket> socket(new MillSocket);
-    if (!socket->connect(host)) {
+    std::shared_ptr<net::Socket> socket(new net::MillSocket);
+    if (!socket->connect(host.c_str())) {
         LOG(FATAL) << "Connection error";
         return 1;
     }

@@ -9,19 +9,29 @@
 #include <signal.h>
 
 #include <glog/logging.h>
-#include <utils/MillSocket.h>
+#include <utils/net.h>
 #include <utils/Http.h>
 
-static void round (std::shared_ptr<MillSocket> socket) {
+static void round (std::shared_ptr<net::Socket> socket) {
     std::string out;
     http::Call call;
     call.Socket(socket)
             .Method("GET")
             .Selector("/v3.0/OPENIO/conscience/list")
             .Query("type", "echo")
-            .Field("k", "v");
+            .Field("Connection", "keep-alive");
     auto rc = call.Run("{}", out);
     LOG(INFO) << "HTTP rc=" << rc << " reply=" << out;
+}
+
+static void cycle (net::Socket *sptr, const char *url) {
+    std::shared_ptr<net::Socket> socket(sptr);
+    assert(socket->connect(url));
+    socket->setnodelay();
+    socket->setquickack();
+    for (int i=0; i<3 ;++i) {
+        round(socket);
+    }
 }
 
 int main (int argc, char **argv) {
@@ -37,14 +47,9 @@ int main (int argc, char **argv) {
     assert(argc > 1);
 
     LOG(INFO) << "Hello!";
-
-    std::shared_ptr<MillSocket> socket(new MillSocket);
-    assert(socket->connect(argv[1]));
-
-    for (int i=0; i<3 ;++i)
-        round(socket);
-
-    socket->close();
+    cycle(new net::MillSocket, argv[1]);
+    cycle(new net::RegularSocket, argv[1]);
     LOG(INFO) << "Bye!";
+
     return 0;
 }

@@ -78,7 +78,7 @@ void RemovalBuilder::Trailer(const std::string &k) {
 }
 
 std::shared_ptr<oio::api::blob::Removal> RemovalBuilder::Build(
-        std::shared_ptr<MillSocket> socket) {
+        std::shared_ptr<net::Socket> socket) {
     auto rm = new HttpRemoval;
     rm->rpc.Socket(socket).Method("DELETE").Selector(name).Field("Host", host);
     std::shared_ptr<Removal> shared(rm);

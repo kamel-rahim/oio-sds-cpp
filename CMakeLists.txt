@@ -83,11 +83,8 @@ add_library(oio-kinetic-client SHARED
         oio/kinetic/coro/blob/Download.cpp
         oio/kinetic/coro/blob/Removal.cpp
         oio/kinetic/coro/blob/Listing.cpp
-		oio/http/coro/blob/Upload.cpp
-		oio/http/coro/blob/Download.cpp
-        oio/http/coro/blob/Removal.cpp
-        oio/http/coro/blob/Listing.cpp
-		oio/http/coro/blob.h
+        oio/http/imperative/blob.cpp
+        oio/http/imperative/blob.h
 		oio/local/blob/Upload.cpp
 		oio/local/blob/Download.cpp
         oio/local/blob/Listing.cpp

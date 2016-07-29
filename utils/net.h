@@ -55,6 +55,27 @@ struct Addr {
 };
 
 /**
+ * An interface for two-way communication channels.
+ */
+class Channel {
+  public:
+    virtual ~Channel() {}
+    virtual ssize_t read (uint8_t *buf, size_t len, int64_t dl) = 0;
+
+    /* Reads exactly max bytes from the current Socket */
+    virtual bool read_exactly(uint8_t *buf, size_t len, int64_t dl) = 0;
+
+    virtual bool send (struct iovec *iov, unsigned int count, int64_t dl) = 0;
+
+    virtual bool send (const uint8_t *buf, size_t len, int64_t dl) = 0;
+
+    bool send (const char *str, size_t len, int64_t dl) {
+        return this->send(reinterpret_cast<const uint8_t *>(str), len, dl);
+    }
+
+};
+
+/**
  * Wraps a file descriptor, with some of the common operations.
  */
 class Socket {

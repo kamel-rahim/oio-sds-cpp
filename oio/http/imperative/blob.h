@@ -4,8 +4,8 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
-#ifndef OIO_KINETIC_OIO_HTTP_CORO_BLOB_H
-#define OIO_KINETIC_OIO_HTTP_CORO_BLOB_H
+#ifndef OIO_KINETIC_OIO_HTTP_IMPERATIVE_BLOB_H
+#define OIO_KINETIC_OIO_HTTP_IMPERATIVE_BLOB_H
 
 #include <string>
 #include <memory>
@@ -16,7 +16,7 @@
 
 namespace oio {
 namespace http {
-namespace coro {
+namespace imperative {
 
 class DownloadBuilder {
   public:
@@ -39,7 +39,6 @@ class DownloadBuilder {
     std::map<std::string, std::string> fields;
 };
 
-
 class UploadBuilder {
   public:
     UploadBuilder();
@@ -60,7 +59,6 @@ class UploadBuilder {
   private:
     std::string host;
     std::string name;
-    int64_t content_length;
     std::map<std::string, std::string> fields;
     std::set<std::string> trailers;
 };
@@ -89,8 +87,8 @@ class RemovalBuilder {
     std::set<std::string> trailers;
 };
 
-} // namespace coro
+} // namespace imperative
 } // namespace http
 } // namespace oio
 
-#endif //OIO_KINETIC_OIO_HTTP_CORO_BLOB_H
+#endif //OIO_KINETIC_OIO_HTTP_IMPERATIVE_BLOB_H

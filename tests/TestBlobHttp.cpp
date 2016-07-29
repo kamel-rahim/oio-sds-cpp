@@ -8,9 +8,9 @@
 #include <libmill.h>
 #include <utils/utils.h>
 #include <utils/net.h>
-#include <oio/http/coro/blob.h>
+#include <oio/http/imperative/blob.h>
 
-using oio::http::coro::UploadBuilder;
+using oio::http::imperative::UploadBuilder;
 using oio::api::blob::Upload;
 
 static void _load_env (std::string &dst, const char *key) {

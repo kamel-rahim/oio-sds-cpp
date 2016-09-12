@@ -53,7 +53,16 @@ using oio::kinetic::client::Sync;
 using oio::kinetic::rpc::Exchange;
 using oio::kinetic::rpc::GetLog;
 
+struct oio_srv_stats {
+	oio_srv_stats(double c, double i, double s, double t) : cpu{c}, io{i},
+															space{s}, temp{t} {}
+	oio_srv_stats(): cpu{0}, io{0}, space{0}, temp{0} {}
+	double cpu, io, space, temp;
+};
+
 std::map<std::string, std::string> REGISTRATIONS;
+std::map<std::string, oio_srv_stats> STATS;
+
 std::string nsname;
 std::string url_proxy;
 std::string srvtype{OIO_KINE_DEFAULT_SRVTYPE};
@@ -103,31 +112,31 @@ static int make_kinetic_socket(void) {
  * @param url the network endpoint of the service
  * @return the tags for the service
  */
-static std::map<std::string, std::string>
+static NOINLINE bool
 qualify(const std::string id, const std::string url) {
-	std::map<std::string,std::string> out;
 	GetLog op;
 	auto client = factory.Get(url);
 	auto sync = client->Start(&op);
 	sync->Wait();
-	assert(op.Ok());
 	if (!op.Ok()) {
 		LOG(INFO) << "Failed to stat " << url;
+		return false;
 	} else {
+		STATS[id] = oio_srv_stats(op.getCpu(), op.getIo(), op.getSpace(),
+								  op.getTemp());
 		DLOG(INFO) << "Stat " << id << "/" << url << " -> ok";
+		return true;
 	}
-
-	return out;
 }
 
-static void push() {
+static NOINLINE void push() {
 
 	if (REGISTRATIONS.empty()) {
 		DLOG(INFO) << "No registration this turn!";
 		return;
-	} else {
-		DLOG(INFO) << "Sending " << REGISTRATIONS.size() << " registrations";
 	}
+
+	DLOG(INFO) << "Sending " << REGISTRATIONS.size() << " registrations";
 
 	std::map<std::string, std::string> registrations;
 	registrations.swap(REGISTRATIONS);
@@ -140,7 +149,7 @@ static void push() {
 		rapidjson::StringBuffer buf;
 		rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
 
-		qualify(reg.first, reg.second);
+		auto qualified = qualify(reg.first, reg.second);
 
 		// Pack the REGISTRATIONS
 		writer.StartObject();
@@ -154,6 +163,21 @@ static void push() {
 		writer.String(reg.second.c_str());
 		writer.Key("tags");
 		writer.StartObject();
+		writer.Key("tag.up");
+		if (!qualified) {
+			writer.Bool(false);
+		} else {
+			writer.Bool(true);
+			const auto st = STATS[reg.first];
+			writer.Key("stat.cpu");
+			writer.Double(st.cpu);
+			writer.Key("stat.io");
+			writer.Double(st.io);
+			writer.Key("stat.space");
+			writer.Double(st.space);
+			writer.Key("stat.temp");
+			writer.Double(st.temp);
+		}
 		writer.EndObject();
 		writer.Key("score");
 		writer.Int(-2);
@@ -175,7 +199,7 @@ static void push() {
 	client->close();
 }
 
-static void push_and_set_deadline(int64_t &next_dl) {
+static NOINLINE void push_and_set_deadline(int64_t &next_dl) {
 	push();
 	assert(REGISTRATIONS.empty());
 	next_dl = mill_now() + PERIOD_REG;

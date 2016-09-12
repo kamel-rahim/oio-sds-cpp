@@ -12,13 +12,24 @@
 #include <utils/net.h>
 #include <utils/Http.h>
 
-static void round (std::shared_ptr<net::Socket> socket) {
+static void post(std::shared_ptr<net::Socket> socket) {
+	std::string out;
+	http::Call call;
+	call.Socket(socket)
+			.Method("POST")
+			.Selector("/v3.0/OPENIO/conscience/unlock")
+			.Field("Connection", "keep-alive");
+	auto rc = call.Run("{\"addr\":\"127.0.0.1:6004\",\"type\":\"meta0\"}", out);
+	LOG(INFO) << "HTTP rc=" << rc << " reply=" << out;
+}
+
+static void get(std::shared_ptr<net::Socket> socket) {
     std::string out;
     http::Call call;
     call.Socket(socket)
             .Method("GET")
             .Selector("/v3.0/OPENIO/conscience/list")
-            .Query("type", "echo")
+            .Query("type", "meta0")
             .Field("Connection", "keep-alive");
     auto rc = call.Run("{}", out);
     LOG(INFO) << "HTTP rc=" << rc << " reply=" << out;
@@ -30,8 +41,10 @@ static void cycle (net::Socket *sptr, const char *url) {
     socket->setnodelay();
     socket->setquickack();
     for (int i=0; i<3 ;++i) {
-        round(socket);
+		post(socket);
+		get(socket);
     }
+	socket->close();
 }
 
 int main (int argc, char **argv) {

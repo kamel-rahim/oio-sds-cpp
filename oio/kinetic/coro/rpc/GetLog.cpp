@@ -4,15 +4,17 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
+#include <glog/logging.h>
 #include <utils/utils.h>
 #include <kinetic.pb.h>
 #include "GetLog.h"
+
 
 namespace proto = ::com::seagate::kinetic::proto;
 
 using oio::kinetic::rpc::GetLog;
 
-GetLog::GetLog(): Exchange() {
+GetLog::GetLog(): Exchange(), cpu{0}, temp{0}, space{0}, io{0} {
     auto h = req_->cmd.mutable_header();
     h->set_messagetype(proto::Command_MessageType_GETLOG);
 	auto types = req_->cmd.mutable_body()->mutable_getlog()->mutable_types();
@@ -26,28 +28,40 @@ GetLog::~GetLog() {
 
 void GetLog::ManageReply(oio::kinetic::rpc::Request &rep) {
 	checkStatus(rep);
-	const auto &gl = req_->cmd.body().getlog();
+	const auto &gl = rep.cmd.body().getlog();
 
-	if (gl.has_capacity())
-		space = 1.0 - gl.capacity().portionfull();
+	if (gl.has_capacity()) {
+		const double usage = gl.capacity().portionfull();
+		space = 100.0 * (1.0 - usage);
+	} else {
+		LOG(ERROR) << "no capacity returned";
+	}
 
 	if (!gl.temperatures().empty()) {
-		for (const auto &t : gl.temperatures()) {
-			const double min = t.minimum();
-			const double max = t.maximum() - min;
-			const double cur = t.current() - min;
-			temp = 1.0 - (cur / max);
+		double t0 = 100.0;
+		for (const auto &temperature : gl.temperatures()) {
+			const double min = temperature.minimum();
+			const double max = temperature.maximum() - min;
+			const double cur = temperature.current() - min;
+			const double t = 100.0 * (1.0 - (cur / max));
+			LOG(ERROR) << "temperature " << temperature.name() << " " << t;
+			t0 = std::min(t0, t);
 		}
+		temp = t0;
+	} else {
+		LOG(ERROR) << "no temperature returned";
 	}
 
 	if (!gl.utilizations().empty()) {
 		for (const auto &u: gl.utilizations()) {
-			const double val = 1.0 - u.value();
-			if (u.name().compare(0, 3, "CPU"))
+			const double val = 100.0 * (1.0 - u.value());
+			if (0 == u.name().compare(0, 3, "CPU"))
 				cpu = val;
-			if (u.name().compare(0, 2, "HD"))
+			if (0 == u.name().compare(0, 2, "HD"))
 				io = val;
 		}
+	} else {
+		LOG(ERROR) << "no cpu/disk utilization returned";
 	}
 }
 

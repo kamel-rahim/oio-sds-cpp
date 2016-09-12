@@ -9,8 +9,7 @@
 using oio::kinetic::rpc::GetNext;
 namespace proto = ::com::seagate::kinetic::proto;
 
-GetNext::GetNext(): req_(), out_(), status_{false} {
-    req_.reset(new Request);
+GetNext::GetNext(): Exchange(), out_() {
     auto h = req_->cmd.mutable_header();
     h->set_messagetype(proto::Command_MessageType_GETNEXT);
     auto kv = req_->cmd.mutable_body()->mutable_keyvalue();
@@ -33,17 +32,6 @@ void GetNext::Steal(std::string &v) {
     out_.swap(v);
 }
 
-void GetNext::SetSequence(int64_t s) {
-    assert(nullptr != req_.get());
-    req_->cmd.mutable_header()->set_sequence(s);
-}
-
-std::shared_ptr<oio::kinetic::rpc::Request> GetNext::MakeRequest() {
-    assert(nullptr != req_.get());
-    return req_;
-}
-
 void GetNext::ManageReply(oio::kinetic::rpc::Request &rep) {
-    status_ =
-            rep.cmd.status().code() == proto::Command_Status_StatusCode_SUCCESS;
+    checkStatus(rep);
 }

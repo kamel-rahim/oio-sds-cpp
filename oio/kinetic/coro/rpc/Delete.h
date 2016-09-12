@@ -17,24 +17,16 @@ namespace rpc {
 class Delete : public oio::kinetic::rpc::Exchange {
   public:
     Delete();
+    FORBID_MOVE_CTOR(Delete);
+    FORBID_COPY_CTOR(Delete);
 
     ~Delete();
 
-    void SetSequence(int64_t s);
-
-    std::shared_ptr<oio::kinetic::rpc::Request> MakeRequest();
-
-    void ManageReply(oio::kinetic::rpc::Request &rep);
-
-    bool Ok() const { return status_; }
+    void ManageReply(oio::kinetic::rpc::Request &rep) override;
 
     void Key (const char *k);
 
     void Key (const std::string &k);
-
-  private:
-    std::shared_ptr<oio::kinetic::rpc::Request> req_;
-    bool status_;
 };
 
 }

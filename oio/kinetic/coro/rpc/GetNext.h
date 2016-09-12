@@ -8,7 +8,7 @@
 #define OIO_KINETIC_GETNEXT_H
 
 #include <cstdint>
-#include <oio/kinetic/coro/client/ClientInterface.h>
+#include "Exchange.h"
 
 namespace oio {
 namespace kinetic {
@@ -17,6 +17,8 @@ namespace rpc {
 class GetNext : public oio::kinetic::rpc::Exchange {
   public:
     GetNext();
+    FORBID_MOVE_CTOR(GetNext);
+    FORBID_COPY_CTOR(GetNext);
 
     ~GetNext();
 
@@ -26,18 +28,10 @@ class GetNext : public oio::kinetic::rpc::Exchange {
 
     void Steal (std::string &v);
 
-    void SetSequence(int64_t s);
-
-    std::shared_ptr<oio::kinetic::rpc::Request> MakeRequest();
-
-    void ManageReply(oio::kinetic::rpc::Request &rep);
-
-    bool Ok() const { return status_; }
+    void ManageReply(oio::kinetic::rpc::Request &rep) override;
 
   private:
-    std::shared_ptr<oio::kinetic::rpc::Request> req_;
     std::string out_;
-    bool status_;
 };
 
 }

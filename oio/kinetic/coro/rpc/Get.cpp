@@ -12,8 +12,7 @@ using namespace oio::kinetic::client;
 using namespace oio::kinetic::rpc;
 namespace proto = ::com::seagate::kinetic::proto;
 
-Get::Get(): req_(), val_(), status_{false} {
-    req_.reset(new Request);
+Get::Get(): Exchange(), val_() {
     auto h = req_->cmd.mutable_header();
     h->set_messagetype(proto::Command_MessageType_GET);
     auto kv = req_->cmd.mutable_body()->mutable_keyvalue();
@@ -22,21 +21,13 @@ Get::Get(): req_(), val_(), status_{false} {
 
 Get::~Get() { }
 
-void Get::SetSequence(int64_t s) {
-    req_->cmd.mutable_header()->set_sequence(s);
-}
-
-std::shared_ptr<Request> Get::MakeRequest() {
-    assert(nullptr != req_.get());
-    return req_;
-}
-
 void Get::ManageReply(Request &rep) {
-    auto code = rep.cmd.status().code();
-    status_ = code == proto::Command_Status_StatusCode_SUCCESS;
-    val_.clear();
-    val_.swap(rep.value);
-    DLOG(INFO) << val_.size();
+    checkStatus(rep);
+    if (status_) {
+        val_.clear();
+        val_.swap(rep.value);
+        DLOG(INFO) << val_.size();
+    }
 }
 
 void Get::Key(const char *k) {

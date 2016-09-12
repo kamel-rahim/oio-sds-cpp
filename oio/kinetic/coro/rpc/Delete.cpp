@@ -13,8 +13,7 @@ namespace proto = ::com::seagate::kinetic::proto;
 using oio::kinetic::rpc::Request;
 using oio::kinetic::rpc::Delete;
 
-Delete::Delete(): req_(), status_{false} {
-    req_.reset(new Request);
+Delete::Delete(): Exchange() {
     auto h = req_->cmd.mutable_header();
     h->set_messagetype(proto::Command_MessageType_DELETE);
     auto kv = req_->cmd.mutable_body()->mutable_keyvalue();
@@ -24,18 +23,8 @@ Delete::Delete(): req_(), status_{false} {
 
 Delete::~Delete() { }
 
-void Delete::SetSequence(int64_t s) {
-    req_->cmd.mutable_header()->set_sequence(s);
-}
-
-std::shared_ptr<Request> Delete::MakeRequest() {
-    assert(nullptr != req_.get());
-    return req_;
-}
-
 void Delete::ManageReply(Request &rep) {
-    const auto code = rep.cmd.status().code();
-    status_ = code == proto::Command_Status_StatusCode_SUCCESS;
+    checkStatus(rep);
 }
 
 void Delete::Key (const char *k) {

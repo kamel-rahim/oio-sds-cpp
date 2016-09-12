@@ -20,6 +20,8 @@ namespace rpc {
 class Get : public oio::kinetic::rpc::Exchange {
   public:
     Get();
+    FORBID_MOVE_CTOR(Get);
+    FORBID_COPY_CTOR(Get);
 
     ~Get();
 
@@ -29,18 +31,10 @@ class Get : public oio::kinetic::rpc::Exchange {
 
     void Steal(std::vector<uint8_t> &v) { v.swap(val_); }
 
-    void SetSequence(int64_t s);
-
-    std::shared_ptr<oio::kinetic::rpc::Request> MakeRequest();
-
-    void ManageReply(oio::kinetic::rpc::Request &rep);
-
-    bool Ok() const { return status_; }
+    void ManageReply(oio::kinetic::rpc::Request &rep) override;
 
   private:
-    std::shared_ptr<oio::kinetic::rpc::Request> req_;
     std::vector<uint8_t> val_;
-    bool status_;
 };
 
 } // namespace rpc

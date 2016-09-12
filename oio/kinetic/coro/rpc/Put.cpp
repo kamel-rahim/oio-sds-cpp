@@ -5,8 +5,8 @@
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
 #include <memory>
+#include <glog/logging.h>
 
-#include <utils/utils.h>
 #include <oio/kinetic/coro/client/ClientInterface.h>
 #include "Put.h"
 
@@ -14,8 +14,8 @@ using namespace oio::kinetic::client;
 using namespace oio::kinetic::rpc;
 namespace proto = ::com::seagate::kinetic::proto;
 
-Put::Put(): req_(nullptr) {
-    req_.reset(new Request);
+Put::Put(): Exchange() {
+    assert(req_.get() != nullptr);
     auto h = req_->cmd.mutable_header();
     h->set_messagetype(proto::Command_MessageType_PUT);
     auto kv = req_->cmd.mutable_body()->mutable_keyvalue();
@@ -28,21 +28,8 @@ Put::~Put() {
     assert(nullptr != req_.get());
 }
 
-std::shared_ptr<Request> Put::MakeRequest() {
-    assert(nullptr != req_.get());
-    auto kv = req_->cmd.mutable_body()->mutable_keyvalue();
-    kv->set_algorithm(proto::Command_Algorithm_SHA1);
-    kv->set_tag("");
-    return std::shared_ptr<Request>(req_);
-}
-
 void Put::ManageReply(Request &rep) {
-    assert(nullptr != req_.get());
-    status_ = (rep.cmd.status().code() == proto::Command_Status::SUCCESS);
-}
-
-void Put::SetSequence(int64_t s) {
-    req_->cmd.mutable_header()->set_sequence(s);
+    checkStatus(rep);
 }
 
 void Put::Key(const char *k) {

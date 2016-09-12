@@ -27,9 +27,13 @@ struct PendingGet {
     uint32_t sequence;
     uint32_t size;
     std::shared_ptr<ClientInterface> client;
-    Get op;
+    std::shared_ptr<Get> op;
     std::shared_ptr<Sync> sync;
-    bool started;
+
+    PendingGet(std::shared_ptr<ClientInterface> c, const std::string &k)
+            : sequence{0}, size{0}, client{c}, op(new Get), sync(nullptr) {
+        op->Key(k);
+    }
 };
 
 struct PendingGetSorter {
@@ -90,11 +94,9 @@ class KineticDownload : public blob::Download {
                 } else {
                     int seq = std::stoi(k.substr(dash + 1));
                     k.resize(dash);
-                    PendingGet pg;
-                    pg.op.Key(key);
+                    PendingGet pg(factory->Get(id), key);
                     pg.size = size;
                     pg.sequence = seq;
-                    pg.client = factory->Get(id);
                     DLOG(INFO) << "Chunk [" << key << "] seq=" << pg.sequence <<
                     " size=" << pg.size;
                     chunks.push_front(pg);
@@ -105,7 +107,7 @@ class KineticDownload : public blob::Download {
             return p0.sequence < p1.sequence;
         });
 
-        for (auto p: chunks)
+        for (auto &p: chunks)
             waiting.push(p);
 
         return blob::Download::Status::OK;
@@ -123,8 +125,8 @@ class KineticDownload : public blob::Download {
                 DLOG(INFO) << "No chunks in the waiting queue";
                 break;
             } else {
-                auto pg = waiting.front();
-                pg.sync = pg.client->Start(&pg.op);
+                auto &pg = waiting.front();
+                pg.sync = pg.client->Start(pg.op.get());
                 running.push(pg);
                 waiting.pop();
                 DLOG(INFO) << "chunk download started";
@@ -134,10 +136,10 @@ class KineticDownload : public blob::Download {
         if (running.empty())
             return 0;
 
-        auto pg = running.front();
+        auto &pg = running.front();
         running.pop();
         pg.sync->Wait();
-        pg.op.Steal(buf);
+        pg.op->Steal(buf);
         return buf.size();
     }
 

@@ -9,6 +9,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <utils/utils.h>
 #include "Request.h"
 
 namespace oio {
@@ -18,13 +19,27 @@ namespace rpc {
 /* Represents any RPC to a kinetic drive */
 class Exchange {
   public:
-    virtual void SetSequence(int64_t s) = 0;
+    Exchange();
+    FORBID_COPY_CTOR(Exchange);
+    FORBID_MOVE_CTOR(Exchange);
+    
+    virtual ~Exchange() {}
 
-    virtual std::shared_ptr<oio::kinetic::rpc::Request> MakeRequest() = 0;
+    void SetSequence(int64_t s);
+
+    std::shared_ptr<oio::kinetic::rpc::Request> MakeRequest();
+
+    bool Ok() const { return status_; }
 
     virtual void ManageReply(oio::kinetic::rpc::Request &rep) = 0;
 
-    virtual bool Ok() const = 0;
+  protected:
+    void checkStatus (const oio::kinetic::rpc::Request &rep);
+
+  protected:
+    std::shared_ptr<oio::kinetic::rpc::Request> req_;
+    bool status_;
+
 };
 
 } // namespace rpc

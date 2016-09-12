@@ -19,6 +19,8 @@ namespace rpc {
 class Put : public oio::kinetic::rpc::Exchange {
   public:
     Put();
+    FORBID_MOVE_CTOR(Put);
+    FORBID_COPY_CTOR(Put);
 
     ~Put();
 
@@ -35,17 +37,7 @@ class Put : public oio::kinetic::rpc::Exchange {
     void Value(const std::vector<uint8_t> &v); // copy
     void Value(std::vector<uint8_t> &v); // swap!
 
-    void SetSequence(int64_t s);
-
-    std::shared_ptr<oio::kinetic::rpc::Request> MakeRequest();
-
-    void ManageReply(oio::kinetic::rpc::Request &rep);
-
-    bool Ok() const { return status_; }
-
-  private:
-    std::shared_ptr<oio::kinetic::rpc::Request> req_;
-    bool status_;
+    void ManageReply(oio::kinetic::rpc::Request &rep) override;
 };
 
 

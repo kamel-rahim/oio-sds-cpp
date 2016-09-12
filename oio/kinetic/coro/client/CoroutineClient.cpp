@@ -14,19 +14,22 @@
 #include <libmill.h>
 
 #include "utils/utils.h"
+#include "utils/net.h"
 #include "CoroutineClient.h"
 
+using net::MillSocket;
 using oio::kinetic::rpc::Request;
 using oio::kinetic::rpc::Exchange;
 using oio::kinetic::client::CoroutineClient;
 using oio::kinetic::client::Sync;
 
 CoroutineClient::CoroutineClient(const std::string &u):
-        url_{u}, sock_(), cnxid_{0}, seqid_{2},
+        url_{u}, sock_{nullptr	}, cnxid_{0}, seqid_{2},
         waiting_(), pending_(),
         to_agent_{nullptr}, stopped_{nullptr}, running_{false} {
     to_agent_ = chmake(int, 64);
     stopped_ = chmake(int, 2);
+	sock_.reset(new MillSocket());
 }
 
 CoroutineClient::~CoroutineClient() {

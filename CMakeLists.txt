@@ -61,6 +61,7 @@ add_library(oio-kinetic-client SHARED
         oio/api/blob.h
         oio/kinetic/coro/rpc/Request.h
         oio/kinetic/coro/rpc/Exchange.h
+        oio/kinetic/coro/rpc/Exchange.cpp
         oio/kinetic/coro/rpc/Put.cpp
         oio/kinetic/coro/rpc/Put.h
         oio/kinetic/coro/rpc/Get.cpp
@@ -71,6 +72,8 @@ add_library(oio-kinetic-client SHARED
         oio/kinetic/coro/rpc/GetNext.h
         oio/kinetic/coro/rpc/Delete.cpp
         oio/kinetic/coro/rpc/Delete.h
+		oio/kinetic/coro/rpc/GetLog.cpp
+		oio/kinetic/coro/rpc/GetLog.h
         oio/kinetic/coro/client/ClientInterface.h
         oio/kinetic/coro/client/CoroutineClient.cpp
         oio/kinetic/coro/client/CoroutineClient.h

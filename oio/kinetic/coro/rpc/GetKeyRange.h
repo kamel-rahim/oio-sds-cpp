@@ -19,6 +19,8 @@ namespace rpc {
 class GetKeyRange : public oio::kinetic::rpc::Exchange {
   public:
     GetKeyRange();
+    FORBID_MOVE_CTOR(GetKeyRange);
+    FORBID_COPY_CTOR(GetKeyRange);
 
     ~GetKeyRange();
 
@@ -38,18 +40,10 @@ class GetKeyRange : public oio::kinetic::rpc::Exchange {
 
     void Steal(std::vector<std::string> &v);
 
-    void SetSequence(int64_t s);
-
-    std::shared_ptr<oio::kinetic::rpc::Request> MakeRequest();
-
-    void ManageReply(oio::kinetic::rpc::Request &rep);
-
-    bool Ok() const { return status_; }
+    void ManageReply(oio::kinetic::rpc::Request &rep) override;
 
   private:
-    std::shared_ptr<oio::kinetic::rpc::Request> req_;
     std::vector<std::string> out_;
-    bool status_;
 };
 
 } // namespace rpc

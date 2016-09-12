@@ -142,7 +142,6 @@ bool KineticUpload::Commit() {
     this->Write(reinterpret_cast<const uint8_t *>(buf.GetString()), buf.GetSize());
     TriggerUpload("#");
 
-
     // Wait for all the single PUT to finish
     for (auto &s: syncs)
         s->Wait();

@@ -15,19 +15,21 @@ using oio::kinetic::client::ClientInterface;
 using oio::kinetic::client::ClientFactory;
 using oio::kinetic::blob::RemovalBuilder;
 using oio::kinetic::blob::ListingBuilder;
-
+using oio::kinetic::rpc::Delete;
 namespace blob = ::oio::api::blob;
 
 struct PendingDelete {
-    std::string k;
-    oio::kinetic::rpc::Delete op;
-    std::shared_ptr<oio::kinetic::client::ClientInterface> client;
+    std::shared_ptr<Delete> op;
+    std::shared_ptr<ClientInterface> client;
     std::shared_ptr<Sync> sync;
 
+    PendingDelete(std::shared_ptr<ClientInterface> c, const std::string &k)
+            : op(new Delete), client{c}, sync(nullptr) {
+        op->Key(k);
+    }
     void Start() {
         assert(sync.get() == nullptr);
-        sync = client->Start(&op);
-        DLOG(INFO) << "Started rem("<< client->Id() << "," << k << ")";
+        sync = client->Start(op.get());
     }
 };
 
@@ -63,10 +65,7 @@ class KineticRemoval : public blob::Removal {
 
         std::string id, key;
         while (listing->Next(id, key)) {
-            PendingDelete del;
-            del.k.assign(key);
-            del.op.Key(key);
-            del.client = factory->Get(id);
+            PendingDelete del(factory->Get(id), key);
             DLOG(INFO) << "rem("<< id << ","<< key <<")";
             ops.push_back(del);
         }

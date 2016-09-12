@@ -8,11 +8,11 @@
 #include "GetKeyRange.h"
 
 namespace proto = ::com::seagate::kinetic::proto;
+using oio::kinetic::rpc::Exchange;
 using oio::kinetic::rpc::Request;
 using oio::kinetic::rpc::GetKeyRange;
 
-GetKeyRange::GetKeyRange(): req_(), status_{false} {
-    req_.reset(new Request);
+GetKeyRange::GetKeyRange(): Exchange() {
     auto h = req_->cmd.mutable_header();
     h->set_messagetype(proto::Command_MessageType_GETKEYRANGE);
     auto r = req_->cmd.mutable_body()->mutable_range();
@@ -23,17 +23,8 @@ GetKeyRange::GetKeyRange(): req_(), status_{false} {
 
 GetKeyRange::~GetKeyRange() { }
 
-void GetKeyRange::SetSequence(int64_t s) {
-    req_->cmd.mutable_header()->set_sequence(s);
-}
-
-std::shared_ptr<Request> GetKeyRange::MakeRequest() {
-    return req_;
-}
-
 void GetKeyRange::ManageReply(Request &rep) {
-    auto code = rep.cmd.status().code();
-    status_ = code == proto::Command_Status_StatusCode_SUCCESS;
+    checkStatus(rep);
     if (!status_)
         return;
     for (const auto &k: rep.cmd.body().range().keys())

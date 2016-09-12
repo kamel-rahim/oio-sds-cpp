@@ -125,10 +125,10 @@ class KineticDownload : public blob::Download {
                 DLOG(INFO) << "No chunks in the waiting queue";
                 break;
             } else {
-                auto &pg = waiting.front();
+                auto pg = waiting.front();
+                waiting.pop();
                 pg.sync = pg.client->Start(pg.op.get());
                 running.push(pg);
-                waiting.pop();
                 DLOG(INFO) << "chunk download started";
             }
         }
@@ -136,7 +136,7 @@ class KineticDownload : public blob::Download {
         if (running.empty())
             return 0;
 
-        auto &pg = running.front();
+        auto pg = running.front();
         running.pop();
         pg.sync->Wait();
         pg.op->Steal(buf);

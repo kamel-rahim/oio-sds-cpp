@@ -26,7 +26,6 @@ void Get::ManageReply(Request &rep) {
     if (status_) {
         val_.clear();
         val_.swap(rep.value);
-        DLOG(INFO) << val_.size();
     }
 }
 

@@ -85,10 +85,12 @@ bool CoroutineClient::manage(Frame &frame) {
         req.cmd.ParseFromArray(req.msg.commandbytes().data(),
                                req.msg.commandbytes().size());
         req.value.swap(frame.val);
-        DLOG(INFO) << "K< CMD " << req.cmd.ShortDebugString();
-        DLOG(INFO) << "K< VAL size " << req.value.size();
+        DLOG(INFO) << "K< V.size=" << req.value.size()
+				   << " CMD=" << req.cmd.ShortDebugString();
 
-        cnxid_ = req.cmd.header().connectionid();
+		const auto id = req.cmd.header().connectionid();
+		if (id > 0)
+        	cnxid_ = id;
 
         auto seqid = req.cmd.header().acksequence();
         auto cb = [seqid](const std::shared_ptr<PendingExchange> &ex) -> bool {
@@ -135,8 +137,8 @@ int CoroutineClient::pack(std::shared_ptr<Request> &req,
     req->msg.mutable_hmacauth()->set_identity(1);
     req->msg.mutable_hmacauth()->set_hmac(hmac.data(), hmac.size());
 
-    DLOG(INFO) << "K> CMD " << req->cmd.ShortDebugString();
-    DLOG(INFO) << "K> VAL size " << req->value.size();
+    DLOG(INFO) << "K> V.size=" << req->value.size()
+			   << " CMD=" << req->cmd.ShortDebugString();
 
     // Serialize the message
     frame.msg.clear();
@@ -191,8 +193,10 @@ coroutine void CoroutineClient::run_agent_consumer(chan done) {
                     break;
                 }
             }
-            else if (err != EAGAIN)
-                break;
+            else if (err != EAGAIN) {
+				DLOG(ERROR) << "Frame reading error: ("<< errno <<") " << ::strerror(errno);
+				break;
+			}
         }
         DLOG(INFO) << "K< waiting for the producer";
         (void) chr(from_producer, int);

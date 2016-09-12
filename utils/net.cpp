@@ -261,15 +261,6 @@ int Socket::accept_fd(Addr &peer, Addr &local) {
     return fd;
 }
 
-#define POLL(How,DL) do { \
-    auto evt = Poll##How(DL); \
-    if (evt & MILLSOCKET_ERROR) \
-        return false; \
-    if (evt & MILLSOCKET_EVENT) \
-        continue; \
-    return false; \
-} while (0)
-
 ssize_t Socket::read (uint8_t *buf, size_t len, int64_t dl) {
     assert(dl > 0);
     for (;;) {
@@ -295,17 +286,24 @@ ssize_t Socket::read (uint8_t *buf, size_t len, int64_t dl) {
 bool Socket::read_exactly(uint8_t *buf, size_t len, int64_t dl) {
     assert(dl > 0);
     while (len > 0) {
+		errno = 0;
         auto rc = ::read(fd_, buf, len);
         if (rc > 0)
             len -= rc;
         else if (rc == 0)
             return false;
         else {
-            if (errno == EINTR)
-                continue;
-            if (errno == EAGAIN)
-                POLL(In,dl);
-            return false;
+            if (errno == EINTR) {
+				continue;
+			} else if (errno == EAGAIN) {
+				auto evt = PollIn(dl);
+				if (evt & MILLSOCKET_ERROR)
+					return false;
+				if (!(evt & MILLSOCKET_EVENT)) // timeout
+					return false;
+			} else {
+				return false;
+			}
         }
     }
     return true;
@@ -324,9 +322,15 @@ bool Socket::send (struct iovec *iov, unsigned int count, int64_t dl) {
         if (rc < 0) {
             if (errno == EINTR)
                 continue;
-            if (errno == EAGAIN)
-                POLL(Out,dl);
-            return false;
+            else if (errno == EAGAIN) {
+				auto evt = PollOut(dl);
+				if (evt & MILLSOCKET_ERROR)
+					return false;
+				if (!(evt & MILLSOCKET_EVENT)) // timeout
+					return false;
+			} else {
+				return false;
+			}
         }
         if (rc > 0) {
             sent += rc;
@@ -360,9 +364,15 @@ bool Socket::send (const uint8_t *buf, size_t len, int64_t dl) {
         } else {
             if (errno == EINTR)
                 continue;
-            if (errno == EAGAIN)
-                POLL(Out,dl);
-            return false;
+            else if (errno == EAGAIN) {
+				auto evt = PollOut(dl);
+				if (evt & MILLSOCKET_ERROR)
+					return false;
+				else if (!(evt & MILLSOCKET_EVENT)) // timeout
+					return false;
+			} else {
+				return false;
+			}
         }
     }
     return true;

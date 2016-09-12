@@ -38,6 +38,8 @@ class Put : public oio::kinetic::rpc::Exchange {
     void Value(std::vector<uint8_t> &v); // swap!
 
     void ManageReply(oio::kinetic::rpc::Request &rep) override;
+  private:
+	void rehash();
 };
 
 

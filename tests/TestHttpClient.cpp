@@ -19,7 +19,7 @@ static void post(std::shared_ptr<net::Socket> socket) {
 			.Method("POST")
 			.Selector("/v3.0/OPENIO/conscience/unlock")
 			.Field("Connection", "keep-alive");
-	auto rc = call.Run("{\"addr\":\"127.0.0.1:6004\",\"type\":\"meta0\"}", out);
+	auto rc = call.Run("{\"addr\":\"127.0.0.1:6004\",\"type\":\"kine\"}", out);
 	LOG(INFO) << "HTTP rc=" << rc << " reply=" << out;
 }
 
@@ -29,7 +29,7 @@ static void get(std::shared_ptr<net::Socket> socket) {
     call.Socket(socket)
             .Method("GET")
             .Selector("/v3.0/OPENIO/conscience/list")
-            .Query("type", "meta0")
+            .Query("type", "kine")
             .Field("Connection", "keep-alive");
     auto rc = call.Run("{}", out);
     LOG(INFO) << "HTTP rc=" << rc << " reply=" << out;
@@ -38,8 +38,8 @@ static void get(std::shared_ptr<net::Socket> socket) {
 static void cycle (net::Socket *sptr, const char *url) {
     std::shared_ptr<net::Socket> socket(sptr);
     assert(socket->connect(url));
-    socket->setnodelay();
-    socket->setquickack();
+    assert(socket->setnodelay());
+    assert(socket->setquickack());
     for (int i=0; i<3 ;++i) {
 		post(socket);
 		get(socket);
@@ -57,12 +57,9 @@ int main (int argc, char **argv) {
     signal(SIGUSR2, SIG_IGN);
     signal(SIGHUP, SIG_IGN);
     signal(SIGPIPE, SIG_IGN);
-    assert(argc > 1);
 
-    LOG(INFO) << "Hello!";
+	assert(argc > 1);
     cycle(new net::MillSocket, argv[1]);
     cycle(new net::RegularSocket, argv[1]);
-    LOG(INFO) << "Bye!";
-
     return 0;
 }

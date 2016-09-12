@@ -8,6 +8,7 @@
 #include <glog/logging.h>
 
 #include <oio/kinetic/coro/client/ClientInterface.h>
+#include <utils/utils.h>
 #include "Put.h"
 
 using namespace oio::kinetic::client;
@@ -62,14 +63,23 @@ void Put::PostVersion(const char *p) {
 void Put::Value(const std::string &v) {
     assert(nullptr != req_.get());
     req_->value.assign(v.cbegin(), v.cend());
+	rehash();
 }
 
 void Put::Value(const std::vector<uint8_t> &v) {
     assert(nullptr != req_.get());
     req_->value.assign(v.cbegin(), v.cend());
+	rehash();
 }
 
 void Put::Value(std::vector<uint8_t> &v) {
     assert(nullptr != req_.get());
     req_->value.swap(v);
+	rehash();
+}
+
+void Put::rehash() {
+	auto sha1 = compute_sha1(req_->value);
+	auto kv = req_->cmd.mutable_body()->mutable_keyvalue();
+	kv->set_tag(sha1.data(), sha1.size());
 }

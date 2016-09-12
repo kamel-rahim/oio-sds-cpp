@@ -23,7 +23,7 @@ class Get : public oio::kinetic::rpc::Exchange {
     FORBID_MOVE_CTOR(Get);
     FORBID_COPY_CTOR(Get);
 
-    ~Get();
+    virtual ~Get();
 
     void Key(const char *k);
 
@@ -31,7 +31,7 @@ class Get : public oio::kinetic::rpc::Exchange {
 
     void Steal(std::vector<uint8_t> &v) { v.swap(val_); }
 
-    void ManageReply(oio::kinetic::rpc::Request &rep) override;
+    virtual void ManageReply(oio::kinetic::rpc::Request &rep) override;
 
   private:
     std::vector<uint8_t> val_;

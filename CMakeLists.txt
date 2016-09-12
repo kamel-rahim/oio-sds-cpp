@@ -25,7 +25,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -pipe -fPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GNU_SOURCE")
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector-all")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector-all")
 
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -fno-inline")
 set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os")
@@ -95,33 +95,26 @@ add_library(oio-kinetic-client SHARED
         oio/local/blob.h)
 
 target_link_libraries(oio-kinetic-client
-		oio-http-parser
+        oio-http-parser
 		protobuf mill_s ${CRYPTO_LIBRARIES} ${GLOG_LIBRARIES})
 
-add_executable(test-rpc
-		tests/TestKineticExchange.cpp)
-target_link_libraries(test-rpc oio-kinetic-client)
+add_executable(test-kinetic-rpc tests/TestKineticExchange.cpp)
+target_link_libraries(test-kinetic-rpc oio-kinetic-client)
 
-add_executable(test-client
-		tests/TestBlobKinetic.cpp)
-target_link_libraries(test-client oio-kinetic-client)
+add_executable(test-blob-kinetic tests/TestBlobKinetic.cpp)
+target_link_libraries(test-blob-kinetic oio-kinetic-client)
 
-add_executable(test-http
-		tests/TestBlobHttp.cpp)
-target_link_libraries(test-http oio-kinetic-client oio-http-parser)
+add_executable(test-blob-http tests/TestBlobHttp.cpp)
+target_link_libraries(test-blob-http oio-kinetic-client oio-http-parser)
 
-add_executable(test-local
-		tests/TestBlobLocal.cpp)
-target_link_libraries(test-local oio-kinetic-client)
+add_executable(test-blob-local tests/TestBlobLocal.cpp)
+target_link_libraries(test-blob-local oio-kinetic-client)
 
-add_executable(test-http-client
-		tests/TestHttpClient.cpp)
+add_executable(test-http-client tests/TestHttpClient.cpp)
 target_link_libraries(test-http-client oio-kinetic-client)
 
-add_executable(oio-kinetic-listener
-		bin/oio-kinetic-listener.cpp)
-target_link_libraries(oio-kinetic-listener
-		oio-kinetic-client
+add_executable(oio-kinetic-listener bin/oio-kinetic-listener.cpp)
+target_link_libraries(oio-kinetic-listener oio-kinetic-client
         ${GLOG_LIBRARIES} mill_s)
 
 add_custom_command(OUTPUT

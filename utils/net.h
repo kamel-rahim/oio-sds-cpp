@@ -69,24 +69,31 @@ class Channel {
 
     virtual bool send (const uint8_t *buf, size_t len, int64_t dl) = 0;
 
-    bool send (const char *str, size_t len, int64_t dl) {
+    virtual bool send (const char *str, size_t len, int64_t dl) {
         return this->send(reinterpret_cast<const uint8_t *>(str), len, dl);
     }
-
 };
 
 /**
  * Wraps a file descriptor, with some of the common operations.
  */
-class Socket {
+class Socket : public Channel {
   protected:
     int fd_;
     Addr peer_;
     Addr local_;
   public:
 
-    virtual ~Socket(); // destructor
-    Socket() : fd_{-1} {} // default c'tor
+	/**
+	 * Destructor. DOESN'T CLOSE THE SOCKET
+	 */
+    virtual ~Socket() {}
+
+	/**
+	 * Default Socket constructor
+	 * @return
+	 */
+    Socket() : fd_{-1} {}
 
     /**
      * Wait for the output to be ready
@@ -116,7 +123,7 @@ class Socket {
 
     void init(int family);
 
-    void close();
+    virtual void close();
 
     bool connect(const std::string s);
 
@@ -173,18 +180,18 @@ class Socket {
      * @return -2 in case of connection closed, -1 in case of error, or number
      * of bytes written in the delay
      */
-    ssize_t read (uint8_t *buf, size_t len, int64_t dl);
+    virtual ssize_t read (uint8_t *buf, size_t len, int64_t dl) override;
 
     /* Reads exactly max bytes from the current Socket */
-    bool read_exactly(uint8_t *buf, size_t len, int64_t dl);
+    virtual bool read_exactly(uint8_t *buf, size_t len, int64_t dl) override;
 
-    bool send (struct iovec *iov, unsigned int count, int64_t dl);
+	virtual bool send (struct iovec *iov, unsigned int count, int64_t dl) override;
 
-    bool send (const uint8_t *buf, size_t len, int64_t dl);
+    virtual bool send (const uint8_t *buf, size_t len, int64_t dl) override;
 
-    bool send (const char *str, size_t len, int64_t dl) {
-        return this->send(reinterpret_cast<const uint8_t *>(str), len, dl);
-    }
+	virtual bool send (const char *str, size_t len, int64_t dl) {
+		return this->send(reinterpret_cast<const uint8_t *>(str), len, dl);
+	}
 
   private:
     FORBID_COPY_CTOR(Socket);
@@ -210,7 +217,7 @@ class RegularSocket : public Socket {
      * @return a managed valid pointer whatever, whose fileno() returns -1 in
      * case of error, and >= 0 in case of success.
      */
-    std::unique_ptr<Socket> accept() override;
+    virtual std::unique_ptr<Socket> accept() override;
 
   private:
     FORBID_MOVE_CTOR(RegularSocket);
@@ -224,21 +231,27 @@ class RegularSocket : public Socket {
  */
 class MillSocket : public Socket {
   public:
-    virtual ~MillSocket();
+    virtual ~MillSocket() {}
     MillSocket(): Socket() {}
 
     /** @see Socket.PollOut() */
-    unsigned int PollOut(int64_t dl) override;
+    virtual unsigned int PollOut(int64_t dl) override;
 
     /** @see Socket.PollIn() */
-    unsigned int PollIn(int64_t dl) override;
+    virtual unsigned int PollIn(int64_t dl) override;
 
     /**
      * Accepts a connection and build a MillSocket around the file descriptor.
      * @return a managed valid pointer whatever, whose fileno() returns -1 in
      * case of error, and >= 0 in case of success.
      */
-    std::unique_ptr<Socket> accept() override;
+    virtual std::unique_ptr<Socket> accept() override;
+
+	/**
+	 * Unregister the socket from the libMill pool, then forward the close() to
+	 * the parent object.
+	 */
+	virtual void close() override;
 
   private:
     FORBID_MOVE_CTOR(MillSocket);

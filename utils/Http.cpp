@@ -84,7 +84,7 @@ static int _on_chunk_complete(http_parser *p UNUSED) {
     return 0;
 }
 
-};
+}; // namespace http
 
 Request::Request()
         : method("GET"), selector("/"), fields(), query(), trailers(),

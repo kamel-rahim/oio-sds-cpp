@@ -270,14 +270,16 @@ class Call {
      */
     Call(std::shared_ptr<net::Socket> s);
 
-    FORBID_COPY_CTOR(Call);
-    FORBID_MOVE_CTOR(Call);
-
     /**
      * Destructor
      */
     ~Call();
 
+	/**
+	 * Tell the current HTTP call to work with the given socket.
+	 * @param s
+	 * @return
+	 */
     Call &Socket(std::shared_ptr<net::Socket> s) {
         request.Socket(s);
         reply.Socket(s);
@@ -309,6 +311,10 @@ class Call {
   protected:
     Request request;
     Reply reply;
+
+  private:
+	FORBID_COPY_CTOR(Call);
+	FORBID_MOVE_CTOR(Call);
 };
 
 } // namespace http

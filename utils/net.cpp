@@ -157,13 +157,9 @@ std::string Socket::Debug() const {
 }
 
 void Socket::reset() {
+    fd_ = -1;
     peer_.reset();
     local_.reset();
-    fd_ = -1;
-}
-
-Socket::~Socket() {
-    this->close();
 }
 
 void Socket::close() {
@@ -372,6 +368,7 @@ bool Socket::send (const uint8_t *buf, size_t len, int64_t dl) {
     return true;
 }
 
+
 static unsigned int _poll(int fd, short int evt, int64_t dl UNUSED) {
     struct pollfd pfd{fd, evt, 0};
     auto rc = ::poll(&pfd, 1, 1000);
@@ -395,6 +392,7 @@ std::unique_ptr<Socket> RegularSocket::accept() {
     return std::unique_ptr<Socket>(cli);
 }
 
+
 static unsigned int _fdwait (int fd, unsigned int evt, int64_t dl) {
     unsigned int revents = fdwait(fd, evt, dl);
     return ((revents & evt) ? MILLSOCKET_EVENT : 0U)
@@ -409,11 +407,12 @@ unsigned int MillSocket::PollOut(int64_t dl) {
     return _fdwait(fd_, FDW_OUT, dl);
 }
 
-MillSocket::~MillSocket() {
-    if (fd_ >= 0) {
-        ::fdclean(fd_);
-        this->close();
-    }
+void MillSocket::close() {
+	if (fd_ >= 0) {
+		::fdclean(fd_);
+		::close(fd_);
+		this->reset();
+	}
 }
 
 std::unique_ptr<Socket> MillSocket::accept() {

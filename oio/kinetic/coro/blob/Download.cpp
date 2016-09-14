@@ -48,8 +48,11 @@ class KineticDownload : public blob::Download {
   public:
     KineticDownload(const std::string &n, std::shared_ptr<ClientFactory> f,
              std::vector<std::string> t)
-            : chunkid{n}, targets(), factory{f}, running(), waiting(), done(),
-              parallel_factor{4} { targets.swap(t); };
+            : chunkid{n}, targets(), factory(f), running(), waiting(), done(),
+              parallel_factor{4} {
+        assert(factory.get() != nullptr);
+        targets.swap(t);
+    };
 
     virtual ~KineticDownload() { }
 
@@ -156,7 +159,9 @@ class KineticDownload : public blob::Download {
 };
 
 DownloadBuilder::DownloadBuilder(std::shared_ptr<ClientFactory> f):
-        name(), targets(), factory(f) { }
+        name(), targets(), factory(f) {
+    assert(factory.get() != nullptr);
+}
 
 DownloadBuilder::~DownloadBuilder() { }
 

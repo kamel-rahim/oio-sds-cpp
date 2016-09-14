@@ -85,7 +85,9 @@ class KineticListing : public blob::Listing {
 ListingBuilder::~ListingBuilder() { }
 
 ListingBuilder::ListingBuilder(std::shared_ptr<ClientFactory> f)
-        : factory(f), targets(), name() { }
+        : factory(f), targets(), name() {
+    assert(factory.get() != nullptr);
+}
 
 void ListingBuilder::Name(const std::string &n) {
     name.assign(n);
@@ -106,6 +108,7 @@ void ListingBuilder::Target(const char *to) {
 }
 
 std::unique_ptr<blob::Listing> ListingBuilder::Build() {
+    assert(factory.get() != nullptr);
     assert(!targets.empty());
     assert(!name.empty());
 

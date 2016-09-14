@@ -26,7 +26,7 @@ using oio::kinetic::client::CoroutineClientFactory;
 
 static volatile bool flag_running{true};
 
-static std::shared_ptr<ClientFactory> factory;
+static std::shared_ptr<ClientFactory> factory(nullptr);
 
 static void _sighandler_stop(int s UNUSED) {
     flag_running = 0;
@@ -94,6 +94,7 @@ int main(int argc, char **argv) {
     freopen("/dev/null", "a", stdout);
     mill_goprepare(1024, 16384, sizeof(void *));
 
+    factory.reset(new CoroutineClientFactory);
     std::shared_ptr<BlobRepository> repo(new KineticRepository);
     BlobDaemon daemon(repo);
     for (int i = 1; i < argc; ++i) {

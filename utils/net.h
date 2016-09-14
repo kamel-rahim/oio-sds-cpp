@@ -183,7 +183,7 @@ class Socket : public Channel {
     virtual ssize_t read (uint8_t *buf, size_t len, int64_t dl) override;
 
     /* Reads exactly max bytes from the current Socket */
-    virtual bool read_exactly(uint8_t *buf, size_t len, int64_t dl) override;
+    virtual bool read_exactly(uint8_t *buf, const size_t len, int64_t dl) override;
 
 	virtual bool send (struct iovec *iov, unsigned int count, int64_t dl) override;
 

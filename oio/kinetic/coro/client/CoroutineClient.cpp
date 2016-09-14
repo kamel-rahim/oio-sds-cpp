@@ -10,7 +10,6 @@
 #include <netinet/in.h>
 
 #include <glog/logging.h>
-#include <glog/log_severity.h>
 #include <libmill.h>
 
 #include "utils/utils.h"
@@ -23,13 +22,13 @@ using oio::kinetic::rpc::Exchange;
 using oio::kinetic::client::CoroutineClient;
 using oio::kinetic::client::Sync;
 
-CoroutineClient::CoroutineClient(const std::string &u):
-        url_{u}, sock_{nullptr	}, cnxid_{0}, seqid_{2},
+CoroutineClient::CoroutineClient(const std::string &u) :
+        url_{u}, sock_{nullptr}, cnxid_{0}, seqid_{2},
         waiting_(), pending_(),
         to_agent_{nullptr}, stopped_{nullptr}, running_{false} {
     to_agent_ = chmake(int, 64);
     stopped_ = chmake(int, 2);
-	sock_.reset(new MillSocket());
+    sock_.reset(new MillSocket());
 }
 
 CoroutineClient::~CoroutineClient() {
@@ -46,19 +45,19 @@ std::string CoroutineClient::Id() const {
     return url_;
 }
 
-std::string CoroutineClient::debug_string() const {
+std::string CoroutineClient::DebugString() const {
     std::stringstream ss;
     ss << "CoroKC{sock:" << sock_->Debug() << '}';
     return ss.str();
 }
 
-int CoroutineClient::recv(Frame &frame, int64_t dl) {
+int CoroutineClient::read_frame(Frame &frame, int64_t dl) {
 
     constexpr uint32_t max = 1024 * 1024;
     uint8_t hdr[9];
 
     if (!sock_->read_exactly(hdr, 9, dl))
-        return EAGAIN;
+        return errno;
     if (hdr[0] != 'F')
         return EBADMSG;
 
@@ -74,7 +73,23 @@ int CoroutineClient::recv(Frame &frame, int64_t dl) {
         return errno;
     if (!sock_->read_exactly(frame.val.data(), frame.val.size(), dl))
         return errno;
+
     return 0;
+}
+
+std::shared_ptr<oio::kinetic::client::PendingExchange>
+CoroutineClient::pop_rpc(int64_t seqid) {
+    auto cb = [seqid](const std::shared_ptr<PendingExchange> &ex) -> bool {
+        return seqid == ex->Sequence();
+    };
+    auto it = std::find_if(pending_.begin(), pending_.end(), cb);
+    if (it == pending_.end()) {
+        return std::shared_ptr<oio::kinetic::client::PendingExchange>(nullptr);
+    }
+
+    auto pe = *it;
+    pending_.erase(it);
+    return pe;
 }
 
 bool CoroutineClient::manage(Frame &frame) {
@@ -86,28 +101,24 @@ bool CoroutineClient::manage(Frame &frame) {
                                req.msg.commandbytes().size());
         req.value.swap(frame.val);
         DLOG(INFO) << "K< V.size=" << req.value.size()
-				   << " CMD=" << req.cmd.ShortDebugString();
+                   << " CMD=" << req.cmd.ShortDebugString();
 
-		const auto id = req.cmd.header().connectionid();
-		if (id > 0)
-        	cnxid_ = id;
+        const auto id = req.cmd.header().connectionid();
+        if (id > 0)
+            cnxid_ = id;
 
-        auto seqid = req.cmd.header().acksequence();
-        auto cb = [seqid](const std::shared_ptr<PendingExchange> &ex) -> bool {
-            return seqid == ex->Sequence();
-        };
-        auto it = std::find_if(pending_.begin(), pending_.end(), cb);
-        if (it != pending_.end()) {
-            (*it)->ManageReply(req);
-            (*it)->Signal();
-            pending_.erase(it);
+        const auto seqid = req.cmd.header().acksequence();
+        auto pe = pop_rpc(seqid);
+        if (pe.get() != nullptr) {
+            pe->ManageReply(req);
+            pe->Signal();
         }
     }
 
     return true;
 }
 
-bool CoroutineClient::forward(Frame &frame) {
+int CoroutineClient::forward(Frame &frame, int64_t dl) {
     uint8_t hdr[9] = {'F', 0, 0, 0, 0, 0, 0, 0, 0};
     *((uint32_t *) (hdr + 1)) = ::htonl(frame.msg.size());
     *((uint32_t *) (hdr + 5)) = ::htonl(frame.val.size());
@@ -116,11 +127,11 @@ bool CoroutineClient::forward(Frame &frame) {
             BUFLEN_IOV(frame.msg.data(), frame.msg.size()),
             BUFLEN_IOV(frame.val.data(), frame.val.size())
     };
-    return sock_->send(iov, 3, mill_now() + 5000);
+    return sock_->send(iov, 3, dl) ? 0 : errno;
 }
 
 int CoroutineClient::pack(std::shared_ptr<Request> &req,
-                                 Frame &frame) {
+        Frame &frame) {
     assert (req != nullptr);
 
     // Finish the command
@@ -137,8 +148,8 @@ int CoroutineClient::pack(std::shared_ptr<Request> &req,
     req->msg.mutable_hmacauth()->set_identity(1);
     req->msg.mutable_hmacauth()->set_hmac(hmac.data(), hmac.size());
 
-    DLOG(INFO) << "K> V.size=" << req->value.size()
-			   << " CMD=" << req->cmd.ShortDebugString();
+    DLOG(INFO) << "K> V.size=" << req->value.size() << " CMD="
+               << req->cmd.ShortDebugString();
 
     // Serialize the message
     frame.msg.clear();
@@ -152,24 +163,28 @@ int CoroutineClient::pack(std::shared_ptr<Request> &req,
 coroutine void CoroutineClient::run_agent_consumer(chan done) {
 
     assert (sock_->fileno() < 0);
+    int evt{0};
     int64_t handshake_deadline = mill_now() + 5000;
 
     // Wait for an established connection
-    if (0 > (sock_->connect(url_.c_str())))
+    if (0 > (sock_->connect(url_.c_str()))) {
+        DLOG(ERROR) << "K< connection error (url)";
         goto out;
-
-    while (running_) {
-        int evt = fdwait(sock_->fileno(), FDW_OUT | FDW_IN, handshake_deadline);
-        if (evt & FDW_ERR)
-            goto out;
-        if (evt & FDW_OUT)
-            break;
+    }
+    evt = sock_->PollOut(handshake_deadline);
+    if (evt & MILLSOCKET_ERROR) {
+        DLOG(ERROR) << "K< connection error (network)";
+        goto out;
+    }
+    if (!(evt & MILLSOCKET_EVENT)) { // timeout
+        DLOG(ERROR) << "K< connection timeout";
+        goto out;
     }
 
     // wait for a banner
     while (running_) {
         Frame banner;
-        int err = recv(banner, handshake_deadline);
+        int err = read_frame(banner, handshake_deadline);
         if (err == 0) {
             manage(banner);
             break;
@@ -186,66 +201,135 @@ coroutine void CoroutineClient::run_agent_consumer(chan done) {
         // consume frames from the device
         while (running_) {
             Frame frame;
-            int err = recv(frame, mill_now() + 1000);
+            int err = read_frame(frame, mill_now() + 1000);
             if (err == 0) {
                 if (!manage(frame)) {
-                    DLOG(INFO) << "Frame management error";
+                    DLOG(INFO) << "K< Frame management error";
                     break;
                 }
+            } else if (err != EAGAIN) {
+                DLOG(ERROR) << "K< Frame reading error: (" << errno << ") "
+                            << ::strerror(errno);
+                break;
             }
-            else if (err != EAGAIN) {
-				DLOG(ERROR) << "Frame reading error: ("<< errno <<") " << ::strerror(errno);
-				break;
-			}
         }
         DLOG(INFO) << "K< waiting for the producer";
         (void) chr(from_producer, int);
     }
 
-    out:
+out:
     DLOG(INFO) << "K< exiting!";
     chs(done, int, SIGNAL_AGENT_STOP);
 }
 
-coroutine void CoroutineClient::run_agent_producer(chan done) {
+void CoroutineClient::abort_rpc(
+        std::shared_ptr<oio::kinetic::client::PendingExchange> pe, int err) {
+    const auto seq = pe->SeqId();
+    pe->ManageError(err);
+    pe->Signal();
+    pop_rpc(seq);
+}
+
+void CoroutineClient::abort_all_rpc() {
+
+    LOG(INFO) << "Aborting waiting & pending RPC";
+    while (!waiting_.empty()) {
+        auto pe = waiting_.front();
+        waiting_.pop();
+        pending_.push_back(pe);
+    }
+
+    decltype(pending_) tmp;
+    tmp.swap(pending_);
+    for (auto pe: tmp)
+        pe->ManageError(ECONNRESET);
+    for (auto pe: tmp)
+        pe->Signal();
+    tmp.clear();
+}
+
+void CoroutineClient::abort_stalled_rpc(int64_t now) {
+    for (auto pe: pending_) {
+        if (now > pe->Deadline()) {
+            abort_rpc(pe, ETIMEDOUT);
+        }
+    }
+}
+
+bool CoroutineClient::start_rpc(std::shared_ptr<PendingExchange> pe) {
+
     Frame frame;
+    auto spe = pe->MakeRequest();
+    pack(spe, frame);
+
+    // the RPC must be registered before any I/O op, because those ops might
+    // cause other coroutines to be yield, and the reply be managed before the
+    // return of the forward().
+    pending_.push_back(pe);
+
+    int errcode = forward(frame, mill_now() + 1000);
+    if (errcode == 0) {
+        return true;
+    } else {
+        abort_rpc(pe, errcode);
+        return false;
+    }
+}
+
+coroutine void CoroutineClient::run_agent_producer(chan done) {
+    int64_t now = mill_now(), next_check = now + 1000;
     while (running_) {
-        frame.msg.clear();
-        frame.val.clear();
         mill_choose {
                 mill_in(to_agent_, int, sig):
-                        if (SIGNAL_AGENT_STOP == sig) {
-                            // TODO make shutdown available as a socket method
-                            ::shutdown(sock_->fileno(), SHUT_RDWR);
-                            break;
-                        } else {
-                            std::shared_ptr<PendingExchange> pe(
-                                    waiting_.front());
+                    if (SIGNAL_AGENT_STOP == sig) {
+                        DLOG(INFO) << "K> Explicit shutdown requested";
+                        // TODO make shutdown available as a socket method
+                        ::shutdown(sock_->fileno(), SHUT_RDWR);
+                        break;
+                    } else {
+                        if (!waiting_.empty()) {
+                            auto pe = waiting_.front();
                             waiting_.pop();
-                            auto spe = pe->MakeRequest();
-                            pack(spe, frame);
-                            pending_.emplace_back(std::move(pe));
-                            if (!forward(frame)) {
-                                DLOG(INFO) << "K> forward error";
+                            DLOG(INFO) << "K> RPC ready: " << pe->SeqId();
+                            if (!start_rpc(pe)) {
+                                DLOG(ERROR) << "K> Failed to send RPC";
+                                break;
                             }
                         }
+                    }
                 mill_deadline(mill_now() + 1000):
             mill_end
         }
+
+        now = mill_now();
+        // check for stalled pending jobs
+        if (now > next_check) {
+            next_check = now + 1000;
+            abort_stalled_rpc(now);
+        }
     }
+
     DLOG(INFO) << "K> exiting!";
     chs(done, int, SIGNAL_AGENT_STOP);
 }
 
 coroutine void CoroutineClient::run_agents() {
+    DLOG(INFO) << "Starting agents for " << DebugString();
     while (running_) {
         chan from_consumer = chmake(int, 0);
         mill_go(run_agent_consumer(from_consumer));
         (void) chr(from_consumer, int);
         sock_->close();
         chclose(from_consumer);
-        if (running_) msleep(mill_now() + 500);
+
+        // At this point, both the producer and the consumer coroutines
+        // been stopped. Abort all the pending operations.
+        abort_all_rpc();
+
+        if (running_)
+            msleep(mill_now() + 500);
     }
+    DLOG(INFO) << "Exited agents for " << DebugString();
     chs(stopped_, int, SIGNAL_AGENT_STOP);
 }
 
@@ -262,6 +346,7 @@ std::shared_ptr<Sync> CoroutineClient::Start(Exchange *ei) {
 
     std::shared_ptr<PendingExchange> shex(ex);
     waiting_.push(shex);
+    assert(2 == shex.use_count());
     chs(to_agent_, int, SIGNAL_AGENT_DATA);
     return shex;
 }

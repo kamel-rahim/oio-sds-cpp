@@ -4,6 +4,7 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
+#include <glog/logging.h>
 #include "Exchange.h"
 
 using oio::kinetic::rpc::Exchange;
@@ -26,4 +27,9 @@ std::shared_ptr<oio::kinetic::rpc::Request> Exchange::MakeRequest() {
 void Exchange::checkStatus(const oio::kinetic::rpc::Request &rep) {
     assert(nullptr != req_.get());
     status_ = (rep.cmd.status().code() == proto::Command_Status::SUCCESS);
+}
+
+void Exchange::ManageError(int errcode) {
+    LOG(INFO) << "RPC failed (errno=" << errcode << "): " << ::strerror(errcode);
+    status_ = false;
 }

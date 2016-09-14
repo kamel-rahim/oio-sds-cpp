@@ -33,6 +33,8 @@ class Exchange {
 
     virtual void ManageReply(oio::kinetic::rpc::Request &rep) = 0;
 
+    virtual void ManageError(int errcode);
+
   protected:
     void checkStatus (const oio::kinetic::rpc::Request &rep);
 

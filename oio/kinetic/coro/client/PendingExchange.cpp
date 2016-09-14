@@ -10,14 +10,19 @@
 
 using oio::kinetic::client::PendingExchange;
 
-PendingExchange::PendingExchange(oio::kinetic::rpc::Exchange *e):
-        exchange_(e), notification_{nullptr} {
+int64_t oio::kinetic::client::rpc_default_ttl = OIO_KINETIC_RPC_DEFAULT_TTL;
+
+PendingExchange::PendingExchange(oio::kinetic::rpc::Exchange *e) :
+        exchange_(e), notification_{nullptr}, seqid_{0} {
     notification_ = chmake(int, 1);
+    deadline_ = mill_now() + oio::kinetic::client::rpc_default_ttl;
 }
 
 PendingExchange::~PendingExchange() {
     assert(notification_ != nullptr);
     chclose(notification_);
+    exchange_ = nullptr;
+    notification_ = nullptr;
 }
 
 void PendingExchange::SetSequence(int64_t s) {
@@ -41,14 +46,17 @@ void PendingExchange::Wait() {
     (void) rc;
 }
 
-void
-PendingExchange::ManageReply(oio::kinetic::rpc::Request &rep) {
+void PendingExchange::ManageReply(oio::kinetic::rpc::Request &rep) {
     assert(exchange_ != nullptr);
     return exchange_->ManageReply(rep);
 }
 
-std::shared_ptr<oio::kinetic::rpc::Request>
-PendingExchange::MakeRequest() {
+void PendingExchange::ManageError(int errcode) {
+    assert(exchange_ != nullptr);
+    return exchange_->ManageError(errcode);
+}
+
+std::shared_ptr<oio::kinetic::rpc::Request> PendingExchange::MakeRequest() {
     assert(exchange_ != nullptr);
     return exchange_->MakeRequest();
 

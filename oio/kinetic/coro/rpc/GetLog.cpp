@@ -44,7 +44,6 @@ void GetLog::ManageReply(oio::kinetic::rpc::Request &rep) {
 			const double max = temperature.maximum() - min;
 			const double cur = temperature.current() - min;
 			const double t = 100.0 * (1.0 - (cur / max));
-			LOG(ERROR) << "temperature " << temperature.name() << " " << t;
 			t0 = std::min(t0, t);
 		}
 		temp = t0;

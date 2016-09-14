@@ -65,16 +65,68 @@ class CoroutineClient : public ClientInterface {
 
     std::string Id () const;
 
-    std::shared_ptr<Sync> Start(oio::kinetic::rpc::Exchange *ex);
+    /**
+     * @see ClientInterface::Start()
+     */
+    std::shared_ptr<Sync> Start(oio::kinetic::rpc::Exchange *ex) override;
 
-    // returns errno
-    int recv(Frame &frame, int64_t dl);
+    /**
+     * Receive enough bytes from the socket and unpack them int a Framee
+     * @param frame
+     * @param dl the deadline for the whole operation
+     * @return
+     */
+    int read_frame(Frame &frame, int64_t dl);
 
+    /**
+     * Manage the frame just received from the socket
+     * @param frame
+     * @return
+     */
     bool manage(Frame &frame);
 
-    bool forward(Frame &frame);
+    /**
+     * Send the frame over the socket and return errno
+     * @param frame
+     * @param dl the deadline for the whole operation
+     * @return errno
+     */
+    int forward(Frame &frame, int64_t dl);
 
-    // Packs req in frame, and return errno
+    /**
+     * Start the RPC right out of the queue
+     * @param pe
+     * @return if the communication was possible
+     */
+    bool start_rpc(std::shared_ptr<oio::kinetic::client::PendingExchange> pe);
+
+    /**
+     * Remove the RPC from the pending list and notify the caller the error
+     * occured.
+     * @param pe the RPC to be removed and signaled.
+     * @param errcode  the error that occured.
+     */
+    void abort_rpc(std::shared_ptr<oio::kinetic::client::PendingExchange> pe, int errcode);
+
+    /**
+     * Call abort_rpc(ECONNRESET) on all the pending and waiting RPC
+     */
+    void abort_all_rpc();
+
+    /**
+     * Call abort_rpc(ETIMEDOUT) on all the RPC whose deadline has been reached
+     * @param now the pivot time to compare to the deadlines
+     */
+    void abort_stalled_rpc(int64_t now);
+
+    std::shared_ptr<oio::kinetic::client::PendingExchange> pop_rpc(int64_t id);
+
+    /**
+     * Packs req in frame, and return errno
+     * @param req the request to be packed
+     * @param frame the structure
+     * @return the error that occured
+     */
     int pack(std::shared_ptr<oio::kinetic::rpc::Request> &req, Frame &frame);
 
     NOINLINE void run_agent_consumer(struct mill_chan *done);
@@ -88,7 +140,7 @@ class CoroutineClient : public ClientInterface {
 
     CoroutineClient(const std::string &u);
 
-    std::string debug_string() const;
+    std::string DebugString() const;
 };
 
 } // namespace client

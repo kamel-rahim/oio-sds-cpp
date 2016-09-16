@@ -103,20 +103,22 @@ RemovalBuilder::RemovalBuilder(std::shared_ptr<ClientFactory> f)
         : factory(f), targets(), name() {
 }
 
-void RemovalBuilder::Name(const std::string &n) {
+bool RemovalBuilder::Name(const std::string &n) {
     name.assign(n);
+    return true;
 }
 
-void RemovalBuilder::Name(const char *n) {
+bool RemovalBuilder::Name(const char *n) {
     assert(n != nullptr);
     return Name(std::string(n));
 }
 
-void RemovalBuilder::Target(const std::string &to) {
+bool RemovalBuilder::Target(const std::string &to) {
     targets.insert(to);
+    return true;
 }
 
-void RemovalBuilder::Target(const char *to) {
+bool RemovalBuilder::Target(const char *to) {
     assert(to != nullptr);
     return Target(std::string(to));
 }

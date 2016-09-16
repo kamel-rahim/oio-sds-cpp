@@ -47,7 +47,7 @@ std::string CoroutineClient::Id() const {
 
 std::string CoroutineClient::DebugString() const {
     std::stringstream ss;
-    ss << "CoroKC{sock:" << sock_->Debug() << '}';
+    ss << "CoroKC{url:"<< url_ << ",sock:" << sock_->Debug() << '}';
     return ss.str();
 }
 

@@ -109,6 +109,7 @@ struct BlobClient {
     std::string last_field_name;
     std::map<std::string, std::string> xattrs;
     bool expect_100;
+    bool want_closure;
 };
 
 class BlobService {

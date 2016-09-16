@@ -25,13 +25,13 @@ class UploadBuilder {
 
     ~UploadBuilder();
 
-    void Target(const char *to);
+    bool Target(const char *to);
 
-    void Target(const std::string &to);
+    bool Target(const std::string &to);
 
-    void Name(const char *n);
+    bool Name(const char *n);
 
-    void Name(const std::string &n);
+    bool Name(const std::string &n);
 
     void BlockSize(uint32_t s);
 
@@ -51,20 +51,20 @@ class DownloadBuilder {
 
     ~DownloadBuilder();
 
-    void Name(const char *n);
+    bool Name(const char *n);
 
-    void Name(const std::string &n);
+    bool Name(const std::string &n);
 
-    void Target(const char *to);
+    bool Target(const char *to);
 
-    void Target(const std::string &to);
+    bool Target(const std::string &to);
 
     std::unique_ptr<oio::api::blob::Download> Build();
 
   private:
-    std::string name;
-    std::set<std::string> targets;
     std::shared_ptr<oio::kinetic::client::ClientFactory> factory;
+    std::set<std::string> targets;
+    std::string name;
 };
 
 class RemovalBuilder {
@@ -72,13 +72,13 @@ class RemovalBuilder {
     RemovalBuilder(
             std::shared_ptr<oio::kinetic::client::ClientFactory> f);
 
-    void Name(const std::string &n);
+    bool Name(const std::string &n);
 
-    void Name(const char *n);
+    bool Name(const char *n);
 
-    void Target(const std::string &to);
+    bool Target(const std::string &to);
 
-    void Target(const char *to);
+    bool Target(const char *to);
 
     std::unique_ptr<oio::api::blob::Removal> Build();
 
@@ -95,13 +95,13 @@ class ListingBuilder {
 
     ~ListingBuilder();
 
-    void Name(const std::string &n);
+    bool Name(const std::string &n);
 
-    void Name(const char *n);
+    bool Name(const char *n);
 
-    void Target(const std::string &to);
+    bool Target(const std::string &to);
 
-    void Target(const char *to);
+    bool Target(const char *to);
 
     std::unique_ptr<oio::api::blob::Listing> Build();
 

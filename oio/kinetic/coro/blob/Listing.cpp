@@ -89,20 +89,22 @@ ListingBuilder::ListingBuilder(std::shared_ptr<ClientFactory> f)
     assert(factory.get() != nullptr);
 }
 
-void ListingBuilder::Name(const std::string &n) {
+bool ListingBuilder::Name(const std::string &n) {
     name.assign(n);
+    return true;
 }
 
-void ListingBuilder::Name(const char *n) {
+bool ListingBuilder::Name(const char *n) {
     assert(n != nullptr);
     return Name(std::string(n));
 }
 
-void ListingBuilder::Target(const std::string &to) {
+bool ListingBuilder::Target(const std::string &to) {
     targets.insert(to);
+    return true;
 }
 
-void ListingBuilder::Target(const char *to) {
+bool ListingBuilder::Target(const char *to) {
     assert(to != nullptr);
     return Target(std::string(to));
 }

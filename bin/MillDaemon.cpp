@@ -20,6 +20,8 @@ using blob::Upload;
 using blob::Download;
 using blob::Removal;
 
+static const std::string kinetic_url_prefix("k/");
+
 static int _on_IGNORE(http_parser *p UNUSED) {
     return 0;
 }
@@ -35,6 +37,7 @@ static int _on_trailer_value_COMMON(http_parser *p, const char *b, size_t l);
 
 static int _on_headers_complete_UPLOAD(http_parser *p) {
     auto ctx = (BlobClient *) p->data;
+    DLOG(INFO) << __FUNCTION__ << " fd=" << ctx->client->fileno();
     ctx->Reply100();
     ctx->settings.on_header_field = _on_trailer_field_COMMON;
     ctx->settings.on_header_value = _on_trailer_value_COMMON;
@@ -64,12 +67,14 @@ static int _on_headers_complete_UPLOAD(http_parser *p) {
 }
 
 static int _on_body_UPLOAD(http_parser *p, const char *buf, size_t len) {
+    auto ctx = (BlobClient *) p->data;
+    DLOG(INFO) << __FUNCTION__ << " fd=" << ctx->client->fileno();
+
     // We do not manage bodies exceeding 4GB at once
     if (len >= std::numeric_limits<uint32_t>::max()) {
         return 1;
     }
 
-    auto ctx = (BlobClient *) p->data;
     ctx->upload->Write(reinterpret_cast<const uint8_t *>(buf), len);
     return 0;
 }
@@ -87,6 +92,8 @@ static int _on_chunk_complete_UPLOAD(http_parser *p UNUSED) {
 
 static int _on_message_complete_UPLOAD(http_parser *p) {
     auto ctx = (BlobClient *) p->data;
+    DLOG(INFO) << __FUNCTION__ << " fd=" << ctx->client->fileno();
+
     auto upload_rc = ctx->upload->Commit();
 
     // Trigger a reply to the client
@@ -109,18 +116,18 @@ static int _on_headers_complete_DOWNLOAD(http_parser *p) {
             return 0;
         case Download::Status::NotFound:
             ctx->ReplyError({404, 420, "blobs not found"});
-            return 1;
+            break;
         case Download::Status::NetworkError:
             ctx->ReplyError({503, 500, "devices unreachable"});
-            return 1;
+            break;
         case Download::Status::ProtocolError:
             ctx->ReplyError({502, 500, "invalid reply from device"});
-            return 1;
+            break;
         case Download::Status::InternalError:
             ctx->ReplyError({500, 500, "invalid reply from device"});
-            return 1;
+            break;
     }
-    abort();
+    ctx->settings.on_message_complete = nullptr;
     return 1;
 }
 
@@ -187,7 +194,9 @@ static int _on_message_complete_REMOVAL(http_parser *p UNUSED) {
 }
 
 static int _on_message_begin_COMMON(http_parser *p UNUSED) {
-    ((BlobClient *) (p->data))->Reset();
+    auto ctx = (BlobClient *) p->data;
+    DLOG(INFO) << __FUNCTION__ << " fd=" << ctx->client->fileno();
+    ctx->Reset();
     return 0;
 }
 
@@ -211,6 +220,8 @@ static std::string _http_url_field(const http_parser_url &u, int f,
 int _on_url_COMMON(http_parser *p, const char *buf, size_t len) {
     auto ctx = (BlobClient *) p->data;
 
+    // TODO move this to the BlobClient, this is implementation dependant
+
     // Get the name, this is common to al the requests
     http_parser_url url;
     if (0 != http_parser_parse_url(buf, len, false, &url)) {
@@ -221,18 +232,16 @@ int _on_url_COMMON(http_parser *p, const char *buf, size_t len) {
         ctx->SaveError({400, 400, "URL has no path"});
         return 0;
     }
+
+    // Get the chunk-id, the last part of the URL path
     auto path = _http_url_field(url, UF_PATH, buf, len);
-    auto last_sep = path.rfind('/');
-    if (last_sep == std::string::npos) {
-        ctx->SaveError({400, 400, "URL has no/empty basename"});
-        return 0;
-    }
-    if (last_sep == path.size() - 1) {
+    auto sep = path.rfind('/');
+    if (sep == std::string::npos || sep == path.size() - 1) {
         ctx->SaveError({400, 400, "URL has no/empty basename"});
         return 0;
     }
 
-    ctx->chunk_id.assign(path, last_sep + 1, std::string::npos);
+    ctx->chunk_id.assign(path, sep + 1, std::string::npos);
     return 0;
 }
 
@@ -253,8 +262,16 @@ int _on_header_field_COMMON(http_parser *p, const char *buf, size_t len) {
 int _on_header_value_COMMON(http_parser *p, const char *buf, size_t len) {
     auto ctx = (BlobClient *) p->data;
     assert(ctx->defered_error.http == 0);
-    if (ctx->last_field == HDR_OIO_TARGET)
-        ctx->targets.emplace_back(buf, len);
+
+    if (ctx->last_field == HDR_OIO_TARGET) {
+        // TODO move this to the BlobClient, this is implementation dependant
+        net::Addr addr;
+        if (!addr.parse(std::string(buf, len))) {
+            ctx->SaveError({400, 400, "Invalid Kinetic target"});
+        } else {
+            ctx->targets.emplace_back(buf, len);
+        }
+    }
     else if (ctx->last_field == HDR_OIO_XATTR) {
         if (p->method == HTTP_PUT) {
             ctx->xattrs[ctx->last_field_name] = std::move(
@@ -290,6 +307,7 @@ int _on_headers_complete_COMMON(http_parser *p) {
         return 1;
     }
 
+    DLOG(INFO) << __FUNCTION__ << " fd=" << ctx->client->fileno();
     if (p->method == HTTP_PUT) {
         ctx->settings.on_message_begin = _on_message_begin_COMMON;
         ctx->settings.on_url = _on_url_COMMON;
@@ -492,7 +510,8 @@ BlobClient::~BlobClient() {
 
 BlobClient::BlobClient(std::unique_ptr<net::Socket> c,
         std::shared_ptr<BlobRepository> r)
-        : client(std::move(c)), repository{r} {
+        : client(std::move(c)), repository{r},
+          expect_100{false}, want_closure{false} {
     DLOG(INFO) << __FUNCTION__;
 }
 
@@ -543,8 +562,9 @@ void BlobClient::Run(volatile bool &flag_running) {
             }
         }
     }
-    out:
+out:
     DLOG(INFO) << "CLIENT " << client->fileno() << " done";
+    client->close();
 }
 
 void BlobClient::Reset() {

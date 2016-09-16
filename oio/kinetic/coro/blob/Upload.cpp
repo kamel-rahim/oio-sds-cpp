@@ -154,7 +154,9 @@ bool KineticUpload::Abort() {
 
 blob::Upload::Status KineticUpload::Prepare() {
 
-    // Send the same listing request to all the clients
+    // Send the same listing request to all the clients, GetKeyRange allows this
+    // even if it won't cleanly manage mixed errors and successes
+    /* TODO have 1 GetKeyRange per target, to cleanly manage errors */
     const std::string key_manifest(chunkid + "-#");
     GetKeyRange gkr;
     gkr.Start(key_manifest);
@@ -167,6 +169,9 @@ blob::Upload::Status KineticUpload::Prepare() {
         ops.push_back(cli->Start(&gkr));
     for (auto op: ops)
         op->Wait();
+    //if (!gkr.Ok())
+    //    return blob::Upload::Status::NetworkError;
+
     std::vector<std::string> keys;
     gkr.Steal(keys);
     if (!keys.empty())
@@ -180,20 +185,22 @@ UploadBuilder::~UploadBuilder() { }
 UploadBuilder::UploadBuilder(std::shared_ptr<ClientFactory> f):
         factory(f), targets(), block_size{512 * 1024} { }
 
-void UploadBuilder::Target(const std::string &to) {
+bool UploadBuilder::Target(const std::string &to) {
     targets.insert(to);
+    return true;
 }
 
-void UploadBuilder::Target(const char *to) {
+bool UploadBuilder::Target(const char *to) {
     assert(to != nullptr);
     return Target(std::string(to));
 }
 
-void UploadBuilder::Name(const std::string &n) {
+bool UploadBuilder::Name(const std::string &n) {
     name.assign(n);
+    return true;
 }
 
-void UploadBuilder::Name(const char *n) {
+bool UploadBuilder::Name(const char *n) {
     assert(n != nullptr);
     return Name(std::string(n));
 }

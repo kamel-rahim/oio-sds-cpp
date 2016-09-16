@@ -159,26 +159,28 @@ class KineticDownload : public blob::Download {
 };
 
 DownloadBuilder::DownloadBuilder(std::shared_ptr<ClientFactory> f):
-        name(), targets(), factory(f) {
+        factory(f), targets(), name() {
     assert(factory.get() != nullptr);
 }
 
 DownloadBuilder::~DownloadBuilder() { }
 
-void DownloadBuilder::Name(const std::string &n) {
+bool DownloadBuilder::Name(const std::string &n) {
     name.assign(n);
+    return true;
 }
 
-void DownloadBuilder::Name(const char *n) {
+bool DownloadBuilder::Name(const char *n) {
     assert(n != nullptr);
-    name.assign(std::string(n));
+    return Name(std::string(n));
 }
 
-void DownloadBuilder::Target(const std::string &to) {
+bool DownloadBuilder::Target(const std::string &to) {
     targets.insert(to);
+    return true;
 }
 
-void DownloadBuilder::Target(const char *to) {
+bool DownloadBuilder::Target(const char *to) {
     assert(to != nullptr);
     return Target(std::string(to));
 }

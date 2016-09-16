@@ -1,11 +1,20 @@
 # OpenIO Kinetic backend
 
-The present repository provides 2 tools:
+The present repository provides several tools:
 
 * **oio-kinetic-client**: a coroutine-based code library to put, get and
   delete BLOBs spread on kinetic drives.
 * **oio-kinetic-proxy**: a minimal coroutine-based HTTP server wrapping
-  the **oio-kinetic-client**.  
+  the **oio-kinetic-client**.
+* **oio-kinetic-listener**: listens to the multicast UDP announces of
+  kinetic drives and register those in the configured conscience.
+* **oio-rawx**: an ersatz of the officiel OpenIO SDS rawx service, used
+  to validate the design. Also coroutine-based.
+
+## Status
+
+This repository is under an active development effort and is subject to
+change frequently. 
 
 ## License
 
@@ -40,6 +49,17 @@ PARTICULAR PURPOSE. See the Mozilla Public License for more details.
   and efficiently recognize HTTP headers 
 * [libmill](https://github.com/sustrik/libmill)
 * [glog](https://github.com/google/glog)
+* oio-kinetic-client
+
+### oio-kinetic-proxy
+
+* [http-parser](https://github.com/nodejs/http-parser) included as a Git
+  submodule
+* [ragel](https://github.com/colmnet/ragel): Used as a lexer to easily
+  and efficiently recognize HTTP headers 
+* [libmill](https://github.com/sustrik/libmill)
+* [glog](https://github.com/google/glog)
+
 
 Build & Install
 ---------------

@@ -11,12 +11,23 @@
 #include <string>
 #include <cstdint>
 
-#define BUFLEN_IOV(B,L) {.iov_base=((void*)(B)),.iov_len=L}
-#define BUF_IOV(S) BUFLEN_IOV((void*)(S),sizeof(S)-1)
-#define STR_IOV(S) BUFLEN_IOV((void*)(S),strlen(S))
+#define FORBID_DEFAULT_CTOR(T) T() = delete
+#define FORBID_COPY_CTOR(T) T(T &o) = delete; T(const T &o) = delete
+#define FORBID_MOVE_CTOR(T) T(T &&o) = delete
 
-#define ON_ENUM(D,F) case D::F: return #F
+#define FORBID_ALL_CTOR(T) \
+    FORBID_DEFAULT_CTOR(T); \
+    FORBID_COPY_CTOR(T); \
+    FORBID_MOVE_CTOR(T)
 
+
+#define BUFLEN_IOV(B, L) {.iov_base=((void*)(B)),.iov_len=L}
+
+#define BUF_IOV(S) BUFLEN_IOV((S),sizeof(S)-1)
+#define STR_IOV(S) BUFLEN_IOV((S),strlen(S))
+#define STRING_IOV(S) BUFLEN_IOV((S).data(),(S).size())
+
+#define ON_ENUM(D, F) case D::F: return #F
 
 #if defined __GNUC__ || defined __clang__
 #define UNUSED __attribute__ ((unused))
@@ -25,11 +36,15 @@
 #error "Unsupported compiler!"
 #endif
 
-std::vector<uint8_t> compute_sha1 (const std::vector<uint8_t> &val) noexcept;
+std::vector<uint8_t> compute_sha1(const std::vector<uint8_t> &val);
 
-std::vector<uint8_t> compute_sha1_hmac (const std::string &key, const std::string &val) noexcept;
+std::vector<uint8_t> compute_sha1_hmac(const std::string &key,
+                                       const std::string &val);
 
 void append_string_random(std::string &dst, unsigned int len,
-                          const std::string &chars) noexcept;
+                          const std::string &chars);
+
+std::string generate_string_random(unsigned int len,
+                                   const std::string &chars);
 
 #endif //OIO_KINETIC_UTILS_H

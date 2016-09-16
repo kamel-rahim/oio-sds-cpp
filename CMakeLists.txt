@@ -25,6 +25,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -pipe -fPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GNU_SOURCE")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector-all")
 
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -fno-inline")
 set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os")
@@ -44,71 +45,102 @@ add_custom_command(OUTPUT
 			${CMAKE_CURRENT_SOURCE_DIR}/kinetic-protocol/kinetic.proto
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/kinetic-protocol/kinetic.proto)
 
+add_library(oio-http-parser SHARED
+		http-parser/http_parser.c
+		http-parser/http_parser.h)
+
 add_library(oio-kinetic-client SHARED
-        utils/MillSocket.cpp
-        utils/MillSocket.h
-        utils/Socket.cpp
-        utils/Socket.h
-        utils/Addr.cpp
-        utils/Addr.h
         utils/utils.h
         utils/utils.cpp
+        utils/net.h
+        utils/net.cpp
+        utils/Http.h
+        utils/Http.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/kinetic.pb.cc
         ${CMAKE_CURRENT_BINARY_DIR}/kinetic.pb.h
-        oio/api/Upload.h
-        oio/api/Download.h
-        oio/api/Removal.h
-        oio/api/Listing.h
-        oio/kinetic/rpc/Request.h
-        oio/kinetic/rpc/Exchange.h
-        oio/kinetic/rpc/Put.cpp
-        oio/kinetic/rpc/Put.h
-        oio/kinetic/rpc/Get.cpp
-        oio/kinetic/rpc/Get.h
-        oio/kinetic/rpc/GetKeyRange.cpp
-        oio/kinetic/rpc/GetKeyRange.h
-        oio/kinetic/rpc/GetNext.cpp
-        oio/kinetic/rpc/GetNext.h
-        oio/kinetic/rpc/Delete.cpp
-        oio/kinetic/rpc/Delete.h
-        oio/kinetic/client/ClientInterface.h
-        oio/kinetic/client/CoroutineClient.cpp
-        oio/kinetic/client/CoroutineClient.h
-        oio/kinetic/client/CoroutineClientFactory.cpp
-        oio/kinetic/client/CoroutineClientFactory.h
-        oio/kinetic/client/PendingExchange.cpp
-        oio/kinetic/client/PendingExchange.h
-        oio/kinetic/blob/Upload.cpp
-        oio/kinetic/blob/Upload.h
-        oio/kinetic/blob/Download.cpp
-        oio/kinetic/blob/Download.h
-        oio/kinetic/blob/Removal.cpp
-        oio/kinetic/blob/Removal.h
-        oio/kinetic/blob/Listing.cpp
-        oio/kinetic/blob/Listing.h)
+        oio/api/blob.h
+        oio/kinetic/coro/rpc/Request.h
+        oio/kinetic/coro/rpc/Exchange.h
+        oio/kinetic/coro/rpc/Exchange.cpp
+        oio/kinetic/coro/rpc/Put.cpp
+        oio/kinetic/coro/rpc/Put.h
+        oio/kinetic/coro/rpc/Get.cpp
+        oio/kinetic/coro/rpc/Get.h
+        oio/kinetic/coro/rpc/GetKeyRange.cpp
+        oio/kinetic/coro/rpc/GetKeyRange.h
+        oio/kinetic/coro/rpc/GetNext.cpp
+        oio/kinetic/coro/rpc/GetNext.h
+        oio/kinetic/coro/rpc/Delete.cpp
+        oio/kinetic/coro/rpc/Delete.h
+		oio/kinetic/coro/rpc/GetLog.cpp
+		oio/kinetic/coro/rpc/GetLog.h
+        oio/kinetic/coro/client/ClientInterface.h
+        oio/kinetic/coro/client/CoroutineClient.cpp
+        oio/kinetic/coro/client/CoroutineClient.h
+        oio/kinetic/coro/client/CoroutineClientFactory.cpp
+        oio/kinetic/coro/client/CoroutineClientFactory.h
+        oio/kinetic/coro/client/PendingExchange.cpp
+        oio/kinetic/coro/client/PendingExchange.h
+        oio/kinetic/coro/blob.h
+        oio/kinetic/coro/blob/Upload.cpp
+        oio/kinetic/coro/blob/Download.cpp
+        oio/kinetic/coro/blob/Removal.cpp
+        oio/kinetic/coro/blob/Listing.cpp
+        oio/http/imperative/blob.cpp
+        oio/http/imperative/blob.h
+		oio/local/blob/Upload.cpp
+		oio/local/blob/Download.cpp
+        oio/local/blob/Listing.cpp
+        oio/local/blob/Removal.cpp
+        oio/local/blob.h)
 
 target_link_libraries(oio-kinetic-client
-    protobuf mill_s ${CRYPTO_LIBRARIES} ${GLOG_LIBRARIES})
+        oio-http-parser
+		protobuf mill_s ${CRYPTO_LIBRARIES} ${GLOG_LIBRARIES})
 
-add_executable(test-rpc
-        oio/kinetic/client/TestExchange.cpp)
-target_link_libraries(test-rpc oio-kinetic-client)
+add_executable(test-kinetic-rpc tests/TestKineticExchange.cpp)
+target_link_libraries(test-kinetic-rpc oio-kinetic-client)
 
-add_executable(test-client
-        oio/kinetic/blob/TestClient.cpp)
-target_link_libraries(test-client oio-kinetic-client)
+add_executable(test-blob-kinetic tests/TestBlobKinetic.cpp)
+target_link_libraries(test-blob-kinetic oio-kinetic-client)
 
+add_executable(test-blob-http tests/TestBlobHttp.cpp)
+target_link_libraries(test-blob-http oio-kinetic-client oio-http-parser)
+
+add_executable(test-blob-local tests/TestBlobLocal.cpp)
+target_link_libraries(test-blob-local oio-kinetic-client)
+
+add_executable(test-http-client tests/TestHttpClient.cpp)
+target_link_libraries(test-http-client oio-kinetic-client)
+
+add_executable(oio-kinetic-listener bin/oio-kinetic-listener.cpp)
+target_link_libraries(oio-kinetic-listener oio-kinetic-client
+        ${GLOG_LIBRARIES} mill_s)
 
 add_custom_command(OUTPUT
         ${CMAKE_CURRENT_BINARY_DIR}/headers.cc
 		COMMAND ${RAGEL_EXE} -o ${CMAKE_CURRENT_BINARY_DIR}/headers.cc
-            ${CMAKE_CURRENT_SOURCE_DIR}/oio/kinetic/proxy/headers.rl
-        DEPENDS oio/kinetic/proxy/headers.rl)
+		${CMAKE_CURRENT_SOURCE_DIR}/bin/headers.rl
+        DEPENDS bin/headers.rl)
 
 add_executable(oio-kinetic-proxy
-        http-parser/http_parser.c
-        http-parser/http_parser.h
         ${CMAKE_CURRENT_BINARY_DIR}/headers.cc
-        oio/kinetic/proxy/headers.h
-        oio/kinetic/proxy/main.cpp)
-    target_link_libraries(oio-kinetic-proxy oio-kinetic-client ${GLOG_LIBRARIES})
+		bin/headers.h
+		bin/MillDaemon.h
+		bin/MillDaemon.cpp
+		bin/oio-kinetic-proxy.cpp)
+
+target_link_libraries(oio-kinetic-proxy
+		oio-http-parser oio-kinetic-client
+		${GLOG_LIBRARIES})
+
+add_executable(oio-rawx
+        ${CMAKE_CURRENT_BINARY_DIR}/headers.cc
+        bin/headers.h
+        bin/MillDaemon.h
+		bin/MillDaemon.cpp
+		bin/oio-rawx.cpp)
+
+target_link_libraries(oio-rawx
+        oio-http-parser oio-kinetic-client
+        ${GLOG_LIBRARIES})

@@ -29,6 +29,7 @@ parse_header := |*
     /accept/i           { return HDR_ACCEPT; };
     /user-agent/i       { return HDR_USERAGENT; };
     /X-oio-target/i     { return HDR_OIO_TARGET; };
+    /X-oio-target-.*/i  { return HDR_OIO_TARGET; };
     /X-oio-meta-.*/i    { return HDR_OIO_XATTR; };
 *|;
 }%%

@@ -100,8 +100,9 @@ bool CoroutineClient::manage(Frame &frame) {
         req.cmd.ParseFromArray(req.msg.commandbytes().data(),
                                req.msg.commandbytes().size());
         req.value.swap(frame.val);
-        DLOG(INFO) << "K< V.size=" << req.value.size()
-                   << " CMD=" << req.cmd.ShortDebugString();
+        DLOG(INFO) << "K< " << DebugString()
+                   << " " << req.cmd.ShortDebugString()
+                   << " V.size=" << req.value.size();
 
         const auto id = req.cmd.header().connectionid();
         if (id > 0)
@@ -148,8 +149,9 @@ int CoroutineClient::pack(std::shared_ptr<Request> &req,
     req->msg.mutable_hmacauth()->set_identity(1);
     req->msg.mutable_hmacauth()->set_hmac(hmac.data(), hmac.size());
 
-    DLOG(INFO) << "K> V.size=" << req->value.size() << " CMD="
-               << req->cmd.ShortDebugString();
+    DLOG(INFO) << "K> " << DebugString()
+               << " " << req->cmd.ShortDebugString()
+               << " V.size=" << req->value.size();
 
     // Serialize the message
     frame.msg.clear();
@@ -213,11 +215,13 @@ coroutine void CoroutineClient::run_agent_consumer(chan done) {
                 break;
             }
         }
+
         DLOG(INFO) << "K< waiting for the producer";
+        ::shutdown(sock_->fileno(), SHUT_RDWR);
         (void) chr(from_producer, int);
     }
 
-out:
+    out:
     DLOG(INFO) << "K< exiting!";
     chs(done, int, SIGNAL_AGENT_STOP);
 }
@@ -283,17 +287,14 @@ coroutine void CoroutineClient::run_agent_producer(chan done) {
                 mill_in(to_agent_, int, sig):
                     if (SIGNAL_AGENT_STOP == sig) {
                         DLOG(INFO) << "K> Explicit shutdown requested";
-                        // TODO make shutdown available as a socket method
-                        ::shutdown(sock_->fileno(), SHUT_RDWR);
-                        break;
+                        goto out;
                     } else {
                         if (!waiting_.empty()) {
                             auto pe = waiting_.front();
                             waiting_.pop();
-                            DLOG(INFO) << "K> RPC ready: " << pe->SeqId();
                             if (!start_rpc(pe)) {
                                 DLOG(ERROR) << "K> Failed to send RPC";
-                                break;
+                                goto out;
                             }
                         }
                     }
@@ -308,6 +309,11 @@ coroutine void CoroutineClient::run_agent_producer(chan done) {
             abort_stalled_rpc(now);
         }
     }
+out:
+    // shut the reading so that the consumer ends (the producer is already
+    // being stopped)
+    // TODO make shutdown available as a socket method
+    ::shutdown(sock_->fileno(), SHUT_RD);
 
     DLOG(INFO) << "K> exiting!";
     chs(done, int, SIGNAL_AGENT_STOP);
@@ -316,14 +322,18 @@ coroutine void CoroutineClient::run_agent_producer(chan done) {
 coroutine void CoroutineClient::run_agents() {
     DLOG(INFO) << "Starting agents for " << DebugString();
     while (running_) {
+
+        // New connection, new sequence ID
+        seqid_ = 0;
+
         chan from_consumer = chmake(int, 0);
         mill_go(run_agent_consumer(from_consumer));
         (void) chr(from_consumer, int);
         sock_->close();
         chclose(from_consumer);
 
-        // At this point, both the producer and the consumer coroutines
-        // been stopped. Abort all the pending operations.
+        // At this point, both producer/consumer coroutines have been stopped.
+        // Abort all the pending operations.
         abort_all_rpc();
 
         if (running_)

@@ -9,6 +9,7 @@
 
 #include <vector>
 #include <string>
+#include <memory>
 #include <cstdint>
 
 #define FORBID_DEFAULT_CTOR(T) T() = delete
@@ -20,12 +21,17 @@
     FORBID_COPY_CTOR(T); \
     FORBID_MOVE_CTOR(T)
 
+#define BUFLEN_IOV0(B, L) ((void*)(B)),L
+#define BUFLEN_IOV(B, L)  {BUFLEN_IOV0(B,L)}
 
-#define BUFLEN_IOV(B, L) {.iov_base=((void*)(B)),.iov_len=L}
-
-#define BUF_IOV(S) BUFLEN_IOV((S),sizeof(S)-1)
-#define STR_IOV(S) BUFLEN_IOV((S),strlen(S))
+#define BUF_IOV(S)    BUFLEN_IOV((S),sizeof(S)-1)
+#define STR_IOV(S)    BUFLEN_IOV((S),strlen(S))
 #define STRING_IOV(S) BUFLEN_IOV((S).data(),(S).size())
+
+#define BUF_IOV0(S)    BUFLEN_IOV0((S),sizeof(S)-1)
+#define STR_IOV0(S)    BUFLEN_IOV0((S),strlen(S))
+#define STRING_IOV0(S) BUFLEN_IOV0((S).data(),(S).size())
+
 
 #define ON_ENUM(D, F) case D::F: return #F
 
@@ -35,6 +41,18 @@
 #else
 #error "Unsupported compiler!"
 #endif
+
+class Checksum {
+  public:
+    virtual void Update(const uint8_t *b, size_t l) = 0;
+    virtual void Update(const char *b, size_t l) = 0;
+    virtual std::string Final() = 0;
+};
+
+Checksum* checksum_make_MD5();
+Checksum* checksum_make_SHA1();
+
+std::string bin2hex(const uint8_t *b, size_t l);
 
 std::vector<uint8_t> compute_sha1(const std::vector<uint8_t> &val);
 

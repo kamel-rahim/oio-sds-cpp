@@ -4,12 +4,83 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
+#include <array>
 #include <random>
+#include <sstream>
+#include <iomanip>
 #include <netinet/in.h>
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
+#include <openssl/md5.h>
 
 #include "utils.h"
+
+class ChecksumMD5 : public Checksum {
+  public:
+    ChecksumMD5() {
+        MD5_Init(&ctx);
+    }
+    virtual ~ChecksumMD5() {}
+
+    virtual void Update(const uint8_t *b, size_t l) override {
+        MD5_Update(&ctx, b, l);
+    }
+
+    virtual void Update(const char *b, size_t l) override {
+        MD5_Update(&ctx, b, l);
+    }
+
+    virtual std::string Final() override {
+        std::array<uint8_t,MD5_DIGEST_LENGTH> tmp;
+        MD5_Final(tmp.data(), &ctx);
+        return bin2hex(tmp.data(), tmp.size());
+    }
+
+  private:
+    MD5_CTX ctx;
+};
+
+class ChecksumSHA1 : public Checksum {
+  public:
+    ChecksumSHA1() {
+        SHA1_Init(&ctx);
+    }
+    virtual ~ChecksumSHA1() {}
+
+    virtual void Update(const uint8_t *b, size_t l) override {
+        SHA1_Update(&ctx, b, l);
+    }
+
+    virtual void Update(const char *b, size_t l) override {
+        SHA1_Update(&ctx, b, l);
+    }
+
+    virtual std::string Final() override {
+        std::array<uint8_t,SHA_DIGEST_LENGTH> tmp;
+        SHA1_Final(tmp.data(), &ctx);
+        return bin2hex(tmp.data(), tmp.size());
+    }
+
+  private:
+    SHA_CTX ctx;
+};
+
+Checksum* checksum_make_MD5() {
+    return new ChecksumMD5;
+}
+
+Checksum* checksum_make_SHA1() {
+    return new ChecksumSHA1;
+}
+
+std::string bin2hex(const uint8_t *b, size_t l) {
+    std::stringstream ss;
+    for (; l > 0 ;--l,++b) {
+        ss << std::hex << std::setw(2) << std::setfill('0')
+           << (unsigned int)(*b);
+    }
+    return ss.str();
+}
 
 std::vector<uint8_t>
 compute_sha1(const std::vector<uint8_t> &val) {

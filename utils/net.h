@@ -60,6 +60,9 @@ struct Addr {
 class Channel {
   public:
     virtual ~Channel() {}
+
+    virtual std::string Debug() const = 0;
+
     virtual ssize_t read (uint8_t *buf, size_t len, int64_t dl) = 0;
 
     /* Reads exactly max bytes from the current Socket */
@@ -168,7 +171,7 @@ class Socket : public Channel {
      */
     bool setquickack();
 
-    std::string Debug() const;
+    virtual std::string Debug() const override;
 
     /**
      * Reads some bytes from the socket, and why at most until 'dl' is reached

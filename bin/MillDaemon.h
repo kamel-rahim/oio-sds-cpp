@@ -83,12 +83,18 @@ struct BlobClient {
 
     void ReplySuccess();
 
+    void ReplySuccess(int code, const std::string &payload);
+
     void ReplyStream();
 
     void ReplyEndOfStream();
 
     void Reply100();
 
+    /**
+     * Writes the status line and the headers.
+     */
+    void ReplyPreamble(int code, const char *msg, int64_t length);
 
     std::unique_ptr<net::Socket> client;
     std::shared_ptr<BlobRepository> repository;
@@ -99,17 +105,23 @@ struct BlobClient {
     // Related to the current request
     std::string chunk_id;
     std::vector<std::string> targets;
+    std::map<std::string,std::string> reply_headers;
 
     SoftError defered_error;
     std::unique_ptr<oio::api::blob::Upload> upload;
     std::unique_ptr<oio::api::blob::Download> download;
     std::unique_ptr<oio::api::blob::Removal> removal;
 
+    // used during the parsing of the request
+
     enum http_header_e last_field;
     std::string last_field_name;
     std::map<std::string, std::string> xattrs;
     bool expect_100;
     bool want_closure;
+
+    int64_t bytes_in;
+    std::shared_ptr<Checksum> checksum_in;
 };
 
 class BlobService {

@@ -113,6 +113,9 @@ target_link_libraries(test-blob-local oio-kinetic-client)
 add_executable(test-http-client tests/TestHttpClient.cpp)
 target_link_libraries(test-http-client oio-kinetic-client)
 
+add_executable(test-utils tests/TestUtils.cpp)
+target_link_libraries(test-utils oio-kinetic-client)
+
 add_executable(oio-kinetic-listener bin/oio-kinetic-listener.cpp)
 target_link_libraries(oio-kinetic-listener oio-kinetic-client
         ${GLOG_LIBRARIES} mill_s)

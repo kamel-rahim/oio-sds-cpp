@@ -61,11 +61,11 @@ private:
 };
 
 KineticUpload::~KineticUpload() {
-    DLOG(INFO) << __FUNCTION__;
+
 }
 
 KineticUpload::KineticUpload(): clients(), next_client{0}, puts(), syncs() {
-    DLOG(INFO) << __FUNCTION__;
+
 }
 
 void KineticUpload::SetXattr(const std::string &k, const std::string &v) {
@@ -156,34 +156,49 @@ blob::Upload::Status KineticUpload::Prepare() {
 
     // Send the same listing request to all the clients, GetKeyRange allows this
     // even if it won't cleanly manage mixed errors and successes
-    /* TODO have 1 GetKeyRange per target, to cleanly manage errors */
-    const std::string key_manifest(chunkid + "-#");
-    GetKeyRange gkr;
-    gkr.Start(key_manifest);
-    gkr.End(key_manifest);
-    gkr.IncludeStart(true);
-    gkr.IncludeEnd(true);
-    gkr.MaxItems(1);
-    std::vector<std::shared_ptr<Sync>> ops;
-    for (auto cli: clients)
-        ops.push_back(cli->Start(&gkr));
-    for (auto op: ops)
-        op->Wait();
-    //if (!gkr.Ok())
-    //    return blob::Upload::Status::NetworkError;
 
-    std::vector<std::string> keys;
-    gkr.Steal(keys);
-    if (!keys.empty())
-        return blob::Upload::Status::Already;
+    const std::string key_manifest(chunkid + "-#");
+
+    std::vector<std::shared_ptr<GetKeyRange>> ops;
+    std::vector<std::shared_ptr<Sync>> syncs;
+    for (auto cli: clients) {
+        std::shared_ptr<GetKeyRange> gkr(new GetKeyRange);
+        gkr->Start(key_manifest);
+        gkr->End(key_manifest);
+        gkr->IncludeStart(true);
+        gkr->IncludeEnd(true);
+        gkr->MaxItems(1);
+        ops.push_back(gkr);
+    }
+    int i = 0;
+    for (auto cli: clients) {
+        auto op = ops[i];
+        syncs.push_back(cli->Start(op.get()));
+    }
+    for (auto sync: syncs)
+        sync->Wait();
+    for (auto op: ops) {
+        if (!op->Ok())
+            return blob::Upload::Status::NetworkError;
+    }
+    for (auto op: ops) {
+        std::vector<std::string> keys;
+        op->Steal(keys);
+        if (!keys.empty())
+            return blob::Upload::Status::Already;
+    }
 
     return blob::Upload::Status::OK;
 }
 
-UploadBuilder::~UploadBuilder() { }
+UploadBuilder::~UploadBuilder() {
+
+}
 
 UploadBuilder::UploadBuilder(std::shared_ptr<ClientFactory> f):
-        factory(f), targets(), block_size{512 * 1024} { }
+        factory(f), targets(), block_size{512 * 1024} {
+
+}
 
 bool UploadBuilder::Target(const std::string &to) {
     targets.insert(to);
@@ -217,6 +232,5 @@ std::unique_ptr<blob::Upload> UploadBuilder::Build() {
     ul->chunkid.assign(name);
     for (const auto &to: targets)
         ul->clients.emplace_back(factory->Get(to.c_str()));
-    DLOG(INFO) << __FUNCTION__ << " with " << static_cast<int>(ul->clients.size());
     return std::unique_ptr<KineticUpload>(ul);
 }

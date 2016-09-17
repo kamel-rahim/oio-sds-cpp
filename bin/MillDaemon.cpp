@@ -67,25 +67,30 @@ static int _on_headers_complete_UPLOAD(http_parser *p) {
 
 static int _on_body_UPLOAD(http_parser *p, const char *buf, size_t len) {
     auto ctx = (BlobClient *) p->data;
-    DLOG(INFO) << __FUNCTION__ << " fd=" << ctx->client->fileno();
+    DLOG(INFO) << __FUNCTION__
+               << " fd=" << ctx->client->fileno()
+               << " len=" << len;
 
     // We do not manage bodies exceeding 4GB at once
     if (len >= std::numeric_limits<uint32_t>::max()) {
         return 1;
     }
 
-    ctx->upload->Write(reinterpret_cast<const uint8_t *>(buf), len);
+    if (len > 0) {
+        if (ctx->checksum_in.get() != nullptr)
+            ctx->checksum_in->Update(buf, len);
+        ctx->bytes_in += len;
+        ctx->upload->Write(reinterpret_cast<const uint8_t *>(buf), len);
+    }
+
     return 0;
 }
 
 static int _on_chunk_header_UPLOAD(http_parser *p UNUSED) {
-    DLOG(INFO) << __FUNCTION__ << "len=" << p->content_length << " r=" <<
-    p->nread;
     return 0;
 }
 
 static int _on_chunk_complete_UPLOAD(http_parser *p UNUSED) {
-    DLOG(INFO) << __FUNCTION__;
     return 0;
 }
 
@@ -95,16 +100,19 @@ static int _on_message_complete_UPLOAD(http_parser *p) {
 
     auto upload_rc = ctx->upload->Commit();
 
-    rapidjson::StringBuffer buf;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
-    writer.StartObject();
-    writer.Key("chunks");
-    writer.StartArray();
-    writer.EndArray();
-    writer.EndObject();
-
     // Trigger a reply to the client
     if (upload_rc) {
+        rapidjson::StringBuffer buf;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
+        writer.StartObject();
+        writer.Key("stream");
+        writer.StartObject();
+        writer.Key("bytes");
+        writer.Int64(ctx->bytes_in);
+        writer.Key("md5");
+        writer.String(ctx->checksum_in->Final().c_str());
+        writer.EndObject();
+        writer.EndObject();
         ctx->ReplySuccess(201, buf.GetString());
     } else {
         ctx->ReplyError({500, 400, "LocalUpload commit failed"});
@@ -515,7 +523,9 @@ BlobClient::~BlobClient() {
 BlobClient::BlobClient(std::unique_ptr<net::Socket> c,
         std::shared_ptr<BlobRepository> r)
         : client(std::move(c)), repository{r},
-          expect_100{false}, want_closure{false} {
+          expect_100{false}, want_closure{false},
+          bytes_in{0}, checksum_in{nullptr} {
+    checksum_in.reset(checksum_make_MD5());
 }
 
 void BlobClient::Run(volatile bool &flag_running) {
@@ -526,7 +536,7 @@ void BlobClient::Run(volatile bool &flag_running) {
     parser.data = this;
     Reset();
 
-    std::vector<uint8_t> buffer(8192);
+    std::vector<uint8_t> buffer(32768);
 
     while (flag_running) {
 
@@ -597,90 +607,67 @@ void BlobClient::SaveError(SoftError err) {
     settings.on_body = _on_data_IGNORE;
 }
 
-void BlobClient::ReplyError(SoftError err) {
+void BlobClient::ReplyPreamble(int code, const char *msg, int64_t l) {
     char first[64], length[64];
+
+    snprintf(first, sizeof(first), "HTTP/%1hu.%1hu %03d %s\r\n",
+             parser.http_major, parser.http_minor, code, msg);
+    if (l >= 0)
+        snprintf(length, sizeof(length), "Content-Length: %lu\r\n", l);
+    else
+        snprintf(length, sizeof(length), "Transfer-Encoding: chunked\r\n");
+
+    std::vector<struct iovec> iotab;
+    iotab.resize(6 + 4 * reply_headers.size());
+    struct iovec *iov = iotab.data();
+    int i = 0;
+    iov[i++] = STR_IOV(first);
+    iov[i++] = BUF_IOV("Host: nowhere\r\n");
+    iov[i++] = BUF_IOV("User-Agent: OpenIO/oio-kinetic-proxy\r\n");
+    for (auto &e: reply_headers) {
+        iov[i++] = BUFLEN_IOV(e.first.data(), e.first.size());
+        iov[i++] = BUF_IOV(": ");
+        iov[i++] = BUFLEN_IOV(e.second.data(), e.second.size());
+        iov[i++] = BUF_IOV("\r\n");
+    }
+    iov[i++] = BUF_IOV("Connection: close\r\n");
+    iov[i++] = STR_IOV(length);
+    iov[i++] = BUF_IOV("\r\n");
+
+    client->send(iotab.data(), iotab.size(), mill_now() + 1000);
+}
+
+void BlobClient::ReplyError(SoftError err) {
     std::string payload;
-
     err.Pack(payload);
-    snprintf(first, sizeof(first), "HTTP/%1hu.%1hu %03d Error\r\n",
-             parser.http_major, parser.http_minor, err.http);
-    snprintf(length, sizeof(length), "Content-Length: %lu\r\n",
-             payload.size());
-
-    struct iovec iov[] = {
-            STR_IOV(first),
-            STR_IOV(length),
-            BUF_IOV("Connection: close\r\n"),
-            BUF_IOV("\r\n"),
-            BUFLEN_IOV(payload.data(), payload.size())
-    };
-    client->send(iov, 5, mill_now() + 1000);
+    ReplyPreamble(err.http, "Error", payload.size());
+    client->send(payload.data(), payload.size(), mill_now() + 1000);
 }
 
 void BlobClient::ReplySuccess() {
-    char first[] = "HTTP/1.0 200 OK\r\n";
-    first[5] = '0' + parser.http_major;
-    first[7] = '0' + parser.http_minor;
-    struct iovec iov[] = {
-            STR_IOV(first),
-            BUF_IOV("Connection: close\r\n"),
-            BUF_IOV("Content-Length: 0\r\n"),
-            BUF_IOV("\r\n"),
-    };
-    client->send(iov, 4, mill_now() + 1000);
+    return ReplyPreamble(200, "OK", 0);
 }
 
 void BlobClient::ReplySuccess(int code, const std::string &payload) {
-    char first[64], length[64];
-
-    snprintf(first, sizeof(first), "HTTP/%1hu.%1hu %03d OK\r\n",
-             parser.http_major, parser.http_minor, code);
-    snprintf(length, sizeof(length), "Content-Length: %lu\r\n",
-             payload.size());
-
-    struct iovec iov[] = {
-            STR_IOV(first),
-            STR_IOV(length),
-            BUF_IOV("Connection: close\r\n"),
-            BUF_IOV("\r\n"),
-            BUFLEN_IOV(payload.data(), payload.size())
-    };
-    client->send(iov, 5, mill_now() + 1000);
+    ReplyPreamble(code, "OK", payload.size());
+    client->send(payload.data(), payload.size(), mill_now() + 1000);
 }
 
 void BlobClient::ReplyStream() {
-    char first[] = "HTTP/1.0 200 OK\r\n";
-    first[5] = '0' + parser.http_major;
-    first[7] = '0' + parser.http_minor;
-    struct iovec iov[] = {
-            STR_IOV(first),
-            BUF_IOV("Connection: close\r\n"),
-            BUF_IOV("Transfer-Encoding: chunked\r\n"),
-            BUF_IOV("\r\n"),
-    };
-    client->send(iov, 4, mill_now() + 1000);
+    return ReplyPreamble(200, "OK", -1);
 }
 
 void BlobClient::ReplyEndOfStream() {
-    struct iovec iov = BUF_IOV("0\r\n\r\n");
-    client->send(&iov, 1, mill_now() + 1000);
+    static const char *tail = "0\r\n\r\n";
+    client->send(tail, 5, mill_now() + 1000);
 }
 
 void BlobClient::Reply100() {
-
     if (!expect_100)
         return;
     expect_100 = false;
 
-    char first[] = "HTTP/X.X 100 Continue\r\n";
-    struct iovec iov[] = {
-            BUF_IOV(first),
-            BUF_IOV("Content-Length: 0\r\n"),
-            BUF_IOV("\r\n"),
-    };
-    first[5] = '0' + parser.http_major;
-    first[7] = '0' + parser.http_minor;
-    client->send(iov, 3, mill_now() + 1000);
+    return ReplyPreamble(100, "Continue", 0);
 }
 
 void SoftError::Pack(std::string &dst) {

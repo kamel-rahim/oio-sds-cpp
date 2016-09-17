@@ -61,11 +61,11 @@ private:
 };
 
 KineticUpload::~KineticUpload() {
-    DLOG(INFO) << __FUNCTION__;
+
 }
 
 KineticUpload::KineticUpload(): clients(), next_client{0}, puts(), syncs() {
-    DLOG(INFO) << __FUNCTION__;
+
 }
 
 void KineticUpload::SetXattr(const std::string &k, const std::string &v) {
@@ -191,10 +191,14 @@ blob::Upload::Status KineticUpload::Prepare() {
     return blob::Upload::Status::OK;
 }
 
-UploadBuilder::~UploadBuilder() { }
+UploadBuilder::~UploadBuilder() {
+
+}
 
 UploadBuilder::UploadBuilder(std::shared_ptr<ClientFactory> f):
-        factory(f), targets(), block_size{512 * 1024} { }
+        factory(f), targets(), block_size{512 * 1024} {
+
+}
 
 bool UploadBuilder::Target(const std::string &to) {
     targets.insert(to);
@@ -228,6 +232,5 @@ std::unique_ptr<blob::Upload> UploadBuilder::Build() {
     ul->chunkid.assign(name);
     for (const auto &to: targets)
         ul->clients.emplace_back(factory->Get(to.c_str()));
-    DLOG(INFO) << __FUNCTION__ << " with " << static_cast<int>(ul->clients.size());
     return std::unique_ptr<KineticUpload>(ul);
 }

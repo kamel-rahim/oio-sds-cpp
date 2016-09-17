@@ -37,7 +37,6 @@ static int _on_trailer_value_COMMON(http_parser *p, const char *b, size_t l);
 
 static int _on_headers_complete_UPLOAD(http_parser *p) {
     auto ctx = (BlobClient *) p->data;
-    DLOG(INFO) << __FUNCTION__ << " fd=" << ctx->client->fileno();
     ctx->Reply100();
     ctx->settings.on_header_field = _on_trailer_field_COMMON;
     ctx->settings.on_header_value = _on_trailer_value_COMMON;
@@ -203,7 +202,7 @@ static int _on_message_complete_REMOVAL(http_parser *p UNUSED) {
 
 static int _on_message_begin_COMMON(http_parser *p UNUSED) {
     auto ctx = (BlobClient *) p->data;
-    DLOG(INFO) << __FUNCTION__ << " fd=" << ctx->client->fileno();
+    DLOG(INFO) << " REQUEST fd=" << ctx->client->fileno();
     ctx->Reset();
     return 0;
 }
@@ -217,8 +216,6 @@ static std::string _http_url_field(const http_parser_url &u, int f,
         const char *buf, size_t len) {
     if (!_http_url_has(u, f))
         return std::string("");
-    DLOG(INFO) << "off " << u.field_data[f].off << " len " <<
-    u.field_data[f].len;
     assert(u.field_data[f].off <= len);
     assert(u.field_data[f].len <= len);
     assert(u.field_data[f].off + u.field_data[f].len <= len);
@@ -513,19 +510,17 @@ bool BlobDaemon::LoadJson(const std::string &cfg) {
 }
 
 BlobClient::~BlobClient() {
-    DLOG(INFO) << __FUNCTION__;
 }
 
 BlobClient::BlobClient(std::unique_ptr<net::Socket> c,
         std::shared_ptr<BlobRepository> r)
         : client(std::move(c)), repository{r},
           expect_100{false}, want_closure{false} {
-    DLOG(INFO) << __FUNCTION__;
 }
 
 void BlobClient::Run(volatile bool &flag_running) {
 
-    LOG(INFO) << "CLIENT fd " << client->fileno();
+    LOG(INFO) << "CLIENT fd=" << client->fileno();
 
     http_parser_init(&parser, HTTP_REQUEST);
     parser.data = this;

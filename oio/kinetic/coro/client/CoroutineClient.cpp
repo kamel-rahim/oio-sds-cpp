@@ -292,7 +292,6 @@ coroutine void CoroutineClient::run_agent_producer(chan done) {
                         if (!waiting_.empty()) {
                             auto pe = waiting_.front();
                             waiting_.pop();
-                            DLOG(INFO) << "K> RPC ready: " << pe->SeqId();
                             if (!start_rpc(pe)) {
                                 DLOG(ERROR) << "K> Failed to send RPC";
                                 goto out;

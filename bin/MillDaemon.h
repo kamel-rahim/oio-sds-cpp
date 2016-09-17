@@ -83,6 +83,8 @@ struct BlobClient {
 
     void ReplySuccess();
 
+    void ReplySuccess(int code, const std::string &payload);
+
     void ReplyStream();
 
     void ReplyEndOfStream();

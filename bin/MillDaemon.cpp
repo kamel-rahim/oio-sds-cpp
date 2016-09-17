@@ -96,12 +96,20 @@ static int _on_message_complete_UPLOAD(http_parser *p) {
 
     auto upload_rc = ctx->upload->Commit();
 
-    // Trigger a reply to the client
-    if (upload_rc)
-        ctx->ReplySuccess();
-    else
-        ctx->ReplyError({500, 400, "LocalUpload commit failed"});
+    rapidjson::StringBuffer buf;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
+    writer.StartObject();
+    writer.Key("chunks");
+    writer.StartArray();
+    writer.EndArray();
+    writer.EndObject();
 
+    // Trigger a reply to the client
+    if (upload_rc) {
+        ctx->ReplySuccess(201, buf.GetString());
+    } else {
+        ctx->ReplyError({500, 400, "LocalUpload commit failed"});
+    }
     return 0;
 }
 
@@ -625,6 +633,24 @@ void BlobClient::ReplySuccess() {
             BUF_IOV("\r\n"),
     };
     client->send(iov, 4, mill_now() + 1000);
+}
+
+void BlobClient::ReplySuccess(int code, const std::string &payload) {
+    char first[64], length[64];
+
+    snprintf(first, sizeof(first), "HTTP/%1hu.%1hu %03d OK\r\n",
+             parser.http_major, parser.http_minor, code);
+    snprintf(length, sizeof(length), "Content-Length: %lu\r\n",
+             payload.size());
+
+    struct iovec iov[] = {
+            STR_IOV(first),
+            STR_IOV(length),
+            BUF_IOV("Connection: close\r\n"),
+            BUF_IOV("\r\n"),
+            BUFLEN_IOV(payload.data(), payload.size())
+    };
+    client->send(iov, 5, mill_now() + 1000);
 }
 
 void BlobClient::ReplyStream() {

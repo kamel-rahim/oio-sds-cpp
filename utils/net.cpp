@@ -299,6 +299,7 @@ bool Socket::read_exactly(uint8_t *buf, const size_t len0, int64_t dl) {
             buf += rc;
         }
         else if (rc == 0) {
+            errno = ECONNRESET;
             return false;
         }
         else {

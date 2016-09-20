@@ -11,6 +11,7 @@ extern "C" {
 #endif
 
 #define OIO_HEADER_XATTR_PREFIX "X-oio-meta-"
+#define OIO_HEADER_XATTR_RAWX_PREFIX "X-oio-chunk-meta-"
 
 enum http_header_e
 {
@@ -25,6 +26,7 @@ enum http_header_e
 
     HDR_OIO_TARGET,
 	HDR_OIO_XATTR,
+	HDR_OIO_XATTR_RAWX,
 };
 
 enum http_header_e header_parse (const char *p, unsigned int len);

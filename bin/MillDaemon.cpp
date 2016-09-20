@@ -258,17 +258,23 @@ int _on_url_COMMON(http_parser *p, const char *buf, size_t len) {
     return 0;
 }
 
+#define _assign_non_prefixed(prefix) do { \
+    const char *_b = buf + sizeof(prefix) - 1; \
+    size_t _l = len - sizeof(prefix) - 1; \
+    ctx->last_field_name.assign(_b, _l); \
+} while (0)
+
 int _on_header_field_COMMON(http_parser *p, const char *buf, size_t len) {
     auto ctx = (BlobClient *) p->data;
     assert(ctx->defered_error.http == 0);
-    ctx->last_field = header_parse(buf, len);
-    if (ctx->last_field == HDR_OIO_XATTR) {
-        if (p->method == HTTP_PUT) {
-            const char *_b = buf + sizeof(OIO_HEADER_XATTR_PREFIX) - 1;
-            size_t _l = len - sizeof(OIO_HEADER_XATTR_PREFIX) - 1;
-            ctx->last_field_name.assign(_b, _l);
+    if (p->method == HTTP_PUT) {
+        if (ctx->last_field == HDR_OIO_XATTR) {
+            _assign_non_prefixed(OIO_HEADER_XATTR_PREFIX);
+        } else if (p->method == HDR_OIO_XATTR_RAWX) {
+            _assign_non_prefixed(OIO_HEADER_XATTR_RAWX_PREFIX);
         }
     }
+    ctx->last_field = header_parse(buf, len);
     return 0;
 }
 

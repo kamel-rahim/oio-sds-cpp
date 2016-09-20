@@ -49,7 +49,7 @@ class KineticRepository : public BlobRepository {
     std::unique_ptr<oio::api::blob::Upload> GetUpload(
             const BlobClient &client) override {
         auto builder = UploadBuilder(factory);
-        builder.BlockSize(512 * 1024);
+        builder.BlockSize(1024 * 1024);
         builder.Name(client.chunk_id);
         for (const auto &to: client.targets)
             builder.Target(to);

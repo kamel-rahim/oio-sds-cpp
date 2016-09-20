@@ -67,9 +67,7 @@ static int _on_headers_complete_UPLOAD(http_parser *p) {
 
 static int _on_body_UPLOAD(http_parser *p, const char *buf, size_t len) {
     auto ctx = (BlobClient *) p->data;
-    DLOG(INFO) << __FUNCTION__
-               << " fd=" << ctx->client->fileno()
-               << " len=" << len;
+    //DLOG(INFO) << __FUNCTION__ << " fd=" << ctx->client->fileno() << " len=" << len;
 
     // We do not manage bodies exceeding 4GB at once
     if (len >= std::numeric_limits<uint32_t>::max()) {
@@ -378,6 +376,8 @@ BlobService::BlobService(std::shared_ptr<BlobRepository> r)
 
 BlobService::~BlobService() {
     front.close();
+    chclose(done);
+    done = nullptr;
 }
 
 void BlobService::Start(volatile bool &flag_running) {

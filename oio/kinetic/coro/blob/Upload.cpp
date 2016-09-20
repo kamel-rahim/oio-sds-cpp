@@ -196,7 +196,7 @@ UploadBuilder::~UploadBuilder() {
 }
 
 UploadBuilder::UploadBuilder(std::shared_ptr<ClientFactory> f):
-        factory(f), targets(), block_size{512 * 1024} {
+        factory(f), targets(), block_size{1024 * 1024} {
 
 }
 

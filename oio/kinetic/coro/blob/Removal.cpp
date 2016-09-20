@@ -82,8 +82,8 @@ class KineticRemoval : public blob::Removal {
         for (unsigned int i = 0; i < ops.size(); ++i) {
             ops[i].sync->Wait();
             // an operation finished, pre-start another one
-            if (i + parallelism_factor + 1 < ops.size())
-                ops[i + parallelism_factor + 1].Start();
+            if (i + parallelism_factor < ops.size())
+                ops[i + parallelism_factor].Start();
         }
         return true;
     }

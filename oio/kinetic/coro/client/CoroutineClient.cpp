@@ -219,6 +219,7 @@ coroutine void CoroutineClient::run_agent_consumer(chan done) {
         DLOG(INFO) << "K< waiting for the producer";
         ::shutdown(sock_->fileno(), SHUT_RDWR);
         (void) chr(from_producer, int);
+        chclose(from_producer);
     }
 
     out:

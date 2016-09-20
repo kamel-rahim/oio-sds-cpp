@@ -31,31 +31,61 @@ class KineticListing : public blob::Listing {
     // TODO limit the parallelism to N (configurable) items
     blob::Listing::Status Prepare() override {
         items.clear();
-        std::vector<std::shared_ptr<GetKeyRange>> ops;
-        std::vector<std::shared_ptr<Sync>> syncs;
 
-        for (auto cli: clients) {
-            auto gkr = new GetKeyRange;
-            gkr->Start(name + "-#");
-            gkr->End(name + "-X");
-            gkr->IncludeStart(true);
-            gkr->IncludeEnd(false);
-            ops.emplace_back(gkr);
-            syncs.emplace_back(cli->Start(gkr));
-        }
-        for (auto sync: syncs)
-            sync->Wait();
+        // Mark clients tat still have key
+        std::vector<bool> readyv(clients.size());
+        std::vector<std::string> markers;
+        for (int i=0,max=readyv.size(); i<max ;++i)
+            readyv[i] = true;
+        for (int i=0,max=clients.size(); i<max ;++i)
+            markers.push_back(name + "-");
 
-        for (unsigned int i = 0; i < ops.size(); ++i) {
-            std::vector<std::string> keys;
-            ops[i]->Steal(keys);
-            for (auto &k: keys) {
-                // We try here to avoid copies
-                std::string s;
-                s.swap(k);
-                items.emplace_back(i, std::move(s));
-                assert(s.size() == 0);
-                assert(k.size() == 0);
+
+        for (;;) {
+            // Stop iterating if not any drive reports it still has keys
+            // TODO this cann be a one-liner with the help of a lambda
+            bool any = false;
+            for (int i=0,max=readyv.size(); i<max && !any ;++i)
+                any = readyv[i];
+            if (!any)
+                break;
+
+            std::vector<std::shared_ptr<GetKeyRange>> ops(clients.size());
+            std::vector<std::shared_ptr<Sync>> syncs;
+
+            // Initial batch of listings
+            for (int i=0,max=readyv.size(); i<max ;++i) {
+                if (!readyv[i])
+                    continue;
+                auto gkr = new GetKeyRange;
+                gkr->Start(markers[i]);
+                gkr->End(name + "-X");
+                gkr->IncludeStart(false);
+                gkr->IncludeEnd(false);
+                ops[i].reset(gkr);
+                syncs.emplace_back(clients[i]->Start(gkr));
+            }
+            for (auto sync: syncs)
+                sync->Wait();
+
+            for (unsigned int i = 0; i < ops.size(); ++i) {
+                if (!readyv[i])
+                    continue;
+                std::vector<std::string> keys;
+                ops[i]->Steal(keys);
+                if (keys.empty())
+                    readyv[i] = false;
+                else {
+                    markers[i] = std::string(keys.back());
+                    for (auto &k: keys) {
+                        // We try here to avoid copies
+                        std::string s;
+                        s.swap(k);
+                        items.emplace_back(i, std::move(s));
+                        assert(s.size() == 0);
+                        assert(k.size() == 0);
+                    }
+                }
             }
         }
 

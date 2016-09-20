@@ -31,6 +31,7 @@ parse_header := |*
     /X-oio-target/i     { return HDR_OIO_TARGET; };
     /X-oio-target-.*/i  { return HDR_OIO_TARGET; };
     /X-oio-meta-.*/i    { return HDR_OIO_XATTR; };
+    /X-oio-chunk-meta-.*/i  { return HDR_OIO_XATTR_RAWX; };
 *|;
 }%%
 
@@ -60,6 +61,7 @@ const char * header_to_string (enum http_header_e h) {
 		ON_HEADER(HDR_,USERAGENT);
         ON_HEADER(HDR_,OIO_TARGET);
         ON_HEADER(HDR_,OIO_XATTR);
+        ON_HEADER(HDR_,OIO_XATTR_RAWX);
 		default:
 			return "unmanaged";
 	}

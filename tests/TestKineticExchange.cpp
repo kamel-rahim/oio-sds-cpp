@@ -36,7 +36,7 @@ static void test_single_upload(
 	put.Key("k");
 	put.Value("v");
 	put.PostVersion("0");
-	client->Start(&put)->Wait();
+    client->RPC(&put)->Wait();
 	assert(put.Ok());
 }
 
@@ -47,7 +47,7 @@ static void test_sequential_uploads(
 		put.Key("k");
 		put.Value("v");
 		put.PostVersion("0");
-		client->Start(&put)->Wait();
+        client->RPC(&put)->Wait();
 		assert(put.Ok());
 	}
 }
@@ -67,9 +67,9 @@ static void test_multi_upload(
 	put2.Value("v");
 	put2.Key("0");
 
-	auto op0 = client->Start(&put0);
-	auto op1 = client->Start(&put1);
-	auto op2 = client->Start(&put2);
+	auto op0 = client->RPC(&put0);
+	auto op1 = client->RPC(&put1);
+	auto op2 = client->RPC(&put2);
 
 	op0->Wait();
 	op1->Wait();
@@ -93,7 +93,7 @@ static void test_array_upload(
 
 	std::vector<std::shared_ptr<Sync>> ops;
 	for (auto &p: puts) {
-		auto pe = client->Start(p.get());
+		auto pe = client->RPC(p.get());
 		ops.push_back(std::move(pe));
 	}
 	for (auto &op: ops)
@@ -105,7 +105,7 @@ static void test_array_upload(
 static void test_single_get(std::shared_ptr<ClientInterface> client) {
 	Get get;
 	get.Key("k");
-	auto op = client->Start(&get);
+	auto op = client->RPC(&get);
 	op->Wait();
 	assert(get.Ok());
 
@@ -118,7 +118,7 @@ static void test_single_keyrange(
 	GetKeyRange op;
 	op.Start("a");
 	op.End("z");
-	auto sync = client->Start(&op);
+	auto sync = client->RPC(&op);
 	sync->Wait();
 	assert(op.Ok());
 }
@@ -127,7 +127,7 @@ static void test_single_getnext(
 		std::shared_ptr<ClientInterface> client) {
 	GetNext op;
 	op.Key("a");
-	auto sync = client->Start(&op);
+	auto sync = client->RPC(&op);
 	sync->Wait();
 	assert(op.Ok());
 }
@@ -135,7 +135,7 @@ static void test_single_getnext(
 static void test_single_getlog(
 		std::shared_ptr<ClientInterface> client) {
 	GetLog op;
-	auto sync = client->Start(&op);
+	auto sync = client->RPC(&op);
 	sync->Wait();
 	assert(op.Ok());
 

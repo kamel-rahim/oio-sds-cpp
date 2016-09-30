@@ -9,39 +9,119 @@
 
 #include <cstdint>
 #include <memory>
+
 #include <utils/utils.h>
-#include "Request.h"
+#include <utils/net.h>
+#include <kinetic.pb.h>
 
 namespace oio {
 namespace kinetic {
 namespace rpc {
 
-/* Represents any RPC to a kinetic drive */
+/**
+ * State information of the connection.
+ */
+struct Context {
+    int64_t cnx_id_;
+    int64_t sequence_id_;
+
+    int64_t cluster_version_;
+    int64_t identity_;
+    const char *sha_salt_;
+
+    Context();
+
+    ~Context() { }
+
+    void Reset();
+};
+
+/**
+ * A bunch of bytes.
+ * Onnly used when writing to a Channel.
+ */
+struct Slice {
+    void *buf;
+    size_t len;
+
+    Slice() : buf{nullptr}, len{0} { }
+
+    ~Slice() { }
+
+    void Reset() { buf = nullptr; len = 0; }
+};
+
+/**
+ * Raw bytes received.
+ * Only used when reading from the channel.
+ */
+struct Frame {
+    std::vector<uint8_t> msg;
+    std::vector<uint8_t> val;
+
+    Frame() : msg(), val() { }
+
+    ~Frame() { }
+
+    int Read(net::Channel &chan, int64_t dl);
+};
+
+/**
+ * Unpacked form of a received frame.
+ * Only used when reading from the channel.
+ */
+struct Request {
+    ::com::seagate::kinetic::proto::Command cmd;
+    ::com::seagate::kinetic::proto::Message msg;
+    std::vector<uint8_t> value;
+
+    ~Request() { }
+
+    Request() : cmd(), msg(), value() { }
+
+    Request(Request &o) = delete;
+
+    Request(const Request &o) = delete;
+
+    Request(Request &&o) = delete;
+
+    bool Parse(Frame &f);
+
+    int Read(net::Channel &chan, int64_t dl);
+};
+
+
+/**
+ * Represents any RPC to a kinetic drive
+ */
 class Exchange {
   public:
     Exchange();
     FORBID_COPY_CTOR(Exchange);
+
     FORBID_MOVE_CTOR(Exchange);
-    
+
     virtual ~Exchange() {}
+
+    int Write(net::Channel &chan, const Context &ctx, int64_t dl);
 
     void SetSequence(int64_t s);
 
-    std::shared_ptr<oio::kinetic::rpc::Request> MakeRequest();
-
-    bool Ok() const { return status_; }
+    bool Ok() const {
+        return status_;
+    }
 
     virtual void ManageReply(oio::kinetic::rpc::Request &rep) = 0;
 
-    virtual void ManageError(int errcode);
+    void ManageError(int errcode);
 
   protected:
-    void checkStatus (const oio::kinetic::rpc::Request &rep);
+    void checkStatus(const oio::kinetic::rpc::Request &rep);
 
   protected:
-    std::shared_ptr<oio::kinetic::rpc::Request> req_;
+    ::com::seagate::kinetic::proto::Command cmd;
+    Slice payload_;
     bool status_;
-
 };
 
 } // namespace rpc

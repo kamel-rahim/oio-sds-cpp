@@ -18,7 +18,6 @@
 
 #include <cstdint>
 #include <oio/kinetic/coro/rpc/Exchange.h>
-#include <oio/kinetic/coro/rpc/Request.h>
 #include "ClientInterface.h"
 
 struct mill_chan;
@@ -37,7 +36,13 @@ class PendingExchange : public Sync {
 
     void SetSequence(int64_t s);
 
-    int64_t Sequence() const;
+    void SetDeadline(int64_t dl);
+
+    inline int64_t Sequence() const { return sequence_id_; }
+
+    inline int64_t Deadline() const { return deadline_; }
+
+    int Write(net::Channel &chan, oio::kinetic::rpc::Context &ctx, int64_t dl);
 
     /**
      * A reply hass been received.
@@ -52,20 +57,14 @@ class PendingExchange : public Sync {
      */
     void ManageError (int errcode);
 
-    std::shared_ptr<oio::kinetic::rpc::Request> MakeRequest();
-
     void Signal();
 
     void Wait();
 
-    inline int64_t SeqId() const { return seqid_; }
-
-    inline int64_t Deadline() const { return deadline_; }
-
   private:
     oio::kinetic::rpc::Exchange *exchange_;
     struct mill_chan *notification_;
-    int64_t seqid_;
+    int64_t sequence_id_;
     int64_t deadline_;
 };
 

@@ -197,6 +197,14 @@ bool Socket::setquickack() {
     return setopt(IPPROTO_TCP, TCP_QUICKACK, 1);
 }
 
+bool Socket::setsndbuf(int size) {
+    return setopt(SOL_SOCKET, SO_SNDBUF, size);
+}
+
+bool Socket::setrcvbuf(int size) {
+    return setopt(SOL_SOCKET, SO_RCVBUF, size);
+}
+
 bool Socket::listen(int backlog) {
     assert(fd_ >= 0);
     auto rc = ::listen(fd_, backlog);

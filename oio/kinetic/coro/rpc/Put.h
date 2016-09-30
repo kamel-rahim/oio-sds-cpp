@@ -9,7 +9,6 @@
 
 #include <cstdint>
 #include <memory>
-#include "Request.h"
 #include "Exchange.h"
 
 namespace oio {
@@ -32,14 +31,24 @@ class Put : public oio::kinetic::rpc::Exchange {
 
     void PostVersion(const char *p);
 
-    void Value(const std::string &v);
-
+    void Value(const Slice &v); // zero copy
+    void Value(const std::string &v); // copy
     void Value(const std::vector<uint8_t> &v); // copy
-    void Value(std::vector<uint8_t> &v); // swap!
+    void Value(std::vector<uint8_t> &v); // swap
 
     void ManageReply(oio::kinetic::rpc::Request &rep) override;
+
+    /**
+     *
+     * @param on true for WriteThrough, false for WriteBack
+     */
+    void Sync(bool on);
+
   private:
 	void rehash();
+
+  private:
+    std::vector<uint8_t> value_copy;
 };
 
 

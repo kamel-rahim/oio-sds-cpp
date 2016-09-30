@@ -8,8 +8,12 @@ find_program(RAGEL_EXE ragel)
 set(LINKER_LANGUAGE CXX)
 
 pkg_check_modules(GLOG libglog REQUIRED)
+pkg_check_modules(GFLAGS libgflags)
 pkg_check_modules(PROTOBUF protobuf REQUIRED)
 pkg_check_modules(CRYPTO libcrypto REQUIRED)
+
+set(GFLAGS_INCLUDE_DIRECTORIES "/usr/include")
+set(GFLAGS_LIBRARIES "-lgflags")
 
 include_directories(BEFORE
         ${CMAKE_CURRENT_SOURCE_DIR}
@@ -17,12 +21,14 @@ include_directories(BEFORE
         ${CMAKE_CURRENT_SOURCE_DIR}/libmill
 		${PROTOBUF_INCLUDE_DIRECTORIES}
 		${CRYPTO_INCLUDE_DIRECTORIES}
-		${GLOG_INCLUDE_DIRECTORIES})
+		${GLOG_INCLUDE_DIRECTORIES}
+        ${GFLAGS_INCLUDE_DIRECTORIES})
 
 add_subdirectory(libmill)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -pipe -fPIC")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GNU_SOURCE")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector-all")
@@ -33,8 +39,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2")
 
 add_definitions(-DMILL_USE_PREFIX=1)
-
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
 
 add_custom_command(OUTPUT
         ${CMAKE_CURRENT_BINARY_DIR}/kinetic.pb.cc
@@ -59,7 +63,6 @@ add_library(oio-kinetic-client SHARED
         ${CMAKE_CURRENT_BINARY_DIR}/kinetic.pb.cc
         ${CMAKE_CURRENT_BINARY_DIR}/kinetic.pb.h
         oio/api/blob.h
-        oio/kinetic/coro/rpc/Request.h
         oio/kinetic/coro/rpc/Exchange.h
         oio/kinetic/coro/rpc/Exchange.cpp
         oio/kinetic/coro/rpc/Put.cpp
@@ -116,9 +119,13 @@ target_link_libraries(test-http-client oio-kinetic-client)
 add_executable(test-utils tests/TestUtils.cpp)
 target_link_libraries(test-utils oio-kinetic-client)
 
+add_executable(test-random-put tests/TestRandomPut.cpp)
+target_link_libraries(test-random-put oio-kinetic-client
+        ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES})
+
 add_executable(oio-kinetic-listener bin/oio-kinetic-listener.cpp)
 target_link_libraries(oio-kinetic-listener oio-kinetic-client
-        ${GLOG_LIBRARIES} mill_s)
+        ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES} mill_s)
 
 add_custom_command(OUTPUT
         ${CMAKE_CURRENT_BINARY_DIR}/headers.cc

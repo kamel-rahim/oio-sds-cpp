@@ -11,7 +11,6 @@
 #include <memory>
 #include <vector>
 #include "Exchange.h"
-#include "Request.h"
 
 namespace oio {
 namespace kinetic {
@@ -29,12 +28,12 @@ class Get : public oio::kinetic::rpc::Exchange {
 
     void Key(const std::string &k);
 
-    void Steal(std::vector<uint8_t> &v) { v.swap(val_); }
+    void Steal(std::vector<uint8_t> &v) { v.swap(out_); }
 
     virtual void ManageReply(oio::kinetic::rpc::Request &rep) override;
 
   private:
-    std::vector<uint8_t> val_;
+    std::vector<uint8_t> out_;
 };
 
 } // namespace rpc

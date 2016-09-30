@@ -49,6 +49,7 @@
 
 using oio::kinetic::client::ClientInterface;
 using oio::kinetic::client::CoroutineClientFactory;
+using oio::kinetic::client::CoroutineClient;
 using oio::kinetic::client::Sync;
 using oio::kinetic::rpc::Exchange;
 using oio::kinetic::rpc::GetLog;
@@ -131,7 +132,7 @@ static void monitoring_round(const std::string id, const std::string url) {
     GetLog op;
     do {
         auto client = factory.Get(url);
-        auto sync = client->Start(&op);
+        auto sync = client->RPC(&op);
         sync->Wait();
         if (!op.Ok()) {
             LOG(INFO) << "Stat [" << id << "] FAILED";

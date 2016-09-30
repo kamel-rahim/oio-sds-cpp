@@ -15,9 +15,9 @@ namespace proto = ::com::seagate::kinetic::proto;
 using oio::kinetic::rpc::GetLog;
 
 GetLog::GetLog(): Exchange(), cpu{0}, temp{0}, space{0}, io{0} {
-    auto h = req_->cmd.mutable_header();
+    auto h = cmd.mutable_header();
     h->set_messagetype(proto::Command_MessageType_GETLOG);
-	auto types = req_->cmd.mutable_body()->mutable_getlog()->mutable_types();
+	auto types = cmd.mutable_body()->mutable_getlog()->mutable_types();
 	types->Add(proto::Command_GetLog_Type::Command_GetLog_Type_CAPACITIES);
 	types->Add(proto::Command_GetLog_Type::Command_GetLog_Type_TEMPERATURES);
 	types->Add(proto::Command_GetLog_Type::Command_GetLog_Type_UTILIZATIONS);

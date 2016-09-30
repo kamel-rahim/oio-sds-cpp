@@ -42,10 +42,10 @@ static int _on_headers_complete_UPLOAD(http_parser *p) {
     ctx->settings.on_header_value = _on_trailer_value_COMMON;
     ctx->upload = ctx->repository->GetUpload(*ctx);
     auto rc = ctx->upload->Prepare();
+    for (const auto &e: ctx->xattrs)
+        ctx->upload->SetXattr(e.first, e.second);
     switch (rc) {
         case Upload::Status::OK:
-            for (const auto &e: ctx->xattrs)
-                ctx->upload->SetXattr(e.first, e.second);
             return 0;
         case Upload::Status::Already:
             ctx->ReplyError({406, 421, "blobs found"});
@@ -257,14 +257,16 @@ int _on_url_COMMON(http_parser *p, const char *buf, size_t len) {
 }
 
 #define _assign_non_prefixed(prefix) do { \
-    const char *_b = buf + sizeof(prefix) - 1; \
-    size_t _l = len - sizeof(prefix) - 1; \
+    size_t _plen = sizeof(prefix) - 1; \
+    const char *_b = buf + _plen; \
+    size_t _l = len - _plen; \
     ctx->last_field_name.assign(_b, _l); \
 } while (0)
 
 int _on_header_field_COMMON(http_parser *p, const char *buf, size_t len) {
     auto ctx = (BlobClient *) p->data;
     assert(ctx->defered_error.http == 0);
+    ctx->last_field = header_parse(buf, len);
     if (p->method == HTTP_PUT) {
         if (ctx->last_field == HDR_OIO_XATTR) {
             _assign_non_prefixed(OIO_HEADER_XATTR_PREFIX);
@@ -272,7 +274,6 @@ int _on_header_field_COMMON(http_parser *p, const char *buf, size_t len) {
             _assign_non_prefixed(OIO_HEADER_XATTR_RAWX_PREFIX);
         }
     }
-    ctx->last_field = header_parse(buf, len);
     return 0;
 }
 
@@ -288,14 +289,11 @@ int _on_header_value_COMMON(http_parser *p, const char *buf, size_t len) {
         } else {
             ctx->targets.emplace_back(buf, len);
         }
-    }
-    else if (ctx->last_field == HDR_OIO_XATTR) {
+    } else if (ctx->last_field == HDR_OIO_XATTR || ctx->last_field == HDR_OIO_XATTR_RAWX) {
         if (p->method == HTTP_PUT) {
-            ctx->xattrs[ctx->last_field_name] = std::move(
-                    std::string(buf, len));
+            ctx->xattrs[ctx->last_field_name] = std::string(buf, len);
         }
-    }
-    else if (ctx->last_field == HDR_EXPECT) {
+    } else if (ctx->last_field == HDR_EXPECT) {
         ctx->expect_100 = ("100-continue" == std::string(buf, len));
     }
     return 0;

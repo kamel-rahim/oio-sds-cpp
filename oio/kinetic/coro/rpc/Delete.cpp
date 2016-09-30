@@ -7,16 +7,15 @@
 #include <kinetic.pb.h>
 #include <oio/kinetic/coro/client/ClientInterface.h>
 #include "Delete.h"
-#include "Request.h"
 
 namespace proto = ::com::seagate::kinetic::proto;
 using oio::kinetic::rpc::Request;
 using oio::kinetic::rpc::Delete;
 
 Delete::Delete(): Exchange() {
-    auto h = req_->cmd.mutable_header();
+    auto h = cmd.mutable_header();
     h->set_messagetype(proto::Command_MessageType_DELETE);
-    auto kv = req_->cmd.mutable_body()->mutable_keyvalue();
+    auto kv = cmd.mutable_body()->mutable_keyvalue();
     kv->set_synchronization(proto::Command_Synchronization_WRITEBACK);
     kv->set_algorithm(proto::Command_Algorithm_SHA1);
 }
@@ -33,5 +32,5 @@ void Delete::Key (const char *k) {
 }
 
 void Delete::Key (const std::string &k) {
-    req_->cmd.mutable_body()->mutable_keyvalue()->set_key(k);
+    cmd.mutable_body()->mutable_keyvalue()->set_key(k);
 }

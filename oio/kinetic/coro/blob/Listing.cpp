@@ -63,7 +63,7 @@ class KineticListing : public blob::Listing {
                 gkr->IncludeStart(false);
                 gkr->IncludeEnd(false);
                 ops[i].reset(gkr);
-                syncs.emplace_back(clients[i]->Start(gkr));
+                syncs.emplace_back(clients[i]->RPC(gkr));
             }
             for (auto sync: syncs)
                 sync->Wait();

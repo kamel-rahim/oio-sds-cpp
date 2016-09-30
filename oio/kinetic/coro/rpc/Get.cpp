@@ -12,10 +12,10 @@ using namespace oio::kinetic::client;
 using namespace oio::kinetic::rpc;
 namespace proto = ::com::seagate::kinetic::proto;
 
-Get::Get(): Exchange(), val_() {
-    auto h = req_->cmd.mutable_header();
+Get::Get(): Exchange(), out_() {
+    auto h = cmd.mutable_header();
     h->set_messagetype(proto::Command_MessageType_GET);
-    auto kv = req_->cmd.mutable_body()->mutable_keyvalue();
+    auto kv = cmd.mutable_body()->mutable_keyvalue();
     kv->set_algorithm(proto::Command_Algorithm_SHA1);
 }
 
@@ -24,15 +24,15 @@ Get::~Get() { }
 void Get::ManageReply(Request &rep) {
     checkStatus(rep);
     if (status_) {
-        val_.clear();
-        val_.swap(rep.value);
+        out_.clear();
+        out_.swap(rep.value);
     }
 }
 
 void Get::Key(const char *k) {
-    req_->cmd.mutable_body()->mutable_keyvalue()->set_key(k);
+    cmd.mutable_body()->mutable_keyvalue()->set_key(k);
 }
 
 void Get::Key(const std::string &k) {
-    req_->cmd.mutable_body()->mutable_keyvalue()->set_key(k);
+    cmd.mutable_body()->mutable_keyvalue()->set_key(k);
 }

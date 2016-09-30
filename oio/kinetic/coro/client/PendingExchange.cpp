@@ -13,7 +13,7 @@ using oio::kinetic::client::PendingExchange;
 int64_t oio::kinetic::client::rpc_default_ttl = OIO_KINETIC_RPC_DEFAULT_TTL;
 
 PendingExchange::PendingExchange(oio::kinetic::rpc::Exchange *e) :
-        exchange_(e), notification_{nullptr}, seqid_{0} {
+        exchange_(e), notification_{nullptr}, sequence_id_{0} {
     notification_ = chmake(int, 1);
     deadline_ = mill_now() + oio::kinetic::client::rpc_default_ttl;
 }
@@ -25,14 +25,14 @@ PendingExchange::~PendingExchange() {
     notification_ = nullptr;
 }
 
-void PendingExchange::SetSequence(int64_t s) {
-    assert(exchange_ != nullptr);
-    seqid_ = s;
-    exchange_->SetSequence(s);
+void PendingExchange::SetDeadline(int64_t dl) {
+    deadline_ = dl;
 }
 
-int64_t PendingExchange::Sequence() const {
-    return seqid_;
+void PendingExchange::SetSequence(int64_t s) {
+    sequence_id_ = s;
+    if (exchange_ != nullptr)
+        exchange_->SetSequence(s);
 }
 
 void PendingExchange::Signal() {
@@ -56,8 +56,10 @@ void PendingExchange::ManageError(int errcode) {
     return exchange_->ManageError(errcode);
 }
 
-std::shared_ptr<oio::kinetic::rpc::Request> PendingExchange::MakeRequest() {
-    assert(exchange_ != nullptr);
-    return exchange_->MakeRequest();
-
+int PendingExchange::Write(net::Channel &chan, oio::kinetic::rpc::Context &ctx,
+        int64_t dl) {
+    if (exchange_ == nullptr)
+        return ECANCELED;
+    SetSequence(ctx.sequence_id_ ++);
+    return exchange_->Write(chan, ctx, dl);
 }

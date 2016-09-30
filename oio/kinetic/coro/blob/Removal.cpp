@@ -29,7 +29,7 @@ struct PendingDelete {
     }
     void Start() {
         assert(sync.get() == nullptr);
-        sync = client->Start(op.get());
+        sync = client->RPC(op.get());
     }
 };
 

@@ -9,7 +9,6 @@
 
 #include <cstdint>
 #include <memory>
-#include "Request.h"
 #include "Exchange.h"
 
 namespace oio {

@@ -33,8 +33,9 @@ License along with this library. */
 using oio::kinetic::client::CoroutineClientFactory;
 using oio::kinetic::client::ClientInterface;
 using oio::kinetic::client::Sync;
-using oio::kinetic::rpc::Put;
 using oio::kinetic::rpc::Exchange;
+using oio::kinetic::rpc::Slice;
+using oio::kinetic::rpc::Put;
 using oio::kinetic::blob::UploadBuilder;
 
 static volatile bool flag_runnning{true};
@@ -96,7 +97,7 @@ class BackwardsNameIterator : public NameIterator {
 };
 
 
-static uint64_t push_loop(uint64_t max, const std::vector<uint8_t> &buf,
+static uint64_t push_loop(uint64_t max, const Slice &buf,
         std::shared_ptr<ClientInterface> client,
         std::shared_ptr<NameIterator> namer) {
     std::queue<std::shared_ptr<Exchange>> qops;
@@ -163,7 +164,12 @@ int main(int argc, char **argv) {
     freopen("/dev/null", "a", stdout);
     mill_goprepare(2+2*FLAGS_put_window, 16384, sizeof(void *));
 
-    const std::vector<uint8_t> buf(FLAGS_block_size);
+    std::vector<uint8_t> buf(FLAGS_block_size);
+
+    Slice slice;
+    slice.buf = buf.data();
+    slice.len = buf.size();
+
     CoroutineClientFactory factory;
 
     const char *url_device = ::getenv("URL");
@@ -189,7 +195,7 @@ int main(int argc, char **argv) {
     LOG(INFO) << "Client ready to " << client->Id();
 
     auto pre = Clock::now();
-    uint64_t count = push_loop(FLAGS_block_count, buf, client, naming);
+    uint64_t count = push_loop(FLAGS_block_count, slice, client, naming);
     auto post = Clock::now();
     auto spent_msec = std::chrono::duration_cast<Precision>(post - pre).count();
 

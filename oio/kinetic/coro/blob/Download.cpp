@@ -130,7 +130,7 @@ class KineticDownload : public blob::Download {
             } else {
                 auto pg = waiting.front();
                 waiting.pop();
-                pg.sync = pg.client->Start(pg.op.get());
+                pg.sync = pg.client->RPC(pg.op.get());
                 running.push(pg);
                 DLOG(INFO) << "chunk download started";
             }

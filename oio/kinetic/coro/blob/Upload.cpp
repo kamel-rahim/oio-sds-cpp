@@ -89,7 +89,7 @@ void KineticUpload::TriggerUpload(const std::string &suffix) {
     assert(buffer.size() == 0);
 
     puts.emplace_back(put);
-    syncs.emplace_back(client->Start(put));
+    syncs.emplace_back(client->RPC(put));
 }
 
 void KineticUpload::TriggerUpload() {
@@ -173,7 +173,7 @@ blob::Upload::Status KineticUpload::Prepare() {
     int i = 0;
     for (auto cli: clients) {
         auto op = ops[i];
-        syncs.push_back(cli->Start(op.get()));
+        syncs.push_back(cli->RPC(op.get()));
     }
     for (auto sync: syncs)
         sync->Wait();

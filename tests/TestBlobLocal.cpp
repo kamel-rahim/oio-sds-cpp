@@ -1,24 +1,31 @@
-/** Copyright (c) 2016 Contributors (see the AUTHORS file)
+/**
+ * Copyright (c) 2016 Contributors (see the AUTHORS file)
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License,
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
- * obtain one at https://mozilla.org/MPL/2.0/ */
+ * obtain one at https://mozilla.org/MPL/2.0/
+ */
+
+#include <gflags/gflags.h>
+#include <gtest/gtest.h>
 #include <glog/logging.h>
+
 #include <oio/local/blob.h>
 #include <utils/utils.h>
 
 using oio::local::blob::UploadBuilder;
 using oio::local::blob::DownloadBuilder;
 using oio::local::blob::RemovalBuilder;
+using oio::api::blob::Status;
 
-static std::string path("/tmp/blob");
+DEFINE_string(string_path, "/tmp/blob", "Path of the random file");
 
-static void test_removal(void) {
+TEST(Local,Removal) {
     RemovalBuilder builder;
-    builder.Path(path);
+    builder.Path(FLAGS_string_path);
     auto rem = builder.Build();
     auto rc = rem->Prepare();
-    if (rc == oio::api::blob::Removal::Status::OK) {
+    if (rc == Status::OK) {
         if (!rem->Commit())
             abort();
     } else {
@@ -26,12 +33,12 @@ static void test_removal(void) {
     }
 }
 
-static void test_download(void) {
+TEST(Local,Download) {
     DownloadBuilder builder;
-    builder.Path(path);
+    builder.Path(FLAGS_string_path);
     auto dl = builder.Build();
     auto rc = dl->Prepare();
-    if (rc == oio::api::blob::Download::Status::OK) {
+    if (rc == Status::OK) {
         while (!dl->IsEof()) {
             std::vector<uint8_t> buf;
             int32_t r = dl->Read(buf);
@@ -40,12 +47,12 @@ static void test_download(void) {
     }
 }
 
-static void test_upload(void) {
+TEST(Local,Upload) {
     UploadBuilder builder;
-    builder.Path(path);
+    builder.Path(FLAGS_string_path);
     auto ul = builder.Build();
     auto rc = ul->Prepare();
-    if (rc == oio::api::blob::Upload::Status::OK) {
+    if (rc == Status::OK) {
         std::string blah;
         append_string_random(blah, 1024*1024, "0123456789ABCDEF");
         for (int i=0; i<8 ;++i)
@@ -57,11 +64,9 @@ static void test_upload(void) {
 }
 
 int main(int argc, char **argv) {
-    (void) argc;
+    gflags::ParseCommandLineFlags(&argc, &argv, true);
     google::InitGoogleLogging(argv[0]);
+    ::testing::InitGoogleTest(&argc, argv);
     FLAGS_logtostderr = true;
-    test_upload();
-    test_download();
-    test_removal();
-    return 0;
+    return RUN_ALL_TESTS();
 }

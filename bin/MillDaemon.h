@@ -20,7 +20,8 @@
 
 #include <utils/net.h>
 #include <oio/api/blob.h>
-#include "headers.h"
+#include "common-header-parser.h"
+#include "common-server-headers.h"
 
 class BlobRepository;
 
@@ -30,21 +31,24 @@ class BlobService;
 
 class BlobDaemon;
 
+DECLARE_bool(verbose_daemon);
+
 /* -------------------------------------------------------------------------- */
 
-struct SoftError {
-    int http, soft;
-    const char *why;
+class BlobHandler {
+  public:
+    virtual ~BlobHandler() {}
 
-    SoftError(): http{0}, soft{0}, why{nullptr} { }
+    virtual SoftError SetUrl (const std::string &u) = 0;
 
-    SoftError(int http, int soft, const char *why):
-            http(http), soft(soft), why(why) {
-    }
+    virtual SoftError SetHeader (
+            const std::string &k, const std::string &v) = 0;
 
-    void Reset() { http = 0; soft = 0, why = nullptr; }
+    virtual std::unique_ptr<oio::api::blob::Upload> GetUpload() = 0;
 
-    void Pack(std::string &dst);
+    virtual std::unique_ptr<oio::api::blob::Download> GetDownload() = 0;
+
+    virtual std::unique_ptr<oio::api::blob::Removal> GetRemoval() = 0;
 };
 
 class BlobRepository {
@@ -55,14 +59,7 @@ class BlobRepository {
 
     virtual bool Configure (const std::string &cfg) = 0;
 
-    virtual std::unique_ptr<oio::api::blob::Upload> GetUpload(
-            const BlobClient &client) = 0;
-
-    virtual std::unique_ptr<oio::api::blob::Download> GetDownload(
-            const BlobClient &client) = 0;
-
-    virtual std::unique_ptr<oio::api::blob::Removal> GetRemoval(
-            const BlobClient &client) = 0;
+    virtual BlobHandler *Handler() = 0;
 };
 
 struct BlobClient {
@@ -97,14 +94,12 @@ struct BlobClient {
     void ReplyPreamble(int code, const char *msg, int64_t length);
 
     std::unique_ptr<net::Socket> client;
-    std::shared_ptr<BlobRepository> repository;
+    std::unique_ptr<BlobHandler> handler;
 
     struct http_parser parser;
     struct http_parser_settings settings;
 
     // Related to the current request
-    std::string chunk_id;
-    std::vector<std::string> targets;
     std::map<std::string,std::string> reply_headers;
 
     SoftError defered_error;
@@ -113,10 +108,7 @@ struct BlobClient {
     std::unique_ptr<oio::api::blob::Removal> removal;
 
     // used during the parsing of the request
-
-    enum http_header_e last_field;
     std::string last_field_name;
-    std::map<std::string, std::string> xattrs;
     bool expect_100;
     bool want_closure;
 

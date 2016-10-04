@@ -21,12 +21,29 @@ class UploadBuilder {
 
     ~UploadBuilder();
 
+    /**
+     * Mandatory
+     * @param path
+     */
     void Path(const std::string &path);
+
+    /**
+     * Optional
+     * @param mode
+     */
+    void FileMode(unsigned int mode);
+
+    /**
+     * Optional
+     * @param mode
+     */
+    void DirMode(unsigned int mode);
 
     std::unique_ptr<oio::api::blob::Upload> Build();
 
   private:
     std::string path;
+    unsigned int fmode, dmode;
 };
 
 class DownloadBuilder {

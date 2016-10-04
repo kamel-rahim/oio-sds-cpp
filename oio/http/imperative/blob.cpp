@@ -23,6 +23,7 @@
 using oio::api::blob::Removal;
 using oio::api::blob::Upload;
 using oio::api::blob::Download;
+using oio::api::blob::Status;
 using oio::http::imperative::RemovalBuilder;
 using oio::http::imperative::UploadBuilder;
 using oio::http::imperative::DownloadBuilder;
@@ -55,7 +56,7 @@ class HttpUpload : public Upload {
 
     void SetXattr(const std::string &k, const std::string &v) override;
 
-    Upload::Status Prepare() override;
+    Status Prepare() override;
 
     bool Commit() override;
 
@@ -78,7 +79,7 @@ class HttpDownload : public Download {
 
     bool IsEof() override;
 
-    Download::Status Prepare() override;
+    Status Prepare() override;
 
     int32_t Read(std::vector<uint8_t> &buf) override;
 
@@ -99,8 +100,8 @@ HttpRemoval::~HttpRemoval() {
  * For example, we could prepare the request here, just sending the headers with
  * the Transfer-Enncoding set to chunked. So we could wait for the commit to
  * finish the request */
-Removal::Status HttpRemoval::Prepare() {
-    return Removal::Status::OK;
+Status HttpRemoval::Prepare() {
+    return Status::OK;
 }
 
 bool HttpRemoval::Commit() {
@@ -171,10 +172,10 @@ bool HttpUpload::Abort() {
     return false;
 }
 
-Upload::Status HttpUpload::Prepare() {
+Status HttpUpload::Prepare() {
     auto rc = request.WriteHeaders();
     (void) rc;
-    return Upload::Status::InternalError;
+    return Status::InternalError;
 }
 
 void HttpUpload::Write(const uint8_t *buf, uint32_t len) {
@@ -235,30 +236,30 @@ bool HttpDownload::IsEof() {
     return reply.Get().step == http::Reply::Step::Done;
 }
 
-Download::Status HttpDownload::Prepare() {
+Status HttpDownload::Prepare() {
 
     auto rc = request.WriteHeaders();
     if (rc != http::Code::OK && rc != http::Code::Done) {
         if (rc == http::Code::NetworkError)
-            return Download::Status::NetworkError;
-        return Download::Status::InternalError;
+            return Status::NetworkError;
+        return Status::InternalError;
     }
 
     rc = request.FinishRequest();
     if (rc != http::Code::OK && rc != http::Code::Done) {
         if (rc == http::Code::NetworkError)
-            return Download::Status::NetworkError;
-        return Download::Status::InternalError;
+            return Status::NetworkError;
+        return Status::InternalError;
     }
 
     rc = reply.ReadHeaders();
     if (rc != http::Code::OK && rc != http::Code::Done) {
         if (rc == http::Code::NetworkError)
-            return Download::Status::NetworkError;
-        return Download::Status::InternalError;
+            return Status::NetworkError;
+        return Status::InternalError;
     }
 
-    return Download::Status::OK;
+    return Status::OK;
 }
 
 int32_t HttpDownload::Read(std::vector<uint8_t> &buf) {

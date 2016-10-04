@@ -142,8 +142,7 @@ std::string Addr::Debug() const {
                << ntohs(ADDR6(&ss_)->sin6_port);
             return ss.str();
         default:
-            LOG(ERROR) << "Address type not managed";
-            abort();
+            return std::string("?");
     }
 }
 

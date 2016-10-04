@@ -258,10 +258,8 @@ static int make_kinetic_socket(void) {
 }
 
 int main(int argc UNUSED, char **argv) {
+    gflags::ParseCommandLineFlags(&argc, &argv, true);
     google::InitGoogleLogging(argv[0]);
-    FLAGS_logtostderr = true;
-    FLAGS_minloglevel = google::INFO;
-    FLAGS_colorlogtostderr = true;
 
     if (argc != 3) {
         LOG(ERROR) << "Usage: " << argv[0] << " NS URL";

@@ -142,8 +142,7 @@ std::string Addr::Debug() const {
                << ntohs(ADDR6(&ss_)->sin6_port);
             return ss.str();
         default:
-            LOG(ERROR) << "Address type not managed";
-            abort();
+            return std::string("?");
     }
 }
 
@@ -195,6 +194,14 @@ bool Socket::setcork() {
 
 bool Socket::setquickack() {
     return setopt(IPPROTO_TCP, TCP_QUICKACK, 1);
+}
+
+bool Socket::setsndbuf(int size) {
+    return setopt(SOL_SOCKET, SO_SNDBUF, size);
+}
+
+bool Socket::setrcvbuf(int size) {
+    return setopt(SOL_SOCKET, SO_RCVBUF, size);
 }
 
 bool Socket::listen(int backlog) {

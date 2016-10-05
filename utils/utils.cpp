@@ -84,10 +84,15 @@ std::string bin2hex(const uint8_t *b, size_t l) {
 
 std::vector<uint8_t>
 compute_sha1(const std::vector<uint8_t> &val) {
+    return compute_sha1(val.data(), val.size());
+}
+
+std::vector<uint8_t>
+compute_sha1(const void *buf, size_t buflen) {
     unsigned int len = SHA_DIGEST_LENGTH;
     std::vector<uint8_t> result(len);
 
-    SHA1(val.data(), val.size(), result.data());
+    SHA1(static_cast<const unsigned char*>(buf), buflen, result.data());
     return result;
 }
 

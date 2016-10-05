@@ -13,9 +13,9 @@ using oio::kinetic::rpc::Request;
 using oio::kinetic::rpc::GetKeyRange;
 
 GetKeyRange::GetKeyRange(): Exchange() {
-    auto h = req_->cmd.mutable_header();
+    auto h = cmd.mutable_header();
     h->set_messagetype(proto::Command_MessageType_GETKEYRANGE);
-    auto r = req_->cmd.mutable_body()->mutable_range();
+    auto r = cmd.mutable_body()->mutable_range();
     r->set_startkeyinclusive(true);
     r->set_endkeyinclusive(true);
     r->set_maxreturned(200);
@@ -32,31 +32,31 @@ void GetKeyRange::ManageReply(Request &rep) {
 }
 
 void GetKeyRange::Start(const char *k) {
-    req_->cmd.mutable_body()->mutable_range()->set_startkey(k);
+    cmd.mutable_body()->mutable_range()->set_startkey(k);
 }
 
 void GetKeyRange::Start(const std::string &k) {
-    req_->cmd.mutable_body()->mutable_range()->set_startkey(k);
+    cmd.mutable_body()->mutable_range()->set_startkey(k);
 }
 
 void GetKeyRange::End(const char *k) {
-    req_->cmd.mutable_body()->mutable_range()->set_endkey(k);
+    cmd.mutable_body()->mutable_range()->set_endkey(k);
 }
 
 void GetKeyRange::End(const std::string &k) {
-    req_->cmd.mutable_body()->mutable_range()->set_endkey(k);
+    cmd.mutable_body()->mutable_range()->set_endkey(k);
 }
 
 void GetKeyRange::IncludeStart(bool v) {
-    req_->cmd.mutable_body()->mutable_range()->set_startkeyinclusive(v);
+    cmd.mutable_body()->mutable_range()->set_startkeyinclusive(v);
 }
 
 void GetKeyRange::IncludeEnd(bool v) {
-    req_->cmd.mutable_body()->mutable_range()->set_endkeyinclusive(v);
+    cmd.mutable_body()->mutable_range()->set_endkeyinclusive(v);
 }
 
 void GetKeyRange::MaxItems(int32_t v) {
-    req_->cmd.mutable_body()->mutable_range()->set_maxreturned(v);
+    cmd.mutable_body()->mutable_range()->set_maxreturned(v);
 }
 
 void GetKeyRange::Steal (std::vector<std::string> &v) {

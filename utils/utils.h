@@ -56,6 +56,8 @@ std::string bin2hex(const uint8_t *b, size_t l);
 
 std::vector<uint8_t> compute_sha1(const std::vector<uint8_t> &val);
 
+std::vector<uint8_t> compute_sha1(const void *buf, size_t len);
+
 std::vector<uint8_t> compute_sha1_hmac(const std::string &key,
                                        const std::string &val);
 

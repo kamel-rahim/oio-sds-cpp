@@ -16,7 +16,6 @@
 #include <utils/net.h>
 #include <kinetic.pb.h>
 #include <oio/kinetic/coro/rpc/Exchange.h>
-#include <oio/kinetic/coro/rpc/Request.h>
 #include <oio/kinetic/coro/client/ClientInterface.h>
 #include <oio/kinetic/coro/client/PendingExchange.h>
 
@@ -29,14 +28,6 @@ namespace oio {
 namespace kinetic {
 namespace client {
 
-struct Frame {
-    std::vector<uint8_t> msg;
-    std::vector<uint8_t> val;
-
-    Frame() : msg(), val() { }
-
-    ~Frame() { }
-};
 
 namespace proto = ::com::seagate::kinetic::proto;
 
@@ -45,8 +36,7 @@ class CoroutineClient : public ClientInterface {
   private:
     std::string url_;
     std::shared_ptr<net::Socket> sock_;
-    int64_t cnxid_;
-    uint64_t seqid_;
+    oio::kinetic::rpc::Context ctx;
 
     std::queue<std::shared_ptr<PendingExchange>> waiting_;
     std::vector<std::shared_ptr<PendingExchange>> pending_;
@@ -68,30 +58,14 @@ class CoroutineClient : public ClientInterface {
     /**
      * @see ClientInterface::Start()
      */
-    std::shared_ptr<Sync> Start(oio::kinetic::rpc::Exchange *ex) override;
-
-    /**
-     * Receive enough bytes from the socket and unpack them int a Framee
-     * @param frame
-     * @param dl the deadline for the whole operation
-     * @return
-     */
-    int read_frame(Frame &frame, int64_t dl);
+    std::shared_ptr<Sync> RPC(oio::kinetic::rpc::Exchange *ex) override;
 
     /**
      * Manage the frame just received from the socket
-     * @param frame
+     * @param req
      * @return
      */
-    bool manage(Frame &frame);
-
-    /**
-     * Send the frame over the socket and return errno
-     * @param frame
-     * @param dl the deadline for the whole operation
-     * @return errno
-     */
-    int forward(Frame &frame, int64_t dl);
+    bool manage(oio::kinetic::rpc::Request &req);
 
     /**
      * Start the RPC right out of the queue
@@ -121,14 +95,6 @@ class CoroutineClient : public ClientInterface {
 
     std::shared_ptr<oio::kinetic::client::PendingExchange> pop_rpc(int64_t id);
 
-    /**
-     * Packs req in frame, and return errno
-     * @param req the request to be packed
-     * @param frame the structure
-     * @return the error that occured
-     */
-    int pack(std::shared_ptr<oio::kinetic::rpc::Request> &req, Frame &frame);
-
     NOINLINE void run_agent_consumer(struct mill_chan *done);
 
     NOINLINE void run_agent_producer(struct mill_chan *done);
@@ -141,6 +107,8 @@ class CoroutineClient : public ClientInterface {
     CoroutineClient(const std::string &u);
 
     std::string DebugString() const;
+
+    void Boot ();
 };
 
 } // namespace client

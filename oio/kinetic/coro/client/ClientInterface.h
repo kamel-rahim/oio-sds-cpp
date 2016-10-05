@@ -11,7 +11,6 @@
 #include <string>
 #include <vector>
 #include <kinetic.pb.h>
-#include <oio/kinetic/coro/rpc/Request.h>
 #include <oio/kinetic/coro/rpc/Exchange.h>
 
 namespace oio {
@@ -28,7 +27,7 @@ class Sync {
 
 class ClientInterface {
   public:
-    virtual std::shared_ptr<Sync> Start(
+    virtual std::shared_ptr<Sync> RPC(
             oio::kinetic::rpc::Exchange *ex) = 0;
 
     virtual std::string Id() const = 0;

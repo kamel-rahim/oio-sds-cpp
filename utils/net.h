@@ -171,6 +171,10 @@ class Socket : public Channel {
      */
     bool setquickack();
 
+    bool setsndbuf(int size);
+
+    bool setrcvbuf(int size);
+
     virtual std::string Debug() const override;
 
     /**

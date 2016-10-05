@@ -8,25 +8,22 @@
 #include <glog/logging.h>
 
 #include <oio/kinetic/coro/client/ClientInterface.h>
-#include <utils/utils.h>
 #include "Put.h"
 
 using namespace oio::kinetic::client;
 using namespace oio::kinetic::rpc;
 namespace proto = ::com::seagate::kinetic::proto;
 
-Put::Put(): Exchange() {
-    assert(req_.get() != nullptr);
-    auto h = req_->cmd.mutable_header();
+Put::Put() : Exchange() {
+    auto h = cmd.mutable_header();
     h->set_messagetype(proto::Command_MessageType_PUT);
-    auto kv = req_->cmd.mutable_body()->mutable_keyvalue();
+    auto kv = cmd.mutable_body()->mutable_keyvalue();
     kv->set_synchronization(proto::Command_Synchronization_WRITEBACK);
     kv->set_algorithm(proto::Command_Algorithm_SHA1);
     kv->set_force(true);
 }
 
 Put::~Put() {
-    assert(nullptr != req_.get());
 }
 
 void Put::ManageReply(Request &rep) {
@@ -34,18 +31,15 @@ void Put::ManageReply(Request &rep) {
 }
 
 void Put::Key(const char *k) {
-    assert(nullptr != req_.get());
-    req_->cmd.mutable_body()->mutable_keyvalue()->set_key(k);
+    cmd.mutable_body()->mutable_keyvalue()->set_key(k);
 }
 
 void Put::Key(const std::string &k) {
-    assert(nullptr != req_.get());
-    req_->cmd.mutable_body()->mutable_keyvalue()->set_key(k);
+    cmd.mutable_body()->mutable_keyvalue()->set_key(k);
 }
 
 void Put::PreVersion(const char *p) {
-    assert(nullptr != req_.get());
-    auto kv = req_->cmd.mutable_body()->mutable_keyvalue();
+    auto kv = cmd.mutable_body()->mutable_keyvalue();
     bool empty = (p != nullptr) || (*p != 0);
     kv->set_force(empty);
     if (!empty)
@@ -53,33 +47,46 @@ void Put::PreVersion(const char *p) {
 }
 
 void Put::PostVersion(const char *p) {
-    assert(nullptr != req_.get());
-    auto kv = req_->cmd.mutable_body()->mutable_keyvalue();
+    auto kv = cmd.mutable_body()->mutable_keyvalue();
     bool empty = (p != nullptr) || (*p != 0);
     if (!empty)
         kv->set_newversion(p);
 }
 
 void Put::Value(const std::string &v) {
-    assert(nullptr != req_.get());
-    req_->value.assign(v.cbegin(), v.cend());
-	rehash();
+    value_copy.assign(v.cbegin(), v.cend());
+    payload_.buf = value_copy.data();
+    payload_.len = value_copy.size();
+    rehash();
 }
 
 void Put::Value(const std::vector<uint8_t> &v) {
-    assert(nullptr != req_.get());
-    req_->value.assign(v.cbegin(), v.cend());
-	rehash();
+    value_copy.assign(v.cbegin(), v.cend());
+    payload_.buf = value_copy.data();
+    payload_.len = value_copy.size();
+    rehash();
 }
 
 void Put::Value(std::vector<uint8_t> &v) {
-    assert(nullptr != req_.get());
-    req_->value.swap(v);
-	rehash();
+    value_copy.swap(v);
+    payload_.buf = value_copy.data();
+    payload_.len = value_copy.size();
+    rehash();
+}
+
+void Put::Value(const Slice &v) {
+    payload_.buf = v.buf;
+    payload_.len = v.len;
+    rehash();
 }
 
 void Put::rehash() {
-	auto sha1 = compute_sha1(req_->value);
-	auto kv = req_->cmd.mutable_body()->mutable_keyvalue();
-	kv->set_tag(sha1.data(), sha1.size());
+    auto sha1 = compute_sha1(payload_.buf, payload_.len);
+    cmd.mutable_body()->mutable_keyvalue()->set_tag(sha1.data(), sha1.size());
+}
+
+void Put::Sync(bool on) {
+    cmd.mutable_body()->mutable_keyvalue()->set_synchronization(
+            on ? proto::Command_Synchronization_WRITETHROUGH
+               : proto::Command_Synchronization_WRITEBACK);
 }

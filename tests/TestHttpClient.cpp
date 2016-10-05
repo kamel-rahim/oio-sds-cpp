@@ -53,11 +53,6 @@ int main (int argc, char **argv) {
     FLAGS_minloglevel = google::INFO;
     FLAGS_colorlogtostderr = true;
 
-    signal(SIGUSR1, SIG_IGN);
-    signal(SIGUSR2, SIG_IGN);
-    signal(SIGHUP, SIG_IGN);
-    signal(SIGPIPE, SIG_IGN);
-
 	assert(argc > 1);
     cycle(new net::MillSocket, argv[1]);
     cycle(new net::RegularSocket, argv[1]);

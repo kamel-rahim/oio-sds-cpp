@@ -10,22 +10,20 @@ using oio::kinetic::rpc::GetNext;
 namespace proto = ::com::seagate::kinetic::proto;
 
 GetNext::GetNext(): Exchange(), out_() {
-    auto h = req_->cmd.mutable_header();
+    auto h = cmd.mutable_header();
     h->set_messagetype(proto::Command_MessageType_GETNEXT);
-    auto kv = req_->cmd.mutable_body()->mutable_keyvalue();
+    auto kv = cmd.mutable_body()->mutable_keyvalue();
     kv->set_algorithm(proto::Command_Algorithm_SHA1);
 }
 
 GetNext::~GetNext() { }
 
 void GetNext::Key(const char *k) {
-    assert(nullptr != req_.get());
-    req_->cmd.mutable_body()->mutable_keyvalue()->set_key(k);
+    cmd.mutable_body()->mutable_keyvalue()->set_key(k);
 }
 
 void GetNext::Key(const std::string &k) {
-    assert(nullptr != req_.get());
-    req_->cmd.mutable_body()->mutable_keyvalue()->set_key(k);
+    cmd.mutable_body()->mutable_keyvalue()->set_key(k);
 }
 
 void GetNext::Steal(std::string &v) {

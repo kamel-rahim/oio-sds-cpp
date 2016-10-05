@@ -11,7 +11,8 @@
 #include <oio/http/imperative/blob.h>
 
 using oio::http::imperative::UploadBuilder;
-using oio::api::blob::Upload;
+namespace blob = oio::api::blob;
+using blob::Status;
 
 static void _load_env (std::string &dst, const char *key) {
     const char *v = ::getenv(key);
@@ -66,7 +67,7 @@ int main (int argc, char **argv) {
 
     auto ul = builder.Build(socket);
     auto rc_prepare = ul->Prepare();
-    if (rc_prepare == Upload::Status::OK) {
+    if (rc_prepare == Status::OK) {
         ul->Write("", 0); // no-op!
         builder.Field("chunk-size", std::to_string(0));
         builder.Field("chunk-hash", generate_string_random(32, hexa));
@@ -76,7 +77,7 @@ int main (int argc, char **argv) {
             LOG(ERROR) << "LocalUpload failed (commit)";
         }
     } else {
-        LOG(FATAL) << "Request error (prepare): " << Upload::Status2Str(rc_prepare);
+        LOG(FATAL) << "Request error (prepare): " << blob::Status2Str(rc_prepare);
         if (ul->Abort()) {
             DLOG(INFO) << "LocalUpload aborted";
         } else {

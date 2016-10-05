@@ -5,8 +5,8 @@
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
 #include <memory>
-#include <glog/logging.h>
 
+#include <utils/macros.h>
 #include <oio/kinetic/coro/client/ClientInterface.h>
 #include "Put.h"
 

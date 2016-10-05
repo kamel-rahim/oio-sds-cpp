@@ -10,9 +10,10 @@
 #include <rapidjson/filereadstream.h>
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
-#include <glog/logging.h>
 
+#include <utils/macros.h>
 #include <utils/utils.h>
+
 #include "MillDaemon.h"
 #include "common-server-headers.h"
 

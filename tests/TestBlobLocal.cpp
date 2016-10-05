@@ -6,12 +6,11 @@
  * obtain one at https://mozilla.org/MPL/2.0/
  */
 
-#include <gflags/gflags.h>
 #include <gtest/gtest.h>
-#include <glog/logging.h>
 
-#include <oio/local/blob.h>
+#include <utils/macros.h>
 #include <utils/utils.h>
+#include <oio/local/blob.h>
 
 using oio::local::blob::UploadBuilder;
 using oio::local::blob::DownloadBuilder;

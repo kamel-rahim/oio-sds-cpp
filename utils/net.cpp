@@ -4,6 +4,12 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
+#include <unistd.h>
+#include <poll.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netinet/tcp.h>
+
 #include <string>
 #include <sstream>
 #include <iostream>
@@ -11,15 +17,9 @@
 #include <cassert>
 #include <cstring>
 
-#include <unistd.h>
-#include <poll.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/tcp.h>
-
-#include <glog/logging.h>
 #include <libmill.h>
 
+#include "macros.h"
 #include "utils.h"
 #include "net.h"
 

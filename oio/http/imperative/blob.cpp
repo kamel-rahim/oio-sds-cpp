@@ -4,16 +4,16 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
-#include <functional>
 #include <string>
+#include <functional>
 #include <sstream>
 #include <memory>
 #include <iomanip>
 #include <cstring>
 
-#include <glog/logging.h>
 #include <http-parser/http_parser.h>
 
+#include <utils/macros.h>
 #include <utils/net.h>
 #include <utils/Http.h>
 #include <oio/api/blob.h>

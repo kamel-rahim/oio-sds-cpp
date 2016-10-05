@@ -6,9 +6,10 @@
 
 #include <sys/uio.h>
 #include <netinet/in.h>
-#include <glog/logging.h>
 
 #include <libmill/libmill.h>
+
+#include <utils/macros.h>
 
 #include "Exchange.h"
 

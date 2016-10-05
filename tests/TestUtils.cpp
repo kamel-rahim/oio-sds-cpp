@@ -7,7 +7,7 @@
 #include <cassert>
 #include <array>
 
-#include <glog/logging.h>
+#include <utils/macros.h>
 #include <utils/utils.h>
 
 int main (int argc UNUSED, char **argv) {

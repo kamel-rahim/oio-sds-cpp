@@ -4,11 +4,10 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
-#include <glog/logging.h>
+#include <utils/macros.h>
 #include <utils/utils.h>
 #include <kinetic.pb.h>
 #include "GetLog.h"
-
 
 namespace proto = ::com::seagate::kinetic::proto;
 

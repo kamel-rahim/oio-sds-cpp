@@ -11,10 +11,10 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <queue>
 #include <memory>
 
 #include <http-parser/http_parser.h>
-#include <queue>
 
 #include "net.h"
 #include "utils.h"

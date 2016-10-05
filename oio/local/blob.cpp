@@ -12,11 +12,11 @@
 #include <string>
 #include <map>
 
-#include <glog/logging.h>
 #include <libmill.h>
 
-#include <oio/local/blob.h>
+#include <utils/macros.h>
 #include <utils/utils.h>
+#include <oio/local/blob.h>
 
 using oio::local::blob::DownloadBuilder;
 using oio::local::blob::RemovalBuilder;

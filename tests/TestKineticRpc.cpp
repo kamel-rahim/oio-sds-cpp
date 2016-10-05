@@ -8,10 +8,9 @@
 #include <memory>
 #include <cassert>
 
-#include <gflags/gflags.h>
-#include <glog/logging.h>
 #include <gtest/gtest.h>
 
+#include <utils/macros.h>
 #include <utils/utils.h>
 #include <oio/kinetic/coro/rpc/Put.h>
 #include <oio/kinetic/coro/rpc/Get.h>

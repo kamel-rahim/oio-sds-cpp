@@ -11,13 +11,12 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
-#include <gflags/gflags.h>
-#include <glog/logging.h>
 #include <rapidjson/document.h>
 #include <rapidjson/filereadstream.h>
 #include <rapidjson/writer.h>
 #include <libmill.h>
 
+#include <utils/macros.h>
 #include <utils/utils.h>
 #include <utils/net.h>
 #include <utils/Http.h>

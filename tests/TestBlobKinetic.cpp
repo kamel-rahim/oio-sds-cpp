@@ -5,7 +5,8 @@
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
 #include <array>
-#include <glog/logging.h>
+
+#include <utils/macros.h>
 #include <utils/utils.h>
 #include "oio/kinetic/coro/client/ClientInterface.h"
 #include "oio/kinetic/coro/client/CoroutineClientFactory.h"

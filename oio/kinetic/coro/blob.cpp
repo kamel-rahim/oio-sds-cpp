@@ -11,12 +11,12 @@
 #include <queue>
 #include <forward_list>
 
-#include <glog/logging.h>
 #include <libmill.h>
 #include <rapidjson/filereadstream.h>
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 
+#include <utils/macros.h>
 #include <oio/api/blob.h>
 #include <oio/kinetic/coro/blob.h>
 #include <oio/kinetic/coro/client/ClientInterface.h>

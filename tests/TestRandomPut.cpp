@@ -13,10 +13,9 @@
 #include <queue>
 #include <chrono>
 
-#include <gflags/gflags.h>
-#include <glog/logging.h>
 #include <libmill.h>
 
+#include <utils/macros.h>
 #include <oio/kinetic/coro/client/ClientInterface.h>
 #include <oio/kinetic/coro/client/CoroutineClientFactory.h>
 #include <oio/kinetic/coro/rpc/Put.h>

@@ -4,15 +4,15 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
+#include <netinet/in.h>
+
 #include <utility>
 #include <algorithm>
 #include <sstream>
-#include <netinet/in.h>
 
-#include <glog/logging.h>
-#include <gflags/gflags.h>
 #include <libmill.h>
 
+#include "utils/macros.h"
 #include "utils/utils.h"
 #include "utils/net.h"
 #include "CoroutineClient.h"

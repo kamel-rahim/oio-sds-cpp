@@ -11,6 +11,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
+#include <gflags/gflags.h>
 #include <glog/logging.h>
 #include <rapidjson/document.h>
 #include <rapidjson/filereadstream.h>

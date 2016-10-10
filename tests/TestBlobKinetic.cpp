@@ -24,7 +24,7 @@ namespace blob = ::oio::api::blob;
 using blob::Upload;
 using blob::Download;
 using blob::Removal;
-using blob::Status;
+using blob::Cause;
 
 const char * envkey_URL = "OIO_KINETIC_URL";
 const char * target = ::getenv(envkey_URL);
@@ -42,7 +42,7 @@ static void test_upload_empty (std::string chunkid, std::shared_ptr<ClientFactor
 
     auto up = builder.Build();
     auto rc = up->Prepare();
-    assert(rc == Status::OK);
+    assert(rc.Ok());
     up->Commit();
 }
 
@@ -59,7 +59,7 @@ static void test_upload_2blocks (std::string chunkid, std::shared_ptr<ClientFact
 
     auto up = builder.Build();
     auto rc = up->Prepare();
-    assert(rc == Status::OK);
+    assert(rc.Ok());
     up->Write(buf.data(), buf.size());
     up->Write(buf.data(), buf.size());
     up->Commit();
@@ -74,7 +74,7 @@ static void test_listing (std::string chunkid, std::shared_ptr<ClientFactory> fa
     builder.Target(target);
     auto list = builder.Build();
     auto rc = list->Prepare();
-    assert(rc == Status::OK);
+    assert(rc.Ok());
     std::string id, key;
     while (list->Next(id, key)) {
         DLOG(INFO) << "id:" << id << " key:" << key;
@@ -88,7 +88,7 @@ static void test_download (std::string chunkid, std::shared_ptr<ClientFactory> f
     builder.Name(chunkid);
     auto dl = builder.Build();
     auto rc = dl->Prepare();
-    assert(rc == Status::OK);
+    assert(rc.Ok());
     DLOG(INFO) << "DL ready, chunk found, eof " << dl->IsEof();
 
     while (!dl->IsEof()) {
@@ -104,7 +104,7 @@ static void test_removal (std::string chunkid, std::shared_ptr<ClientFactory> fa
     builder.Name(chunkid);
     auto rem = builder.Build();
     auto rc = rem->Prepare();
-    assert (rc == Status::OK);
+    assert (rc.Ok());
     rem->Commit();
 }
 

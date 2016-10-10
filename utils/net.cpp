@@ -269,11 +269,15 @@ int Socket::accept_fd(Addr &peer, Addr &local) {
 }
 
 ssize_t Socket::read (uint8_t *buf, size_t len, int64_t dl) {
+    bool waited{false};
     assert(dl > 0);
     for (;;) {
         ssize_t rc = ::read(fd_, buf, len);
-        if (rc > 0)
+        if (rc > 0) {
+            if (!waited)
+                switch_context();
             return rc;
+        }
         if (rc == 0)
             return -2;
         if (errno == EINTR)
@@ -286,6 +290,7 @@ ssize_t Socket::read (uint8_t *buf, size_t len, int64_t dl) {
             return -1;
         }
 
+        waited = true;
         auto evt = PollIn(dl);
         if (evt & MILLSOCKET_ERROR)
             return -1;
@@ -304,6 +309,7 @@ bool Socket::read_exactly(uint8_t *buf, const size_t len0, int64_t dl) {
         if (rc > 0) {
             len -= rc;
             buf += rc;
+            switch_context();
         }
         else if (rc == 0) {
             errno = ECONNRESET;
@@ -311,6 +317,7 @@ bool Socket::read_exactly(uint8_t *buf, const size_t len0, int64_t dl) {
         }
         else {
             if (errno == EINTR) {
+                switch_context();
 				continue;
 			}
             if (errno == EAGAIN) {
@@ -347,9 +354,10 @@ bool Socket::send (struct iovec *iov, unsigned int count, int64_t dl) {
     while (sent < total) {
         rc = ::writev(fd_, iov, count);
         if (rc < 0) {
-            if (errno == EINTR)
+            if (errno == EINTR) {
+                switch_context();
                 continue;
-            else if (errno == EAGAIN) {
+            } else if (errno == EAGAIN) {
                 if (dl < mill_now()) {
                     errno = ETIMEDOUT;
                     return false;
@@ -368,9 +376,10 @@ bool Socket::send (struct iovec *iov, unsigned int count, int64_t dl) {
 				return false;
 			}
         }
-        if (rc > 0) {
+
+        // advance in the iov
+        else if (rc > 0) {
             sent += rc;
-            // advance in the iov
             while (rc > 0) {
                 assert (count > 0);
                 if (static_cast<size_t>(rc) > iov[0].iov_len) {
@@ -394,13 +403,17 @@ bool Socket::send (const uint8_t *buf, size_t len, int64_t dl) {
     while (len) {
         ssize_t rc = ::write(fd_, buf, len);
         if (rc > 0) {
-            len -= rc, buf += rc;
+            len -= rc;
+            buf += rc;
+            switch_context();
         } else if (rc == 0) {
             /* nothing written */
+            switch_context();
         } else {
-            if (errno == EINTR)
+            if (errno == EINTR) {
+                switch_context();
                 continue;
-            else if (errno == EAGAIN) {
+            } else if (errno == EAGAIN) {
                 if (dl < mill_now()) {
                     errno = ETIMEDOUT;
                     return false;
@@ -468,6 +481,10 @@ void MillSocket::close() {
 		::close(fd_);
 		this->reset();
 	}
+}
+
+void MillSocket::switch_context() {
+    yield();
 }
 
 std::unique_ptr<Socket> MillSocket::accept() {

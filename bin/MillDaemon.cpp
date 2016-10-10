@@ -21,7 +21,7 @@ namespace blob = oio::api::blob;
 using blob::Upload;
 using blob::Download;
 using blob::Removal;
-using blob::Status;
+using blob::Cause;
 
 DEFINE_bool(verbose_daemon, false, "Trace server events");
 
@@ -50,23 +50,23 @@ static int _on_headers_complete_UPLOAD(http_parser *p) {
     ctx->Reply100();
     ctx->upload = ctx->handler->GetUpload();
     auto rc = ctx->upload->Prepare();
-    if (rc == Status::OK) {
+    if (rc.Ok()) {
         ctx->settings.on_header_field = _on_trailer_field_COMMON;
         ctx->settings.on_header_value = _on_trailer_value_COMMON;
         return 0;
     } else {
-        switch (rc) {
-            case Status::Forbidden:
+        switch (rc.Why()) {
+            case Cause::Forbidden:
                 ctx->ReplyError({403, 403, "Upload forbidden"});
                 _ignore_upload(ctx);
                 return 1;
-            case Status::Already:
+            case Cause::Already:
                 ctx->ReplyError({406, 421, "blobs found"});
                 return 1;
-            case Status::NetworkError:
+            case Cause::NetworkError:
                 ctx->ReplyError({503, 503, "network error to devices"});
                 return 1;
-            case Status::ProtocolError:
+            case Cause::ProtocolError:
                 ctx->ReplyError({502, 502, "protocol error to devices"});
                 return 1;
             default:
@@ -108,10 +108,10 @@ static int _on_message_complete_UPLOAD(http_parser *p) {
     auto ctx = (BlobClient *) p->data;
     DLOG_IF(INFO,FLAGS_verbose_daemon) << __FUNCTION__ << " fd=" << ctx->client->Debug();
 
-    auto upload_rc = ctx->upload->Commit();
+    auto rc = ctx->upload->Commit();
 
     // Trigger a reply to the client
-    if (upload_rc) {
+    if (rc.Ok()) {
         rapidjson::StringBuffer buf;
         rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
         writer.StartObject();
@@ -134,18 +134,18 @@ static int _on_headers_complete_DOWNLOAD(http_parser *p) {
     auto ctx = (BlobClient *) p->data;
     ctx->download = ctx->handler->GetDownload();
     auto rc = ctx->download->Prepare();
-    switch (rc) {
-        case Status::OK:
+    switch (rc.Why()) {
+        case Cause::OK:
             ctx->Reply100();
             ctx->ReplyStream();
             return 0;
-        case Status::NotFound:
+        case Cause::NotFound:
             ctx->ReplyError({404, 420, "blobs not found"});
             break;
-        case Status::NetworkError:
+        case Cause::NetworkError:
             ctx->ReplyError({503, 500, "devices unreachable"});
             break;
-        case Status::ProtocolError:
+        case Cause::ProtocolError:
             ctx->ReplyError({502, 500, "invalid reply from device"});
             break;
         default:
@@ -183,17 +183,17 @@ static int _on_headers_complete_REMOVAL(http_parser *p UNUSED) {
     auto ctx = (BlobClient *) p->data;
     ctx->removal = ctx->handler->GetRemoval();
     auto rc = ctx->removal->Prepare();
-    switch (rc) {
-        case Status::OK:
+    switch (rc.Why()) {
+        case Cause::OK:
             ctx->Reply100();
             return 0;
-        case Status::NotFound:
+        case Cause::NotFound:
             ctx->ReplyError({404, 402, "no blob found"});
             return 1;
-        case Status::NetworkError:
+        case Cause::NetworkError:
             ctx->ReplyError({503, 500, "devices unreachable"});
             return 1;
-        case Status::ProtocolError:
+        case Cause::ProtocolError:
             ctx->ReplyError({502, 500, "invalid reply from devices"});
             return 1;
         default:
@@ -207,7 +207,7 @@ static int _on_message_complete_REMOVAL(http_parser *p UNUSED) {
     assert(ctx->removal.get() != nullptr);
 
     auto rc = ctx->removal->Commit();
-    if (rc) {
+    if (rc.Ok()) {
         ctx->ReplySuccess();
         return 0;
     } else {
@@ -510,6 +510,7 @@ void BlobClient::Run(volatile bool &flag_running) {
         } else if (sr == 0) {
             // TODO manage the data timeout
         } else {
+
             for (ssize_t done = 0; done < sr;) {
                 size_t consumed = http_parser_execute(&parser, &settings,
                                                       reinterpret_cast<const char *>(

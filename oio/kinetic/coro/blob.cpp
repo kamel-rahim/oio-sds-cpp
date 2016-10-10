@@ -39,6 +39,7 @@ using oio::kinetic::rpc::GetKeyRange;
 
 namespace blob = ::oio::api::blob;
 using blob::Status;
+using blob::Cause;
 
 struct PendingGet {
     uint32_t sequence;
@@ -82,17 +83,12 @@ class KineticDownload : public blob::Download {
             builder.Target(to);
 
         auto listing = builder.Build();
-        switch (listing->Prepare()) {
-            case Status::OK:
+        auto rc = listing->Prepare();
+        switch (rc.Why()) {
+            case Cause::OK:
                 break;
-            case Status::NotFound:
-                return Status::NotFound;
-            case Status::NetworkError:
-                return Status::NetworkError;
-            case Status::ProtocolError:
-                return Status::ProtocolError;
             default:
-                return Status::InternalError;
+                return rc;
         }
 
         std::string id, key;
@@ -132,7 +128,7 @@ class KineticDownload : public blob::Download {
         for (auto &p: chunks)
             waiting.push(p);
 
-        return Status::OK;
+        return Status();
     }
 
     bool IsEof() override {
@@ -286,8 +282,8 @@ class KineticListing : public blob::Listing {
         }
 
         if (items.empty())
-            return Status::NotFound;
-        return Status::OK;
+            return Status(Cause::NotFound);
+        return Status();
     }
 
     bool Next(std::string &id, std::string &key) override {
@@ -382,30 +378,18 @@ class KineticRemoval : public blob::Removal {
         auto listing = builder.Build();
 
         auto rc = listing->Prepare();
-        switch (rc) {
-            case Status::OK:
-                break;
-            case Status::NotFound:
-                return Status::NotFound;
-            case Status::NetworkError:
-                return Status::NetworkError;
-            case Status::ProtocolError:
-                return Status::ProtocolError;
-            default:
-                return Status::InternalError;
+        if (rc.Ok()) {
+            std::string id, key;
+            while (listing->Next(id, key)) {
+                PendingDelete del(factory->Get(id), key);
+                DLOG(INFO) << "rem(" << id << "," << key << ")";
+                ops.push_back(del);
+            }
         }
-
-        std::string id, key;
-        while (listing->Next(id, key)) {
-            PendingDelete del(factory->Get(id), key);
-            DLOG(INFO) << "rem("<< id << ","<< key <<")";
-            ops.push_back(del);
-        }
-
-        return Status::OK;
+        return rc;
     }
 
-    bool Commit() override {
+    Status Commit() override {
         DLOG(INFO) << __FUNCTION__ << " of " << ops.size() << " ops";
         // Pre-start as many parallel operations as the configured parallelism
         for (unsigned int i = 0; i < parallelism_factor && i < ops.size(); ++i)
@@ -417,10 +401,10 @@ class KineticRemoval : public blob::Removal {
             if (i + parallelism_factor < ops.size())
                 ops[i + parallelism_factor].Start();
         }
-        return true;
+        return Status();
     }
 
-    bool Abort() override { return false; }
+    Status Abort() override { return Status(Cause::Unsupported); }
 
   private:
     unsigned int parallelism_factor;
@@ -480,9 +464,9 @@ class KineticUpload : public blob::Upload {
 
     void SetXattr (const std::string &k, const std::string &v) override;
 
-    bool Commit() override;
+    Status Commit() override;
 
-    bool Abort() override;
+    Status Abort() override;
 
     void Write(const uint8_t *buf, uint32_t len) override;
 
@@ -567,7 +551,7 @@ void KineticUpload::Write(const uint8_t *buf, uint32_t len) {
     yield();
 }
 
-bool KineticUpload::Commit() {
+Status KineticUpload::Commit() {
 
     // Flush the internal buffer so that we don't mix payload with xattr
     if (buffer.size() > 0)
@@ -588,11 +572,12 @@ bool KineticUpload::Commit() {
     // Wait for all the single PUT to finish
     for (auto &s: syncs)
         s->Wait();
-    return true;
+
+    return Status();
 }
 
-bool KineticUpload::Abort() {
-    return true;
+Status KineticUpload::Abort() {
+    return Status();
 }
 
 Status KineticUpload::Prepare() {
@@ -622,16 +607,16 @@ Status KineticUpload::Prepare() {
         sync->Wait();
     for (auto op: ops) {
         if (!op->Ok())
-            return Status::NetworkError;
+            return Status(Cause::NetworkError);
     }
     for (auto op: ops) {
         std::vector<std::string> keys;
         op->Steal(keys);
         if (!keys.empty())
-            return Status::Already;
+            return Status(Cause::Already);
     }
 
-    return Status::OK;
+    return Status();
 }
 
 UploadBuilder::~UploadBuilder() {

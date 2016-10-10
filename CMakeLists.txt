@@ -99,8 +99,8 @@ add_library(oio-data-local SHARED
 target_link_libraries(oio-data-local oio-data)
 
 add_library(oio-data-rawx SHARED
-        oio/http/imperative/blob.cpp
-        oio/http/imperative/blob.h)
+        oio/http/blob.cpp
+        oio/http/blob.h)
 target_link_libraries(oio-data-rawx oio-data oio-http-parser)
 
 add_library(oio-data-kinetic SHARED
@@ -158,7 +158,7 @@ target_link_libraries(oio-rawx
 
 
 add_executable(test-utils tests/TestUtils.cpp)
-target_link_libraries(test-utils oio-utils
+target_link_libraries(test-utils oio-utils oio-data
         ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES} gtest)
 
 add_executable(test-blob-local tests/TestBlobLocal.cpp)

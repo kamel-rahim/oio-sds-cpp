@@ -1,5 +1,5 @@
-oio::http::imperative
-=====================
+oio::http
+=========
 
 HTTP-based classes used in **oio**, all written in an imperative style.
 Two ways to parallelize the communicaitons are offered: either you play

@@ -20,13 +20,14 @@
 
 #include "blob.h"
 
+using oio::http::imperative::RemovalBuilder;
+using oio::http::imperative::UploadBuilder;
+using oio::http::imperative::DownloadBuilder;
 using oio::api::blob::Removal;
 using oio::api::blob::Upload;
 using oio::api::blob::Download;
 using oio::api::blob::Status;
-using oio::http::imperative::RemovalBuilder;
-using oio::http::imperative::UploadBuilder;
-using oio::http::imperative::DownloadBuilder;
+using oio::api::blob::Cause;
 
 class HttpRemoval : public Removal {
     friend class RemovalBuilder;
@@ -38,9 +39,9 @@ class HttpRemoval : public Removal {
 
     Status Prepare() override;
 
-    bool Commit() override;
+    Status Commit() override;
 
-    bool Abort() override;
+    Status Abort() override;
 
   private:
     http::Call rpc;
@@ -58,9 +59,9 @@ class HttpUpload : public Upload {
 
     Status Prepare() override;
 
-    bool Commit() override;
+    Status Commit() override;
 
-    bool Abort() override;
+    Status Abort() override;
 
     void Write(const uint8_t *buf, uint32_t len) override;
 
@@ -101,18 +102,21 @@ HttpRemoval::~HttpRemoval() {
  * the Transfer-Enncoding set to chunked. So we could wait for the commit to
  * finish the request */
 Status HttpRemoval::Prepare() {
-    return Status::OK;
+    return Status();
 }
 
-bool HttpRemoval::Commit() {
+Status HttpRemoval::Commit() {
     std::string out;
     auto rc = rpc.Run("", out);
-    return (rc == http::Code::OK || rc == http::Code::Done);
+    if (rc == http::Code::OK || rc == http::Code::Done)
+        return Status();
+    // TODO better manage the error
+    return Status(Cause::InternalError);
 }
 
-bool HttpRemoval::Abort() {
+Status HttpRemoval::Abort() {
     LOG(WARNING) << "Cannot abort a HTTP delete";
-    return false;
+    return Status(Cause::Unsupported);
 }
 
 RemovalBuilder::RemovalBuilder() {
@@ -156,7 +160,7 @@ void HttpUpload::SetXattr(const std::string &k, const std::string &v) {
     request.Field(k, v);
 }
 
-bool HttpUpload::Commit() {
+Status HttpUpload::Commit() {
     auto rc = request.FinishRequest();
 
     rc = reply.ReadHeaders();
@@ -165,17 +169,19 @@ bool HttpUpload::Commit() {
         rc = reply.AppendBody(out);
     }
 
-    return reply.Get().parser.status_code / 100 == 2;
+    if (reply.Get().parser.status_code / 100 == 2)
+        return Status();
+    return Status(Cause::InternalError);
 }
 
-bool HttpUpload::Abort() {
-    return false;
+Status HttpUpload::Abort() {
+    return Status(Cause::Unsupported);
 }
 
 Status HttpUpload::Prepare() {
     auto rc = request.WriteHeaders();
     (void) rc;
-    return Status::InternalError;
+    return Status(Cause::InternalError);
 }
 
 void HttpUpload::Write(const uint8_t *buf, uint32_t len) {
@@ -241,25 +247,25 @@ Status HttpDownload::Prepare() {
     auto rc = request.WriteHeaders();
     if (rc != http::Code::OK && rc != http::Code::Done) {
         if (rc == http::Code::NetworkError)
-            return Status::NetworkError;
-        return Status::InternalError;
+            return Status(Cause::NetworkError);
+        return Status(Cause::InternalError);
     }
 
     rc = request.FinishRequest();
     if (rc != http::Code::OK && rc != http::Code::Done) {
         if (rc == http::Code::NetworkError)
-            return Status::NetworkError;
-        return Status::InternalError;
+            return Status(Cause::NetworkError);
+        return Status(Cause::InternalError);
     }
 
     rc = reply.ReadHeaders();
     if (rc != http::Code::OK && rc != http::Code::Done) {
         if (rc == http::Code::NetworkError)
-            return Status::NetworkError;
-        return Status::InternalError;
+            return Status(Cause::NetworkError);
+        return Status(Cause::InternalError);
     }
 
-    return Status::OK;
+    return Status(Cause::OK);
 }
 
 int32_t HttpDownload::Read(std::vector<uint8_t> &buf) {

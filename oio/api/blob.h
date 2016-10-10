@@ -17,36 +17,94 @@ namespace oio {
 namespace api {
 namespace blob {
 
-enum class Status {
+/**
+ * High-level error cause.
+ */
+enum class Cause {
     OK,
     Already,
     Forbidden,
     NotFound,
     NetworkError,
     ProtocolError,
+    Unsupported,
     InternalError
 };
 
-static inline const char *Status2Str(Status s) {
-    switch (s) {
-        case Status::OK:
-            return "OK";
-        case Status::Already:
-            return "Already";
-        case Status::Forbidden:
-            return "Forbidden";
-        case Status::NotFound:
-            return "Not found";
-        case Status::NetworkError:
-            return "Network error";
-        case Status::ProtocolError:
-            return "Protocol error";
-        case Status::InternalError:
-            return "Internal error";
-        default:
-            return "***invalid status***";
-    }
-}
+/**
+ * Associates a high-level error classs (the Cause) and an explanation message.
+ */
+class Status {
+  protected:
+    Cause rc_;
+    std::string msg_;
+  public:
+    ~Status() {}
+
+    /** Success constructor */
+    Status(): rc_{Cause::OK} {}
+
+    /** Build a Status with a cause and a generic message */
+    explicit Status(Cause rc): rc_{rc} {}
+
+    /**
+     * Tells if the Status depicts a success (true) or an failure (false)
+     * @return true for a success, false for a failure
+     */
+    inline bool Ok() const { return rc_ == Cause::OK; }
+
+    /**
+     * Returns the High-level error cause.
+     * @return the underlyinng error cause
+     */
+    inline Cause Why() const { return rc_; }
+
+    /**
+     * Explain what happened, why it failed, etc.
+     * The returned pointer validity doesn't exceed the current Status lifetime.
+     * @return
+     */
+    inline const char * Message() const { return msg_.c_str(); }
+
+    /**
+     * Handy method to translate the underlying error cause into a pretty
+     * string.
+     * @return the textual representation of the underlying Cause
+     */
+    const char * Name() const;
+};
+
+/**
+ * Simple wrapper to initiate a Status based on the current errno value.
+ * Usage:
+ *
+ * Status failing_method () {
+ *   int rc = ::failing_syscall();
+ *   if (rc == 0) return Errno(0);
+ *   return Errno();
+ * }
+ */
+class Errno : public Status {
+  public:
+
+    /**
+     * Build a Status with the given errno.
+     * @param err an errno value
+     * @return a valid Status
+     */
+    Errno(int err);
+
+    /**
+     * Build a Status with the system's errno
+     * @return a valid Statuss
+     */
+    Errno();
+
+    /**
+     * Destructor
+     */
+    ~Errno() {}
+};
 
 /**
  * Usage:
@@ -90,9 +148,9 @@ class Removal {
 
     virtual Status Prepare() = 0;
 
-    virtual bool Commit() = 0;
+    virtual Status Commit() = 0;
 
-    virtual bool Abort() = 0;
+    virtual Status Abort() = 0;
 };
 
 /**
@@ -121,9 +179,9 @@ class Upload {
 
     virtual Status Prepare() = 0;
 
-    virtual bool Commit() = 0;
+    virtual Status Commit() = 0;
 
-    virtual bool Abort() = 0;
+    virtual Status Abort() = 0;
 
     // buffer copied
     virtual void Write(const uint8_t *buf, uint32_t len) = 0;
@@ -161,8 +219,30 @@ class Download {
 
     virtual Status Prepare() = 0;
 
+    /**
+     * Are there still data to be read
+     * @return false if no further data is to be expected, true elsewhere
+     */
     virtual bool IsEof() = 0;
 
+    /**
+     * Tell the download to fetch only a given range of the original content.
+     * Returns ENOTSUP by default, if not overriden by concrete classes.
+     * To be called *before* Prepare(). When managed, the range is not
+     * immediately applied, but it can be defered to the Prepare() call.
+     * @param offset
+     * @param size
+     * @return 0 if the request has been taken into account, or the errno value
+     * associated to the error that happened.
+     */
+    virtual Status SetRange(uint32_t offset, uint32_t size);
+
+    /**
+     * Steals the whole internal buffer.
+     * @param buf the working buffer destined to be reset, in order to received
+     * the fetched data.
+     * @return the size of the buffer. A negative size means an error occured.
+     */
     virtual int32_t Read(std::vector<uint8_t> &buf) = 0;
 };
 

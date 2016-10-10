@@ -75,6 +75,14 @@ class Channel {
     virtual bool send (const char *str, size_t len, int64_t dl) {
         return this->send(reinterpret_cast<const uint8_t *>(str), len, dl);
     }
+
+  protected:
+
+    /**
+     * No-Op by default, allows yielding another execution context when no wait
+     * was necessary, to avoid starvations.
+     */
+    virtual void switch_context () {}
 };
 
 /**
@@ -259,6 +267,11 @@ class MillSocket : public Socket {
 	 * the parent object.
 	 */
 	virtual void close() override;
+
+    /**
+     * Yield another coroutine.
+     */
+    virtual void switch_context() override;
 
   private:
     FORBID_MOVE_CTOR(MillSocket);

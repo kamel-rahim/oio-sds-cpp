@@ -121,7 +121,7 @@ Code Request::WriteHeaders() {
     } while (0);
 
     /* content-length */
-    if (content_length > 0) {
+    if (content_length >= 0) {
         std::stringstream ss;
         ss << "Content-Length: " << content_length << "\r\n";
         headers.emplace_back(ss.str());
@@ -139,6 +139,7 @@ Code Request::WriteHeaders() {
                 ss << t;
             }
             ss << "\r\n";
+            headers.emplace_back(ss.str());
         }
     }
 
@@ -162,8 +163,11 @@ Code Request::WriteHeaders() {
 }
 
 Code Request::Write(const uint8_t *buf, uint32_t len) {
-    if (buf == nullptr || len == 0)
+    if (buf == nullptr)
         return Code::ClientError;
+    if (len == 0)
+        return Code::OK;
+
     int64_t dl = mill_now() + 1000;
     if (content_length > 0) {
         // Inline Transfer-Encoding
@@ -339,7 +343,9 @@ Call::~Call() {
 }
 
 Code Call::Run(const std::string &in, std::string &out) {
+
     request.ContentLength(in.length());
+
     auto rc = request.WriteHeaders();
     if (rc != http::Code::OK) {
         LOG(WARNING) << "Write(headers) error " << rc;

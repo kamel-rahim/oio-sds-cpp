@@ -11,7 +11,6 @@
 
 #include <rapidjson/document.h>
 
-#include <utils/macros.h>
 #include <utils/utils.h>
 #include <oio/local/blob.h>
 

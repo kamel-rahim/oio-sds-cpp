@@ -98,7 +98,7 @@ class Socket : public Channel {
 	/**
 	 * Destructor. DOESN'T CLOSE THE SOCKET
 	 */
-    virtual ~Socket() {}
+    virtual ~Socket() { }
 
 	/**
 	 * Default Socket constructor

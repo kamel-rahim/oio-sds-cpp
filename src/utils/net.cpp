@@ -343,6 +343,20 @@ bool Socket::read_exactly(uint8_t *buf, const size_t len0, int64_t dl) {
     return true;
 }
 
+struct IOWrap {
+    const struct iovec *iov;
+    unsigned int count;
+};
+
+static std::ostream& operator<<(std::ostream& os, const IOWrap &item)
+{
+    size_t total = 0;
+    for (unsigned int i=0; i<item.count; ++i)
+        total += item.iov[i].iov_len;
+    os << "iovec{len=" << item.count << ",size=" << total << "}";
+    return os;
+}
+
 bool Socket::send (struct iovec *iov, unsigned int count, int64_t dl) {
 
     assert(dl > 0);
@@ -350,9 +364,11 @@ bool Socket::send (struct iovec *iov, unsigned int count, int64_t dl) {
     size_t total = 0, sent = 0;
     for (unsigned int i=0; i<count ;++i)
         total += iov[i].iov_len;
-    ssize_t rc;
+
     while (sent < total) {
-        rc = ::writev(fd_, iov, count);
+        errno = 0;
+        ssize_t rc = ::writev(fd_, iov, count);
+        DLOG(INFO) << IOWrap{iov,count} << " rc=" << rc;
         if (rc < 0) {
             if (errno == EINTR) {
                 switch_context();
@@ -394,6 +410,8 @@ bool Socket::send (struct iovec *iov, unsigned int count, int64_t dl) {
             }
         }
     }
+    DLOG(INFO) << "+++++++++++++";
+
     return true;
 }
 

@@ -9,8 +9,6 @@
 
 #include <libmill/libmill.h>
 
-#include <utils/macros.h>
-
 #include "Exchange.h"
 
 using oio::kinetic::rpc::Context;

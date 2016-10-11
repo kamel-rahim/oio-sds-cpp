@@ -32,13 +32,14 @@ class Request {
   public:
 
     /**
-     *
+     * Default constructor.
+     * builds a "GET /" request with no associated socket.
      */
     Request();
 
     /**
-     *
-     * @param s
+     * Builds a "GET /" Request on the given socket.
+     * @param s the socket to be used.
      */
     Request(std::shared_ptr<net::Socket> s);
 

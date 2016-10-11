@@ -4,19 +4,18 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
-#ifndef OIO_KINETIC_OIO_HTTP_IMPERATIVE_BLOB_H
-#define OIO_KINETIC_OIO_HTTP_IMPERATIVE_BLOB_H
+#ifndef OIO_KINETIC__SRC_OIO_RAWX__BLOB_H
+#define OIO_KINETIC__SRC_OIO_RAWX__BLOB_H
 
 #include <string>
 #include <memory>
 #include <map>
-#include <set>
-#include <utils/net.h>
 #include <oio/api/blob.h>
+#include <oio/http/blob.h>
 
 namespace oio {
-namespace http {
-namespace imperative {
+namespace rawx {
+namespace blob {
 
 class DownloadBuilder {
   public:
@@ -24,7 +23,7 @@ class DownloadBuilder {
 
     ~DownloadBuilder();
 
-    void Host(const std::string &s) ;
+    void Host(const std::string &s);
 
     void Name(const std::string &s);
 
@@ -32,15 +31,12 @@ class DownloadBuilder {
 
     std::shared_ptr<oio::api::blob::Download> Build(
             std::shared_ptr<net::Socket> socket);
-
   private:
-    std::string host;
-    std::string name;
-    std::map<std::string, std::string> fields;
+    oio::http::imperative::DownloadBuilder inner;
 };
 
 class UploadBuilder {
-  public:
+    public:
     UploadBuilder();
 
     ~UploadBuilder();
@@ -55,16 +51,12 @@ class UploadBuilder {
 
     std::shared_ptr<oio::api::blob::Upload> Build(
             std::shared_ptr<net::Socket> socket);
-
   private:
-    std::string host;
-    std::string name;
-    std::map<std::string, std::string> fields;
-    std::set<std::string> trailers;
+    oio::http::imperative::UploadBuilder inner;
 };
 
 class RemovalBuilder {
-  public:
+    public:
     RemovalBuilder();
 
     ~RemovalBuilder();
@@ -81,14 +73,12 @@ class RemovalBuilder {
             std::shared_ptr<net::Socket> socket);
 
   private:
-    std::string host;
-    std::string name;
-    std::map<std::string, std::string> fields;
-    std::set<std::string> trailers;
+    oio::http::imperative::RemovalBuilder inner;
 };
 
-} // namespace imperative
-} // namespace http
-} // namespace oio
 
-#endif //OIO_KINETIC_OIO_HTTP_IMPERATIVE_BLOB_H
+}; // namespace blob
+}; // namespace rawx
+}; // namespace oio
+
+#endif //OIO_KINETIC__SRC_OIO_RAWX__BLOB_H

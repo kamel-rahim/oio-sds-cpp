@@ -13,7 +13,7 @@
 #include <string>
 #include "common-server-headers.h"
 
-#define OIO_HEADER_RAWX_PREFIX "X-oio-chunk-meta-"
+#define OIO_RAWX_HEADER_PREFIX "X-oio-chunk-meta-"
 
 class RawxHeader {
   public:

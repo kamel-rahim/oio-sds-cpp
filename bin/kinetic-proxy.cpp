@@ -10,7 +10,6 @@
 
 #include <libmill.h>
 
-#include <utils/macros.h>
 #include <utils/utils.h>
 #include <oio/api/blob.h>
 #include <oio/kinetic/coro/blob.h>

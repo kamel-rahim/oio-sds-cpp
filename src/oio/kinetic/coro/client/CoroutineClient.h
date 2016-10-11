@@ -16,8 +16,8 @@
 #include <utils/net.h>
 #include <kinetic.pb.h>
 #include <oio/kinetic/coro/rpc/Exchange.h>
-#include <oio/kinetic/coro/client/ClientInterface.h>
-#include <oio/kinetic/coro/client/PendingExchange.h>
+#include "ClientInterface.h"
+#include "PendingExchange.h"
 
 #define SIGNAL_AGENT_STOP 0
 #define SIGNAL_AGENT_DATA 1

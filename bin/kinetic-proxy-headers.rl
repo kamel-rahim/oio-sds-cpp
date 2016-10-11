@@ -8,8 +8,8 @@
  */
 
 #include <cassert>
-#include <bin/common-header-parser.h>
-#include <bin/kinetic-proxy-headers.h>
+#include "common-header-parser.h"
+#include "kinetic-proxy-headers.h"
 
 #define token(T) return (T)
 

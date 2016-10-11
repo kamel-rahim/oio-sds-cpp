@@ -8,7 +8,6 @@
 
 #include <cstdlib>
 
-#include <glog/logging.h>
 #include <libmill.h>
 
 #include <utils/utils.h>

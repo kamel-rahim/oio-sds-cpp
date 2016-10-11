@@ -18,6 +18,7 @@
 #include <libmill.h>
 #include <http-parser/http_parser.h>
 
+#include <utils/macros.h>
 #include <utils/net.h>
 #include <oio/api/blob.h>
 #include "common-header-parser.h"

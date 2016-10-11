@@ -11,8 +11,6 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
-#include <gflags/gflags.h>
-#include <glog/logging.h>
 #include <rapidjson/document.h>
 #include <rapidjson/filereadstream.h>
 #include <rapidjson/writer.h>
@@ -22,9 +20,9 @@
 #include <utils/net.h>
 #include <utils/Http.h>
 
-#include "oio/kinetic/coro/rpc/GetLog.h"
-#include "oio/kinetic/coro/client/CoroutineClient.h"
-#include "oio/kinetic/coro/client/CoroutineClientFactory.h"
+#include <oio/kinetic/coro/rpc/GetLog.h>
+#include <oio/kinetic/coro/client/CoroutineClient.h>
+#include <oio/kinetic/coro/client/CoroutineClientFactory.h>
 
 #ifndef PERIOD_REG
 #define PERIOD_REG          5000

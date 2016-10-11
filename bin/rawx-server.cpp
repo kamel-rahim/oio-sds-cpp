@@ -9,7 +9,6 @@
 #include <string>
 #include <memory>
 
-#include <glog/logging.h>
 #include <rapidjson/document.h>
 
 #include <utils/utils.h>

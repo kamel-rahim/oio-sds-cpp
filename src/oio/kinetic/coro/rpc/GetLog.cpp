@@ -6,7 +6,7 @@
 
 #include <utils/macros.h>
 #include <utils/utils.h>
-#include <kinetic.pb.h>
+#include <src/kinetic.pb.h>
 #include "GetLog.h"
 
 namespace proto = ::com::seagate::kinetic::proto;

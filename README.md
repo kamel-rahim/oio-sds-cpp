@@ -53,6 +53,15 @@ PARTICULAR PURPOSE. See the Mozilla Public License for more details.
 Build & Install
 ---------------
 
+Get the sources and all the dependencies
+
+    git clone https://github.com/open-io/oio-kinetic.git
+    cd oio-kinetic
+    git submodule init
+    git submodule update
+
+Build the whole
+
     cmake .
     make
     make install

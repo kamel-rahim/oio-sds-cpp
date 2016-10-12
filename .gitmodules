@@ -1,10 +1,10 @@
-[submodule "http-parser"]
-	path = http-parser
+[submodule "3rd/http-parser"]
+	path = 3rd/http-parser
 	url = https://github.com/nodejs/http-parser
-[submodule "kinetic-protocol"]
-	path = kinetic-protocol
+[submodule "3rd/kinetic-protocol"]
+	path = 3rd/kinetic-protocol
 	url = https://github.com/Kinetic/kinetic-protocol
-[submodule "libmill"]
-	path = libmill
+[submodule "3rd/libmill"]
+	path = 3rd/libmill
 	url = https://github.com/sustrik/libmill
 	branch = master

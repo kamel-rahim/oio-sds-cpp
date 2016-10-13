@@ -33,12 +33,15 @@ add_library(oio-data-ec SHARED
         oio/ec/blob.cpp
         oio/ec/erasure.c
         oio/ec/blob.h)
-target_link_libraries(oio-data-ec oio-data oio-data-local erasurecode )
+target_link_libraries(oio-data-ec
+        oio-data oio-data-local
+		${EC_LIBRARIES})
 
 add_library(oio-data-http SHARED
         oio/http/blob.cpp
         oio/http/blob.h)
-target_link_libraries(oio-data-http oio-data oio-http-parser)
+target_link_libraries(oio-data-http
+        oio-data oio-http-parser)
 
 
 add_library(oio-data-rawx SHARED
@@ -75,4 +78,4 @@ add_library(oio-data-kinetic SHARED
         oio/kinetic/coro/client/PendingExchange.h)
 target_link_libraries(oio-data-kinetic
         oio-utils oio-data oio-http-parser
-        protobuf mill_s ${CRYPTO_LIBRARIES} ${GLOG_LIBRARIES})
+		mill_s ${PROTOBUF_LIBRARIES} ${CRYPTO_LIBRARIES} ${GLOG_LIBRARIES})

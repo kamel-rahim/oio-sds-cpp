@@ -12,7 +12,7 @@
 
 #include <utils/utils.h>
 #include <utils/net.h>
-#include <kinetic.pb.h>
+#include <src/kinetic.pb.h>
 
 namespace oio {
 namespace kinetic {

@@ -14,7 +14,7 @@
 #include <cassert>
 #include <utils/utils.h>
 #include <utils/net.h>
-#include <kinetic.pb.h>
+#include <src/kinetic.pb.h>
 #include <oio/kinetic/coro/rpc/Exchange.h>
 #include "ClientInterface.h"
 #include "PendingExchange.h"

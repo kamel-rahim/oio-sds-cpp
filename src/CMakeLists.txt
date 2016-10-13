@@ -29,6 +29,11 @@ add_library(oio-data-local SHARED
         oio/local/blob.h)
 target_link_libraries(oio-data-local oio-data)
 
+add_library(oio-data-ec SHARED
+        oio/ec/blob.cpp
+        oio/ec/erasure.c
+        oio/ec/blob.h)
+target_link_libraries(oio-data-ec oio-data oio-data-local erasurecode )
 
 add_library(oio-data-http SHARED
         oio/http/blob.cpp

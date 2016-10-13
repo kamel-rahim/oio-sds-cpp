@@ -15,6 +15,13 @@ add_custom_command(OUTPUT
         DEPENDS kinetic-proxy-headers.rl)
 
 add_custom_command(OUTPUT
+        ${CMAKE_CURRENT_BINARY_DIR}/ec-proxy-headers.cpp
+        COMMAND ${RAGEL_EXE} -o ${CMAKE_CURRENT_BINARY_DIR}/ec-proxy-headers.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/ec-proxy-headers.rl
+        DEPENDS ec-proxy-headers.rl)
+
+
+add_custom_command(OUTPUT
         ${CMAKE_CURRENT_BINARY_DIR}/rawx-server-headers.cpp
         COMMAND ${RAGEL_EXE} -o ${CMAKE_CURRENT_BINARY_DIR}/rawx-server-headers.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/rawx-server-headers.rl
@@ -40,6 +47,13 @@ target_link_libraries(oio-kinetic-proxy
         oio-http-parser oio-server oio-data-kinetic
         ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES})
 
+add_executable(oio-ec-proxy
+        ${CMAKE_CURRENT_BINARY_DIR}/ec-proxy-headers.cpp
+        ec-proxy-headers.h
+        ec-proxy.cpp)
+target_link_libraries(oio-ec-proxy
+		oio-http-parser oio-server oio-data-ec
+		${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES})
 
 add_executable(kinetic-stress-put kinetic-stress-put.cpp)
 target_link_libraries(kinetic-stress-put oio-data-kinetic

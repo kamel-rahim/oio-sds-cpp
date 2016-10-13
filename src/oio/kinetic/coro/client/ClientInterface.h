@@ -10,7 +10,7 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <kinetic.pb.h>
+#include <src/kinetic.pb.h>
 #include <oio/kinetic/coro/rpc/Exchange.h>
 
 namespace oio {

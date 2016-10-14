@@ -11,12 +11,14 @@
 #include <string>
 #include <memory>
 
-#include "utils.h"
-
-namespace net {
-
 #define MILLSOCKET_EVENT 1U
 #define MILLSOCKET_ERROR 2U
+
+// Forward declaration in the main C++ namespace, to match the real definition
+// in <sys/uio.h>
+struct iovec;
+
+namespace net {
 
 extern bool default_reuse_port;
 

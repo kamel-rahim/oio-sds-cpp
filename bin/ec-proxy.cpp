@@ -19,12 +19,10 @@
 #include <oio/api/blob.h>
 #include <oio/ec/blob.h>
 
-#include "MillDaemon.h"
-#include "ec-proxy-headers.h"
+#include "./MillDaemon.h"
+#include "./ec-proxy-headers.h"
 
 using namespace std;
-
-namespace gflags = google;
 
 using oio::ec::blob::RemovalBuilder;
 using oio::ec::blob::DownloadBuilder;
@@ -107,7 +105,7 @@ class EcHandler : public BlobHandler {
         return NULL ;
     }
 
-    SoftError SetUrl(const std::string &u) override {
+    SoftError SetUrl(const std::string &u UNUSED) override {
         // Get the name, this is common to al the requests
 //        http_parser_url url;
 //        if (0 != http_parser_parse_url(u.data(), u.size(), false, &url))
@@ -248,7 +246,7 @@ int main(int argc, char **argv) {
         if (!daemon.LoadJsonFile(argv[i]))
             return 1;
     }
-    daemon.Start(flag_running);
+    daemon.Start(&flag_running);
     daemon.Join();
     return 0;
 }

@@ -324,8 +324,8 @@ BlobService::~BlobService() {
     done = nullptr;
 }
 
-void BlobService::Start(volatile bool &flag_running) {
-    mill_go(Run(flag_running));
+void BlobService::Start(volatile bool *running) {
+    mill_go(Run(running));
 }
 
 void BlobService::Join() {
@@ -367,7 +367,8 @@ bool BlobService::Configure(const std::string &cfg) {
     return true;
 }
 
-NOINLINE void BlobService::Run(volatile bool &flag_running) {
+NOINLINE void BlobService::Run(volatile bool *flag_running) {
+	assert(flag_running != nullptr);
     bool input_ready = true;
     while (flag_running) {
         net::MillSocket client;
@@ -382,7 +383,7 @@ NOINLINE void BlobService::Run(volatile bool &flag_running) {
         auto events = front.PollIn(mill_now() + 1000);
         if (events & MILLSOCKET_ERROR) {
             DLOG(INFO) << "front.poll() error";
-            flag_running = false;
+            *flag_running = false;
         } else {
             input_ready = 0 != (events & MILLSOCKET_EVENT);
         }
@@ -390,8 +391,9 @@ NOINLINE void BlobService::Run(volatile bool &flag_running) {
     chs(done, uint32_t, 0);
 }
 
-NOINLINE void BlobService::RunClient(volatile bool &flag_running,
+NOINLINE void BlobService::RunClient(volatile bool *flag_running,
         std::unique_ptr<net::Socket> s0) {
+	assert(flag_running != nullptr);
     BlobClient client(std::move(s0), repository);
     client.Run(flag_running);
 }
@@ -403,7 +405,8 @@ BlobDaemon::BlobDaemon(std::shared_ptr<BlobRepository> rp)
 BlobDaemon::~BlobDaemon() {
 }
 
-void BlobDaemon::Start(volatile bool &flag_running) {
+void BlobDaemon::Start(volatile bool *flag_running) {
+	assert(flag_running != nullptr);
     DLOG(INFO) << __FUNCTION__;
     for (auto srv: services)
         srv->Start(flag_running);
@@ -479,8 +482,9 @@ BlobClient::BlobClient(std::unique_ptr<net::Socket> c,
     handler.reset(r->Handler());
 }
 
-void BlobClient::Run(volatile bool &flag_running) {
+void BlobClient::Run(volatile bool *flag_running) {
 
+	assert(flag_running != nullptr);
     DLOG_IF(INFO,FLAGS_verbose_daemon) << "CLIENT fd=" << client->fileno();
 
     http_parser_init(&parser, HTTP_REQUEST);
@@ -489,7 +493,7 @@ void BlobClient::Run(volatile bool &flag_running) {
 
     std::vector<uint8_t> buffer(32768);
 
-    while (flag_running) {
+    while (*flag_running) {
 
         errno = EAGAIN;
         ssize_t sr = client->read(buffer.data(), buffer.size(),

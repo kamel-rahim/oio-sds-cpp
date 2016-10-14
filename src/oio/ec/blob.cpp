@@ -5,33 +5,27 @@
  * obtain one at https://mozilla.org/MPL/2.0/ */
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/types.h>
 #include <sys/stat.h>
 #include <attr/xattr.h>
+#include <pwd.h>
 
 #include <cassert>
 #include <string>
+#include <iostream>
+#include <string>
+#include <sstream>
+#include <vector>
 #include <map>
 
 #include <glog/logging.h>
 #include <libmill.h>
+#include <liberasurecode/erasurecode.h>
+#include <liberasurecode/erasurecode_helpers.h>
 
-#include <oio/ec/blob.h>
 #include <utils/utils.h>
-#include <vector>
+#include <oio/ec/blob.h>
 
-#include <unistd.h>
-#include <sys/types.h>
-#include <pwd.h>
-
-#include "erasurecode.h"
-#include "erasurecode_helpers.h"
-
-#include <iostream>
-#include <string>
-#include <sstream>
-
-
-//#include "erasurecode_helpers_ext.h"
 
 using oio::ec::blob::DownloadBuilder;
 using oio::ec::blob::RemovalBuilder;
@@ -127,15 +121,15 @@ class EcDownload : public oio::api::blob::Download {
         encoded_data          = NULL;
         encoded_parity        = NULL;
         encoded_fragment_len  = 0 ;
-		fragments_needed      = NULL ;
-	    char *out_data        = NULL;
-	    uint64_t out_data_len = 0;
-	    unsigned long mask = 0;
-	    int rc = 0;
+        fragments_needed      = NULL ;
+        char *out_data        = NULL;
+        uint64_t out_data_len = 0;
+        unsigned long mask = 0;
+        int rc = 0;
 
-	    struct frag_array_set frags;
+        struct frag_array_set frags;
 
-    	done = false ;
+        done = false ;
 
         struct ec_args args;
         args.k = kVal ;
@@ -148,15 +142,15 @@ class EcDownload : public oio::api::blob::Download {
 
         fragments_needed = (int*)malloc(kVal*mVal*sizeof(int));
         if (!fragments_needed) {
-        	LOG(ERROR) << "LIBERASURECODE: Could not allocate memory for fragments" ;
-        	  return Status(Cause::InternalError);
+            LOG(ERROR) << "LIBERASURECODE: Could not allocate memory for fragments" ;
+              return Status(Cause::InternalError);
         }
         memset(fragments_needed, 0, kVal*mVal*sizeof(int));
 
         int desc = liberasurecode_instance_create(EC_BACKEND_LIBERASURECODE_RS_VAND, &args);
         if (desc <= 0) {
-        	LOG(ERROR) << "LIBERASURECODE: Could not create libec descriptor" ;
-        	return Status(Cause::InternalError);
+            LOG(ERROR) << "LIBERASURECODE: Could not create libec descriptor" ;
+            return Status(Cause::InternalError);
         }
 
         /*
@@ -164,51 +158,51 @@ class EcDownload : public oio::api::blob::Download {
          */
         encoded_data = (char **) malloc(sizeof(char *) * kVal);
         if (NULL == *encoded_data) {
-        	LOG(ERROR) << "LIBERASURECODE: Could not allocate data buffer" ;
-        	return Status(Cause::InternalError);
+            LOG(ERROR) << "LIBERASURECODE: Could not allocate data buffer" ;
+            return Status(Cause::InternalError);
         }
 
         encoded_parity = (char **) malloc(sizeof(char *) * mVal);
         if (NULL == *encoded_parity) {
-        	LOG(ERROR) << "LIBERASURECODE: Could not allocate parity buffer" ;
-        	return Status(Cause::InternalError);
+            LOG(ERROR) << "LIBERASURECODE: Could not allocate parity buffer" ;
+            return Status(Cause::InternalError);
         }
 
         // read from rawx
         for (const auto &to: targets)
         {
-        	const char *homedir;
+            const char *homedir;
 
-        	if ((homedir = getenv("HOME")) == NULL) {
-        	    homedir = getpwuid(getuid())->pw_dir;
-        	}
+            if ((homedir = getenv("HOME")) == NULL) {
+                homedir = getpwuid(getuid())->pw_dir;
+            }
 
-        	std::string path =  std::string (homedir) + "/oio/rawx-" + std::to_string(to.chunk_number+1) + "/" + to.target ;
-        	oio::local::blob::DownloadBuilder builder ;
+            std::string path =  std::string (homedir) + "/oio/rawx-" + std::to_string(to.chunk_number+1) + "/" + to.target ;
+            oio::local::blob::DownloadBuilder builder ;
 
-        	builder.Path(path);
+            builder.Path(path);
 
-        	auto dl = builder.Build();
-        	auto rc = dl->Prepare();
-        	char * p = NULL ;
-        	if (rc.Ok()) {
-        		std::vector<uint8_t> buf;
-        		while (!dl->IsEof()) {
-        			dl->Read(buf);
-           		}
-    			int size = buf.size() ;
-    			encoded_fragment_len = size ;
-    			p = (char *) malloc(sizeof(char) * size);
-    			memcpy (p, &buf[0], buf.size());
-        	}
+            auto dl = builder.Build();
+            auto rc = dl->Prepare();
+            char * p = NULL ;
+            if (rc.Ok()) {
+                std::vector<uint8_t> buf;
+                while (!dl->IsEof()) {
+                    dl->Read(buf);
+                   }
+                int size = buf.size() ;
+                encoded_fragment_len = size ;
+                p = (char *) malloc(sizeof(char) * size);
+                memcpy (p, &buf[0], buf.size());
+            }
 
-        	if (to.chunk_number < kVal)
-        		encoded_data [to.chunk_number] = p ;
-        	else
-        		encoded_parity [to.chunk_number-kVal] = p ;
+            if (to.chunk_number < kVal)
+                encoded_data [to.chunk_number] = p ;
+            else
+                encoded_parity [to.chunk_number-kVal] = p ;
 
-        	if (p == NULL)  // oups!!!  missing chunk!
-        		mask = add_item_to_missing_mask(mask, kVal + mVal -1 - to.chunk_number );
+            if (p == NULL)  // oups!!!  missing chunk!
+                mask = add_item_to_missing_mask(mask, kVal + mVal -1 - to.chunk_number );
         }
 
 
@@ -218,25 +212,25 @@ class EcDownload : public oio::api::blob::Download {
 
 
         create_frags_array_set(&frags,encoded_data, args.k, encoded_parity,
-        		                args.m, mask);
+                                args.m, mask);
         rc = liberasurecode_decode(desc, frags.array, frags.num_fragments,
-                    		       encoded_fragment_len, 1,
-								   &out_data, &out_data_len);
+                                   encoded_fragment_len, 1,
+                                   &out_data, &out_data_len);
 
         if (rc == 0) // decode ok we are done!
-       	{
-//            	bok = true ;
-        	if (out_data_len < size_expected)
-        	{
-        		buffer.resize(out_data_len);
-        		memcpy(&buffer[0], out_data, out_data_len) ;
-        	}
-        	else
-        	{
-        		buffer.resize(size_expected);
-        		memcpy(&buffer[0], &out_data[offset],  size_expected ) ;
-        	}
-       	}
+           {
+//                bok = true ;
+            if (out_data_len < size_expected)
+            {
+                buffer.resize(out_data_len);
+                memcpy(&buffer[0], out_data, out_data_len) ;
+            }
+            else
+            {
+                buffer.resize(size_expected);
+                memcpy(&buffer[0], &out_data[offset],  size_expected ) ;
+            }
+           }
 
         free(frags.array);
         free(out_data);
@@ -245,9 +239,9 @@ class EcDownload : public oio::api::blob::Download {
         liberasurecode_instance_destroy(desc);
 
         if (rc == 0) // decode ok we are done!
-        	return Status(Cause::OK);
+            return Status(Cause::OK);
         else
-        	return Status(Cause::InternalError);
+            return Status(Cause::InternalError);
     }
 
     bool IsEof() override {
@@ -267,23 +261,23 @@ class EcDownload : public oio::api::blob::Download {
 
     void CleanUp() {
 
-    	if (encoded_data) {
-    		for (int j = 0; j < kVal; j++) {
-    			if (encoded_data[j])
-    				free(encoded_data[j]);
-    		}
-    		free(encoded_data);
-    		encoded_data = NULL ;
-    	}
+        if (encoded_data) {
+            for (int j = 0; j < kVal; j++) {
+                if (encoded_data[j])
+                    free(encoded_data[j]);
+            }
+            free(encoded_data);
+            encoded_data = NULL ;
+        }
 
-    	if (encoded_parity) {
-    		for (int j = 0; j < mVal; j++) {
-    			if (encoded_parity[j])
-    				free(encoded_parity[j]);
+        if (encoded_parity) {
+            for (int j = 0; j < mVal; j++) {
+                if (encoded_parity[j])
+                    free(encoded_parity[j]);
             }
             free(encoded_parity);
             encoded_parity = NULL ;
-    	}
+        }
         free(fragments_needed);
         fragments_needed = NULL ;
     }
@@ -321,14 +315,14 @@ DownloadBuilder::~DownloadBuilder() {
 }
 
 std::unique_ptr<blob::Download> DownloadBuilder::Build() {
-	EcDownload *ul = new EcDownload();
+    EcDownload *ul = new EcDownload();
 
     ul->kVal          = kVal;
     ul->mVal          = mVal;
     ul->nbChunks      = nbChunks ;
     ul->chunkSize     = chunkSize ;
     ul->offset        = offset ;
-	ul->size_expected = size_expected ;
+    ul->size_expected = size_expected ;
 
     for (const auto &to: targets)
         ul->Target(to);
@@ -352,16 +346,16 @@ class EcRemoval : public oio::api::blob::Removal {
     }
 
     Status Prepare() override {
-    	return Status(Cause::OK);
+        return Status(Cause::OK);
     }
 
     Status Commit() override {
-    	return Status();
+        return Status();
     }
 
 
     Status Abort() override {
-    	return Status();
+        return Status();
     }
   private:
 };
@@ -377,14 +371,14 @@ class EcUpload : public oio::api::blob::Upload {
 
   public:
     bool Target(const oio::ec::blob::rawxSet &to)   { targets.insert(to);  return true; } ;
-    void SetXattr (const std::string &k, const std::string &v) override	{ xattr[k] = v; DLOG(INFO) << "Received xattr [" << k << "]"; } ;
+    void SetXattr (const std::string &k, const std::string &v) override    { xattr[k] = v; DLOG(INFO) << "Received xattr [" << k << "]"; } ;
 
     Status Prepare() {
         encoded_data         = NULL;
         encoded_parity       = NULL;
         encoded_fragment_len = 0 ;
         data                 = NULL ;
-		parity               = NULL ;
+        parity               = NULL ;
         return Status(Cause::OK);
     }
 
@@ -398,8 +392,8 @@ class EcUpload : public oio::api::blob::Upload {
 
         int err = posix_memalign((void **) &data, 16, ChunkSize);
         if (err != 0 || !data) {
-        	LOG(ERROR) << "LIBERASURECODE: Could not allocate memory for data";
-        	return Status(Cause::InternalError);
+            LOG(ERROR) << "LIBERASURECODE: Could not allocate memory for data";
+            return Status(Cause::InternalError);
         }
         memcpy ( data, &buffer[0], ChunkSize);
 
@@ -409,8 +403,8 @@ class EcUpload : public oio::api::blob::Upload {
 
         int desc = liberasurecode_instance_create(EC_BACKEND_LIBERASURECODE_RS_VAND, &args);
         if (desc <= 0) {
-        	LOG(ERROR) << "LIBERASURECODE: Could not create libec descriptor";
-        	return Status(Cause::InternalError);
+            LOG(ERROR) << "LIBERASURECODE: Could not create libec descriptor";
+            return Status(Cause::InternalError);
         }
 
         /*
@@ -418,74 +412,76 @@ class EcUpload : public oio::api::blob::Upload {
         */
 
         int rc = liberasurecode_encode(desc, data, ChunkSize,
-           	    	                   &encoded_data, &encoded_parity,
-            						   &encoded_fragment_len);
+                                          &encoded_data, &encoded_parity,
+                                       &encoded_fragment_len);
         if (rc != 0) {
-        	LOG(ERROR) << "LIBERASURECODE: encode error";
-        	return Status(Cause::InternalError);
+            LOG(ERROR) << "LIBERASURECODE: encode error";
+            return Status(Cause::InternalError);
         }
 
         for (const auto &to: targets)
         {
-        	const char *homedir;
+            const char *homedir;
 
-        	if ((homedir = getenv("HOME")) == NULL) {
-        	    homedir = getpwuid(getuid())->pw_dir;
-        	}
+            if ((homedir = getenv("HOME")) == NULL) {
+                homedir = getpwuid(getuid())->pw_dir;
+            }
 
-        	std::string path =  std::string (homedir) + "/oio/rawx-" + std::to_string(to.chunk_number+1) + "/" + to.target ;
-        	oio::local::blob::UploadBuilder builder ;
+            std::string path =  std::string (homedir) + "/oio/rawx-" + std::to_string(to.chunk_number+1) + "/" + to.target ;
+            oio::local::blob::UploadBuilder builder ;
 
-        	builder.Path(path);
-        	builder.FileMode(0644);
-        	builder.DirMode(0755);
+            builder.Path(path);
+            builder.FileMode(0644);
+            builder.DirMode(0755);
 
-        	auto ul = builder.Build();
-        	auto rc = ul->Prepare();
+            auto ul = builder.Build();
+            auto rc = ul->Prepare();
 
-        	if (rc.Ok()) {
-
-        		std::string str (to.chunk_number < kVal ? encoded_data [to.chunk_number] : encoded_parity [to.chunk_number-kVal], encoded_fragment_len) ;
-        		ul->Write (str) ;
-        		ul->Commit () ;
-        	}
-        	else
-        		ul->Abort() ;
+            if (rc.Ok()) {
+                const char *tmp = to.chunk_number < kVal
+                    ? encoded_data [to.chunk_number]
+                       : encoded_parity [to.chunk_number-kVal];
+                std::string s(tmp, encoded_fragment_len) ;
+                ul->Write (s) ;
+                ul->Commit () ;
+            }
+            else
+                ul->Abort() ;
         }
 
         CleanUp() ;
 
         liberasurecode_instance_destroy(desc);
 
-    	return Status(Cause::OK) ;
+        return Status(Cause::OK) ;
     }
 
     void CleanUp() {
-    	if (encoded_data) {
-    		for (int j = 0; j < kVal; j++) {
-    			if (encoded_data[j])
-    				free(encoded_data[j]);
-    		}
-    		free(encoded_data);
-    		encoded_data = NULL ;
-    	}
+        if (encoded_data) {
+            for (int j = 0; j < kVal; j++) {
+                if (encoded_data[j])
+                    free(encoded_data[j]);
+            }
+            free(encoded_data);
+            encoded_data = NULL ;
+        }
 
-    	if (encoded_parity) {
-    		for (int j = 0; j < mVal; j++) {
-    			if (encoded_parity[j])
-    				free(encoded_parity[j]);
+        if (encoded_parity) {
+            for (int j = 0; j < mVal; j++) {
+                if (encoded_parity[j])
+                    free(encoded_parity[j]);
             }
             free(encoded_parity);
             encoded_parity = NULL ;
-    	}
+        }
 
         free(data);
         data = NULL ;
     }
 
     Status Abort() override {
-    	CleanUp () ;
-    	return Status(Cause::OK) ;
+        CleanUp () ;
+        return Status(Cause::OK) ;
     }
 
     void Write(const uint8_t *buf, uint32_t len) override {

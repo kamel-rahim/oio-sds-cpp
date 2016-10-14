@@ -4,13 +4,8 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
-#ifndef OIO_KINETIC_MILLDAEMON_H
-#define OIO_KINETIC_MILLDAEMON_H
-
-#include <vector>
-#include <map>
-#include <limits>
-#include <memory>
+#ifndef BIN_MILLDAEMON_H_
+#define BIN_MILLDAEMON_H_
 
 #include <sys/uio.h>
 
@@ -18,11 +13,17 @@
 #include <libmill.h>
 #include <http-parser/http_parser.h>
 
+#include <vector>
+#include <map>
+#include <limits>
+#include <memory>
+#include <string>
+
 #include <utils/macros.h>
 #include <utils/net.h>
 #include <oio/api/blob.h>
-#include "common-header-parser.h"
-#include "common-server-headers.h"
+#include <bin/common-header-parser.h>
+#include <bin/common-server-headers.h>
 
 class BlobRepository;
 
@@ -37,12 +38,12 @@ DECLARE_bool(verbose_daemon);
 /* -------------------------------------------------------------------------- */
 
 class BlobHandler {
-  public:
+ public:
     virtual ~BlobHandler() {}
 
-    virtual SoftError SetUrl (const std::string &u) = 0;
+    virtual SoftError SetUrl(const std::string &u) = 0;
 
-    virtual SoftError SetHeader (
+    virtual SoftError SetHeader(
             const std::string &k, const std::string &v) = 0;
 
     virtual std::unique_ptr<oio::api::blob::Upload> GetUpload() = 0;
@@ -53,25 +54,25 @@ class BlobHandler {
 };
 
 class BlobRepository {
-  public:
+ public:
     virtual ~BlobRepository() {}
 
-    virtual BlobRepository* Clone () = 0;
+    virtual BlobRepository* Clone() = 0;
 
-    virtual bool Configure (const std::string &cfg) = 0;
+    virtual bool Configure(const std::string &cfg) = 0;
 
     virtual BlobHandler *Handler() = 0;
 };
 
 struct BlobClient {
-
     FORBID_ALL_CTOR(BlobClient);
 
     ~BlobClient();
 
-    BlobClient(std::unique_ptr<net::Socket> c, std::shared_ptr<BlobRepository> r);
+    BlobClient(std::unique_ptr<net::Socket> c,
+               std::shared_ptr<BlobRepository> r);
 
-    void Run(volatile bool &flag_running);
+    void Run(volatile bool *flag_running);
 
     void Reset();
 
@@ -101,7 +102,7 @@ struct BlobClient {
     struct http_parser_settings settings;
 
     // Related to the current request
-    std::map<std::string,std::string> reply_headers;
+    std::map<std::string, std::string> reply_headers;
 
     SoftError defered_error;
     std::unique_ptr<oio::api::blob::Upload> upload;
@@ -120,36 +121,36 @@ struct BlobClient {
 class BlobService {
     friend class BlobDaemon;
 
-  public:
+ public:
     FORBID_ALL_CTOR(BlobService);
 
-    BlobService(std::shared_ptr<BlobRepository> r);
+    explicit BlobService(std::shared_ptr<BlobRepository> r);
 
     ~BlobService();
 
-    void Start(volatile bool &flag_running);
+    void Start(volatile bool *running);
 
     void Join();
 
     bool Configure(const std::string &cfg);
 
-  private:
-    NOINLINE void Run(volatile bool &flag_running);
+ private:
+    NOINLINE void Run(volatile bool *flag_running);
 
-    NOINLINE void RunClient(volatile bool &flag_running,
+    NOINLINE void RunClient(volatile bool *flag_running,
             std::unique_ptr<net::Socket> s0);
 
-  private:
+ private:
     net::MillSocket front;
     std::shared_ptr<BlobRepository> repository;
     chan done;
 };
 
 class BlobDaemon {
-  public:
+ public:
     FORBID_ALL_CTOR(BlobDaemon);
 
-    BlobDaemon(std::shared_ptr<BlobRepository> rp);
+    explicit BlobDaemon(std::shared_ptr<BlobRepository> rp);
 
     ~BlobDaemon();
 
@@ -157,13 +158,13 @@ class BlobDaemon {
 
     bool LoadJson(const std::string &cfg);
 
-    void Start(volatile bool &flag_running);
+    void Start(volatile bool *flag_running);
 
     void Join();
 
-  private:
+ private:
     std::vector<std::shared_ptr<BlobService>> services;
     std::shared_ptr<BlobRepository> repository_prototype;
 };
 
-#endif //OIO_KINETIC_MILLDAEMON_H
+#endif // BIN_MILLDAEMON_H_

@@ -197,7 +197,7 @@ int main(int argc, char **argv) {
 		if (!daemon.LoadJsonFile(argv[i]))
 			return 1;
 	}
-	daemon.Start(flag_running);
+	daemon.Start(&flag_running);
 	daemon.Join();
 	return 0;
 }

@@ -1,3 +1,10 @@
+link_directories(
+		${MILL_LIBRARY_DIRS}
+		${EC_LIBRARY_DIRS})
+
+include_directories(BEFORE
+		${MILL_INCLUDE_DIRECTORIES}
+		${EC_INCLUDE_DIRECTORIES})
 
 add_custom_command(OUTPUT
         ${CMAKE_CURRENT_BINARY_DIR}/kinetic.pb.cc
@@ -15,7 +22,7 @@ add_library(oio-utils SHARED
         utils/Http.h utils/Http.cpp)
 target_link_libraries(oio-utils
         oio-http-parser
-        mill_s ${CRYPTO_LIBRARIES} ${GLOG_LIBRARIES})
+        ${MILL_LIBRARIES} ${CRYPTO_LIBRARIES} ${GLOG_LIBRARIES})
 
 
 add_library(oio-data SHARED
@@ -31,11 +38,10 @@ target_link_libraries(oio-data-local oio-data)
 
 add_library(oio-data-ec SHARED
         oio/ec/blob.cpp
-        oio/ec/erasure.c
         oio/ec/blob.h)
 target_link_libraries(oio-data-ec
         oio-data oio-data-local
-		${EC_LIBRARIES})
+        ${EC_LIBRARIES})
 
 add_library(oio-data-http SHARED
         oio/http/blob.cpp
@@ -78,4 +84,5 @@ add_library(oio-data-kinetic SHARED
         oio/kinetic/coro/client/PendingExchange.h)
 target_link_libraries(oio-data-kinetic
         oio-utils oio-data oio-http-parser
-		mill_s ${PROTOBUF_LIBRARIES} ${CRYPTO_LIBRARIES} ${GLOG_LIBRARIES})
+        ${MILL_LIBRARIES} ${PROTOBUF_LIBRARIES} ${CRYPTO_LIBRARIES}
+        ${GLOG_LIBRARIES})

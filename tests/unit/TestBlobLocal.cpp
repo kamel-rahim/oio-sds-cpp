@@ -33,7 +33,7 @@ static bool isPresent(const std::string &path) {
     return 0 == ::stat64(path.c_str(), &st);
 }
 
-static mode_t getMode(const std::string &path) {
+static int getMode(const std::string &path) {
     struct stat64 st;
     st.st_mode = 0;
     ::stat64(path.c_str(), &st);
@@ -106,7 +106,7 @@ TEST(Local,UploadInit) {
 
 // Test Abort() after Prepare()
 TEST(Local,UploadAbort) {
-    const mode_t mode{0615}; // dummy mode different from the default
+    const int mode{0615}; // dummy mode different from the default
     UploadBuilder builder;
     builder.Path(FLAGS_test_file_path);
     builder.FileMode(mode);

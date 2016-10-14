@@ -10,10 +10,16 @@
 #ifndef OIO_KINETIC_UTILS_MACROS_H
 #define OIO_KINETIC_UTILS_MACROS_H
 
+#ifndef GFLAGS_NAMESPACE
+#define GFLAGS_NAMESPACE google
+#endif
+
+#include <gflags/gflags_declare.h>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
 #ifndef GFLAGS_GFLAGS_H_
+#define GFLAGS_GFLAGS_H_
 namespace gflags = google;
 #endif  // GFLAGS_GFLAGS_H_
 

@@ -54,11 +54,13 @@ struct numeric_only: std::ctype<char>
 class EcHandler : public BlobHandler {
   private:
     std::string chunk_id;
-    std::set<oio::ec::blob::rayxSet> targets;
+    std::set<oio::ec::blob::rawxSet> targets;
 
     std::map<std::string,std::string> xattrs;
     int kVal, mVal , nbChunks ;
     int64_t offset_pos ;
+    int64_t chunkSize ;
+    uint64_t offset, size_expected ;
   public:
     EcHandler(): chunk_id(), targets(), xattrs() {}
     ~EcHandler() {}
@@ -83,9 +85,16 @@ class EcHandler : public BlobHandler {
     std::unique_ptr<oio::api::blob::Download> GetDownload() override {
     	auto builder = DownloadBuilder ();
 
+        builder.ChunkSize(chunkSize) ;
+        builder.M_Val (mVal) ;
+        builder.K_Val (kVal) ;
+        builder.NbChunks (nbChunks) ;
+        builder.Offset (offset) ;
+        builder.SizeExpected (size_expected ) ;
+
         for (const auto to: targets)
             builder.Target(to);
-//        return builder.Build();
+        return builder.Build();
         return NULL ;
     }
 
@@ -123,7 +132,7 @@ class EcHandler : public BlobHandler {
             switch (header.Get()) {
                 case EcHeader::Value::ChunkDest:
                 {
-                	oio::ec::blob::rayxSet rawx;
+                	oio::ec::blob::rawxSet rawx;
 
                  	std::string str (k) ;
                  	for ( std::string::iterator it=str.begin(); it!=str.end(); ++it)
@@ -168,6 +177,24 @@ class EcHandler : public BlobHandler {
                 	ss >> offset_pos ;
                 }
                	break ;
+                case EcHeader::Value::ChunkSize:
+                {
+                	std::string all_numbers (v) ;
+                	std::stringstream ss(all_numbers);
+                	ss >> chunkSize ;
+                }
+               	break ;
+                case EcHeader::Value::Range:
+                {
+                	std::string all_numbers (v) ;
+                	for ( std::string::iterator it=all_numbers.begin(); it!=all_numbers.end(); ++it)
+                	    if (!isdigit(*it)) *it = ' ';
+                	std::stringstream ss(all_numbers);
+                	ss >> offset;
+                	ss >> size_expected ;
+                	size_expected = size_expected + 1 - offset ;
+                }
+                break ;
                	default:
                     xattrs[k] = v;
             }

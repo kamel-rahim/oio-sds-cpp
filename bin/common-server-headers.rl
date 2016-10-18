@@ -20,12 +20,13 @@ machine header_lexer_s;
 access lexer.;
 parse_header := |*
     /Content-length/i   { value = Value::ContentLength; };
-    /Dontent-type/i     { value = Value::ContentType; };
+    /Content-type/i     { value = Value::ContentType; };
     /Expect/i           { value = Value::Expect; };
     /Connection/i       { value = Value::Connection; };
     /Host/i             { value = Value::Host; };
     /Accept/i           { value = Value::Accept; };
     /User-agent/i       { value = Value::UserAgent; };
+    /Range/i            { value = Value::Custom; };
     /X-oio-.*/i         { value = Value::Custom; };
 *|;
 }%%

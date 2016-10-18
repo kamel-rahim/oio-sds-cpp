@@ -28,6 +28,8 @@ parse_header := |*
 /x-oio-chunk-meta-chunk-*/i                { value = Value::ChunkDest; }; 
 /x-oio-chunk-meta-chunks-nb/i              { value = Value::Chunks; }; 
 /x-oio-chunk-meta-chunk-pos/i              { value = Value::ChunkPos; }; 
+/x-oio-chunk-meta-chunk-size/i             { value = Value::ChunkSize; }; 
+/Range/i                                   { value = Value::Range; }; 
 /transfer-encoding/i                       { value = Value::TransferEncoding; }; 
 *|;
 }%%
@@ -60,6 +62,8 @@ std::string EcHeader::Name() const {
         ON_HEADER(ChunkDest);
         ON_HEADER(Chunks);
         ON_HEADER(ChunkPos);
+        ON_HEADER(ChunkSize);
+        ON_HEADER(Range);
         ON_HEADER(TransferEncoding);
    }
     return "invalid";

@@ -4,12 +4,12 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
+#include "Exchange.h"
+
 #include <sys/uio.h>
 #include <netinet/in.h>
 
-#include <libmill/libmill.h>
-
-#include "Exchange.h"
+#include <libmill.h>
 
 using oio::kinetic::rpc::Context;
 using oio::kinetic::rpc::Exchange;

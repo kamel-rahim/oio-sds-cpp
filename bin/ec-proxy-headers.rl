@@ -8,8 +8,8 @@
  */
 
 #include <cassert>
-#include <common-header-parser.h>
-#include <ec-proxy-headers.h>
+#include <bin/common-header-parser.h>
+#include <bin/ec-proxy-headers.h>
 
 #define token(T) return (T)
 

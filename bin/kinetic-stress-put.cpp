@@ -151,8 +151,8 @@ int main(int argc, char **argv) {
     signal(SIGUSR2, SIG_IGN);
     signal(SIGHUP, SIG_IGN);
     signal(SIGPIPE, SIG_IGN);
-    freopen("/dev/null", "r", stdin);
-    freopen("/dev/null", "a", stdout);
+    stdin = freopen("/dev/null", "r", stdin);
+    stdout = freopen("/dev/null", "a", stdout);
     mill_goprepare(2+2*FLAGS_put_window, 16384, sizeof(void *));
 
     std::vector<uint8_t> buf(FLAGS_block_size);

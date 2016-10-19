@@ -1,4 +1,17 @@
-include_directories(.)
+include_directories(BEFORE
+		${CMAKE_SOURCE_DIR}/
+		${CMAKE_SOURCE_DIR}/src
+		${CMAKE_SOURCE_DIR}/3rd
+		${CMAKE_BINARY_DIR}
+        ${GFLAGS_INCLUDE_DIRS}
+        ${GLOG_INCLUDE_DIRS}
+        ${MILL_INCLUDE_DIRS}
+        ${RAPIDJSON_INCLUDE_DIRS})
+
+link_directories(
+        ${MILL_LIBRARY_DIRS}
+        ${GFLAGS_LIBRARY_DIRS}
+        ${GLOG_LIBRARY_DIRS})
 
 add_library(oio-server SHARED
         MillDaemon.h
@@ -36,7 +49,7 @@ add_custom_command(OUTPUT
 
 add_executable(oio-kinetic-listener kinetic-listener.cpp)
 target_link_libraries(oio-kinetic-listener oio-data-kinetic
-        ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES} mill_s)
+		${MILL_LIBRARIES} ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES})
 
 
 add_executable(oio-kinetic-proxy
@@ -52,8 +65,8 @@ add_executable(oio-ec-proxy
         ec-proxy-headers.h
         ec-proxy.cpp)
 target_link_libraries(oio-ec-proxy
-		oio-http-parser oio-server oio-data-ec
-		${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES})
+        oio-http-parser oio-server oio-data-ec
+        ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES})
 
 add_executable(kinetic-stress-put kinetic-stress-put.cpp)
 target_link_libraries(kinetic-stress-put oio-data-kinetic

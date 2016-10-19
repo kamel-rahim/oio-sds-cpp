@@ -1,73 +1,316 @@
 cmake_minimum_required(VERSION 3.2)
 project(oio-kinetic)
 
+include(ExternalProject)
 find_package(PkgConfig)
-find_program(PROTOBUF_EXE protoc)
-find_program(RAGEL_EXE ragel)
 
 set(LINKER_LANGUAGE CXX)
 
-pkg_check_modules(GLOG libglog REQUIRED)
-pkg_check_modules(GFLAGS libgflags)
-pkg_check_modules(PROTOBUF protobuf REQUIRED)
 pkg_check_modules(CRYPTO libcrypto REQUIRED)
+
+macro(dump_dependency_components _DEP)
+message("${_DEP}")
+message(" system:${${_DEP}_SYSTEM} guess:${${_DEP}_GUESS} exe:${${_DEP}_EXE}")
+message(" incdir: ${${_DEP}_INCLUDE_DIRS}")
+message(" libdir: ${${_DEP}_LIBRARY_DIRS}")
+message(" lib: ${${_DEP}_LIBRARIES}")
+endmacro()
 
 ################################################################################
 ### liberasurecode
-### Often poorly packaged, it lacks a .pc file for pkg-config.
-### We accept explicit paths, but try to guess if not specified
-pkg_check_modules(EC liberasurecode)
-if (NOT EC_FOUND)
-    if (DEFINED EC_LIBDIR)
-        find_library(EC_LIBRARIES
-            NAMES erasurecode
-            HINTS /usr/lib /usr/lib64)
-    else ()
-        find_library(EC_LIBRARIES
+### Often poorly packaged, it lacks a .pc file for pkg-config. We accept
+### explicit paths, but try to guess if not specified
+
+option(EC_SYSTEM "Use system's liberasurecode" ON)
+option(EC_GUESS "Try to find liberasurecode in standard places" OFF)
+if (DEFINED EC_INCDIR AND DEFINED EC_LIBDIR)
+    find_library(EC_LIBRARIES
             NAMES erasurecode
             PATHS ${EC_LIBDIR})
-    endif()
-    if (DEFINED EC_INCDIR)
-        find_path(EC_INCLUDE_DIRECTORIES
-            NAMES erasurecode.h
+    find_path(EC_INCLUDE_DIRS
+            NAMES liberasurecode/erasurecode.h
             PATHS ${EC_INCDIR})
-    else ()
-        find_path(EC_INCLUDE_DIRECTORIES
-            NAMES erasurecode.h
-            HINTS /usr/include/liberasurecode)
-    endif ()
-endif()
-MESSAGE("EC libraries=${EC_LIBRARIES} header=${EC_INCLUDE_DIRECTORIES}")
+elseif (EC_SYSTEM)
+    pkg_check_modules(EC erasurecode REQUIRED)
+elseif (EC_GUESS)
+    find_library(EC_LIBRARIES
+            NAMES erasurecode
+            HINTS /usr/lib /usr/lib64)
+    find_path(EC_INCLUDE_DIRS
+            NAMES liberasurecode/erasurecode.h
+            PATHS /usr/include)
+endif ()
+dump_dependency_components("EC")
 
-set(GFLAGS_INCLUDE_DIRECTORIES "/usr/include")
-set(GFLAGS_LIBRARIES "-lgflags")
-set(GTEST_LIBRARIES "-lgtest")
+################################################################################
+### Google Flags
+### Often poorly packaged. The .pc file lacks, e.g. on Ubuntu 15. We accept
+### system configuration, explicit paths, or paths guessed at standard places.
 
-include_directories(BEFORE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
-        ${CMAKE_CURRENT_SOURCE_DIR}/3rd
-        ${CMAKE_CURRENT_BINARY_DIR}
-        3rd/libmill
-        ${PROTOBUF_INCLUDE_DIRECTORIES}
-        ${CRYPTO_INCLUDE_DIRECTORIES}
-        ${GLOG_INCLUDE_DIRECTORIES}
-        ${GFLAGS_INCLUDE_DIRECTORIES}
-        ${EC_INCLUDE_DIRECTORIES})
+option(GFLAGS_SYSTEM "Use system's gflags" ON)
+option(GFLAGS_GUESS "Try to find gflags in standard places" OFF)
+if (DEFINED GFLAGS_INCDIR AND DEFINED GFLAGS_LIBDIR)
+    find_library(GFLAGS_LIBRARIES
+            NAMES gflags
+            PATHS ${GFLAGS_LIBDIR})
+    find_path(GFLAGS_INCLUDE_DIRS
+            NAMES gflags/gflags.h
+            PATHS ${GFLAGS_INCDIR})
+elseif (GFLAGS_SYSTEM)
+    pkg_check_modules(GFLAGS gflags REQUIRED)
+elseif (GFLAGS_GUESS)
+    find_library(GFLAGS_LIBRARIES
+            NAMES gflags
+            HINTS /usr/lib /usr/lib64)
+    find_path(GFLAGS_INCLUDE_DIRS
+            NAMES gflags/gflags.h
+            PATHS /usr/include)
+else ()
+    ExternalProject_Add(googleflags
+            DOWNLOAD_COMMAND ""
+            SOURCE_DIR ${CMAKE_SOURCE_DIR}/3rd/gflags
+            BINARY_DIR ${CMAKE_BINARY_DIR}/3rd/gflags-bin
+            TMP_DIR    ${CMAKE_BINARY_DIR}/3rd/gflags-tmp
+            STAMP_DIR  ${CMAKE_BINARY_DIR}/3rd/gflags-stamp
+            CMAKE_ARGS
+            -DBUILD_SHARED_LIBS=ON
+            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG:PATH=DebugLibs
+            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE:PATH=ReleaseLibs
+            -DCMAKE_CXX_FLAGS=${MSVC_COMPILER_DEFS}
+            PREFIX "${CMAKE_CURRENT_BINARY_DIR}"
+            INSTALL_COMMAND "")
+    ExternalProject_Get_Property(googleflags source_dir)
+    ExternalProject_Get_Property(googleflags binary_dir)
+    set(GFLAGS_INCLUDE_DIRS ${binary_dir}/include)
+    set(GFLAGS_LIBRARY_DIRS ${binary_dir}/lib)
+    set(GFLAGS_LIBRARIES gflags)
+endif ()
+dump_dependency_components("GFLAGS")
 
-add_subdirectory(3rd/libmill)
+################################################################################
+### Google Test
+### Worst of all, there is probably a good reason to explain gtest's packages
+### only ship headers and sources...
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -pipe -fPIC")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GNU_SOURCE")
+option(GTEST_SYSTEM "Use system's googletest" ON)
+option(GTEST_GUESS "Try to find googletest in standard places" OFF)
+if (DEFINED GTEST_INCDIR AND DEFINED GTEST_LIBDIR)
+    find_library(GTEST_LIBRARIES
+            NAMES gtest
+            PATHS ${GTEST_LIBDIR})
+    find_path(GTEST_INCLUDE_DIRS
+            NAMES gtest/gtest.h
+            PATHS ${GTEST_INCDIR})
+elseif (GTEST_SYSTEM)
+    pkg_check_modules(GTEST libgtest REQUIRED)
+elseif (GTEST_GUESS)
+    find_library(GTEST_LIBRARIES
+            NAMES gtest
+            HINTS /usr/lib /usr/lib64)
+    find_path(GTEST_INCLUDE_DIRS
+            NAMES gtest/gtest.h
+            PATHS /usr/include)
+else ()
+    ExternalProject_Add(googletest
+            DOWNLOAD_COMMAND ""
+            SOURCE_DIR ${CMAKE_SOURCE_DIR}/3rd/gtest
+            BINARY_DIR ${CMAKE_BINARY_DIR}/3rd/gtest-bin
+            TMP_DIR    ${CMAKE_BINARY_DIR}/3rd/gtest-tmp
+            STAMP_DIR  ${CMAKE_BINARY_DIR}/3rd/gtest-stamp
+            CMAKE_ARGS
+            -DBUILD_SHARED_LIBS=ON
+            -DBUILD_GTEST=ON
+            -DBUILD_GMOCK=OFF
+            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG:PATH=DebugLibs
+            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE:PATH=ReleaseLibs
+            -DCMAKE_CXX_FLAGS=${MSVC_COMPILER_DEFS}
+            PREFIX "${CMAKE_CURRENT_BINARY_DIR}"
+            INSTALL_COMMAND "")
+    ExternalProject_Get_Property(googletest source_dir)
+    ExternalProject_Get_Property(googletest binary_dir)
+    set(GTEST_INCLUDE_DIRS ${source_dir}/googletest/include)
+    set(GTEST_LIBRARY_DIRS ${binary_dir}/googletest)
+    set(GTEST_LIBRARIES gtest)
+endif ()
+dump_dependency_components("GTEST")
 
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-protector-all")
+################################################################################
+### Google Log
+
+option(GLOG_SYSTEM "Use system's googlelog" ON)
+option(GLOG_GUESS "Try to find googlelog in standard places" OFF)
+if (DEFINED GLOG_INCDIR AND DEFINED GLOG_LIBDIR)
+    find_library(GLOG_LIBRARIES
+            NAMES glog
+            PATHS ${GLOG_LIBDIR})
+	find_path(GLOG_INCLUDE_DIRS
+            NAMES glog/logging.h
+            PATHS ${GLOG_INCDIR})
+elseif (GLOG_SYSTEM)
+    pkg_check_modules(GLOG libglog REQUIRED)
+elseif (GLOG_GUESS)
+    find_library(GLOG_LIBRARIES
+            NAMES glog
+            HINTS /usr/lib /usr/lib64)
+	find_path(GLOG_INCLUDE_DIRS
+            NAMES glog/logging.h
+            PATHS /usr/include)
+else ()
+    ExternalProject_Add(googlelog
+            DOWNLOAD_COMMAND ""
+            SOURCE_DIR ${CMAKE_SOURCE_DIR}/3rd/glog
+            BINARY_DIR ${CMAKE_BINARY_DIR}/3rd/glog-bin
+            TMP_DIR    ${CMAKE_BINARY_DIR}/3rd/glog-tmp
+            STAMP_DIR  ${CMAKE_BINARY_DIR}/3rd/glog-stamp
+            CMAKE_ARGS
+            -DBUILD_SHARED_LIBS=ON
+            -DWITH_THREADS=ON
+            -DWITH_GFLAGS=OFF
+            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG:PATH=DebugLibs
+            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE:PATH=ReleaseLibs
+            -DCMAKE_CXX_FLAGS=${MSVC_COMPILER_DEFS}
+            PREFIX "${CMAKE_CURRENT_BINARY_DIR}"
+            INSTALL_COMMAND "")
+    ExternalProject_Get_Property(googlelog source_dir)
+    ExternalProject_Get_Property(googlelog binary_dir)
+    set(GLOG_INCLUDE_DIRS ${source_dir}/src ${binary_dir})
+    set(GLOG_LIBRARY_DIRS ${binary_dir})
+    set(GLOG_LIBRARIES glog)
+endif ()
+dump_dependency_components("GLOG")
+
+################################################################################
+### LibMill
+
+option(MILL_SYSTEM "Use system's libmill" OFF)
+option(MILL_GUESS "Guess the libmill places at system's standard" OFF)
+if (DEFINED MILL_INCDIR AND DEFINED MILL_LIBDIR)
+    find_library(MILL_LIBRARIES
+            NAMES mill
+            PATHS ${MILL_LIBDIR})
+	find_path(MILL_INCLUDE_DIRS
+            NAMES libmill.h
+            PATHS ${MILL_INCDIR})
+elseif (MILL_SYSTEM)
+    pkg_check_modules(MILL mill REQUIRED)
+elseif (MILL_GUESS)
+    find_library(MILL_LIBRARIES
+            NAMES mill
+            HINTS /usr/lib /usr/lib64)
+	find_path(MILL_INCLUDE_DIRS
+            NAMES libmill.h
+            PATHS /usr/include)
+else ()
+	include_directories(${CMAKE_SOURCE_DIR}/3rd/libmill)
+    ExternalProject_Add(libmill
+            DOWNLOAD_COMMAND ""
+            SOURCE_DIR ${CMAKE_SOURCE_DIR}/3rd/libmill
+            BINARY_DIR ${CMAKE_BINARY_DIR}/3rd/libmill-bin
+            TMP_DIR    ${CMAKE_BINARY_DIR}/3rd/libmill-tmp
+            STAMP_DIR  ${CMAKE_BINARY_DIR}/3rd/libmill-stamp
+            CMAKE_ARGS
+            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG:PATH=DebugLibs
+            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE:PATH=ReleaseLibs
+			-DCMAKE_C_FLAGS=-I${CMAKE_SOURCE_DIR}/3rd/libmill
+            PREFIX "${CMAKE_CURRENT_BINARY_DIR}"
+            INSTALL_COMMAND "")
+    ExternalProject_Get_Property(libmill source_dir)
+    ExternalProject_Get_Property(libmill binary_dir)
+	set(MILL_INCLUDE_DIRS ${source_dir})
+	set(MILL_LIBRARY_DIRS ${binary_dir})
+    set(MILL_LIBRARIES libmill.so)
+endif ()
+dump_dependency_components("MILL")
+
+################################################################################
+### NodeJS's http-parser
+### coming as a git submodule, we directly use its sources (2 files) in our
+### project
+
+set(HTTPPARSER_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/3rd)
+
+################################################################################
+### Kinetic's Protocol
+### No need to build anything here, we excpect protobuf to come from the system,
+### at least for the moment.
+
+find_program(PROTOBUF_EXE protoc)
+pkg_check_modules(PROTOBUF protobuf REQUIRED)
+dump_dependency_components("PROTOBUF")
+
+################################################################################
+### RAGEL
+### Only use at compile time, we currently expect the ragel binary is know from
+### the PATH environment variable.
+
+find_program(RAGEL_EXE ragel)
+dump_dependency_components("RAGEL")
+
+################################################################################
+### ATTR
+
+option(ATTR_SYSTEM "Use system's libattr" ON)
+if (DEFINED ATTR_INCDIR AND DEFINED ATTR_LIBDIR)
+    find_library(ATTR_LIBRARIES
+            NAMES attr
+            PATHS ${ATTR_LIBDIR})
+    find_path(ATTR_INCLUDE_DIRS
+            NAMES attr/xattr.h
+            PATHS ${ATTR_INCDIR})
+elseif (ATTR_SYSTEM)
+    pkg_check_modules(ATTR libattr REQUIRED)
+else ()
+    find_library(ATTR_LIBRARIES
+            NAMES attr
+            HINTS /usr/lib /usr/lib64)
+    find_path(ATTR_INCLUDE_DIRS
+            NAMES attr/xattr.h
+            PATHS /usr/include)
+endif ()
+dump_dependency_components("ATTR")
+
+################################################################################
+### RadipJSON
+
+option(RAPIDJSON_SYSTEM "Use system's rapidjson" ON)
+option(RAPIDJSON_GUESS "Guess the libattr places at standard system places" OFF)
+if (DEFINED RAPIDJSON_INCDIR AND DEFINED RAPIDJSON_LIBDIR)
+    find_path(RAPIDJSON_INCLUDE_DIRS
+            NAMES rapidjson/document.h rapidjson/filereadstream.h rapidjson/writer.h
+            PATHS ${RAPIDJSON_INCDIR})
+elseif (RAPIDJSON_SYSTEM)
+    pkg_check_modules(RAPIDJSON rapidjson REQUIRED)
+elseif (RAPIDJSON_GUESS)
+    find_path(RAPIDJSON_INCLUDE_DIRS
+            NAMES rapidjson/document.h rapidjson/filereadstream.h rapidjson/writer.h
+            PATHS /usr/include)
+else ()
+    # Compiling rapidjson is only useful to execute test suites
+    find_path(RAPIDJSON_INCLUDE_DIRS
+            NAMES rapidjson/document.h rapidjson/filereadstream.h rapidjson/writer.h
+            PATHS ${CMAKE_CURRENT_SOURCE_DIR}/3rd/rapidjson/include)
+endif ()
+dump_dependency_components("RAPIDJSON")
+
+################################################################################
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -pipe -fPIC")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Werror")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wclobbered")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS} -std=c++11")
 
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -fno-inline")
 set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "-O2")
+
+set(CMAKE_C_FLAGS_DEBUG "-O0 -fno-inline")
+set(CMAKE_C_FLAGS_MINSIZEREL "-Os")
+set(CMAKE_C_FLAGS_RELEASE "-O2")
+set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O2")
 
 add_library(oio-http-parser SHARED
         3rd/http-parser/http_parser.c
@@ -79,10 +322,6 @@ add_subdirectory(src)
 add_subdirectory(bin)
 
 ENABLE_TESTING()
-
-include_directories(AFTER /usr/src/gtest)
-add_library(gtest STATIC /usr/src/gtest/src/gtest-all.cc)
-target_link_libraries(gtest pthread)
 
 add_subdirectory(tests/unit)
 add_subdirectory(tests/func)

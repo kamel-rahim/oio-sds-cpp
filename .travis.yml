@@ -1,0 +1,25 @@
+sudo: required
+dist: trusty
+language: cpp
+compiler: gcc
+install:
+  - sudo apt-add-repository "deb http://archive.ubuntu.com/ubuntu trusty-backports main restricted universe multiverse"
+  - sudo apt-add-repository "deb http://mirror.openio.io/pub/repo/openio/sds/15.12/ trusty/"
+  - sudo apt-get update -qq
+  - sudo apt-get install -y --force-yes ragel protobuf-compiler libprotobuf-dev liberasurecode-dev attr libattr1 libattr1-dev
+script:
+  - set -e
+  - OPTS=-DCMAKE_INSTALL_PREFIX=/tmp/oio
+  - OPTS="$OPTS -DLD_LIBDIR=lib"
+  - OPTS="$OPTS -DCMAKE_BUILD_TYPE=Release"
+  - OPTS="$OPTS -DRAPIDJSON_SYSTEM=OFF -DRAPIDJSON_GUESS=OFF"
+  - OPTS="$OPTS -DGFLAGS_SYSTEM=OFF    -DGFLAGS_GUESS=OFF"
+  - OPTS="$OPTS -DGTEST_SYSTEM=OFF     -DGTEST_GUESS=OFF"
+  - OPTS="$OPTS -DGLOG_SYSTEM=OFF      -DGLOG_GUESS=OFF"
+  - OPTS="$OPTS -DMILL_SYSTEM=OFF      -DMILL_GUESS=OFF"
+  - OPTS="$OPTS -DATTR_SYSTEM=OFF      -DATTR_GUESS=OFF"
+  - OPTS="$OPTS -DEC_SYSTEM=OFF        -DEC_GUESS=ON"
+  - cmake $OPTS .
+  - make all
+  - make -C tests/unit test
+  - make -C tests/func test

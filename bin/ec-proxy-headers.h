@@ -6,18 +6,19 @@
  * obtain one at https://mozilla.org/MPL/2.0/ 
 */
 
-#ifndef OIO_KINETIC_EC_SERVER_HEADERS_H
-#define OIO_KINETIC_EC_SERVER_HEADERS_H 
+#ifndef BIN_EC_PROXY_HEADERS_H_
+#define BIN_EC_PROXY_HEADERS_H_
 
 #include <string>
-#include "common-server-headers.h"
+
+#include "./common-server-headers.h"
 
 #define OIO_HEADER_EC_PREFIX ""
 
 class EcHeader {
-  public:
+ public:
     enum Value {
-	    Unexpected,
+        Unexpected,
         ReqId,
         ContainerId,
         ContentPath,
@@ -26,23 +27,29 @@ class EcHeader {
         StoragePolicy,
         ChunkMethod,
         MineType,
-        ChunkDest, 
-        Chunks, 
-        ChunkPos, 
+        ChunkDest,
+        Chunks,
+        ChunkPos,
         ChunkSize,
         Range,
         TransferEncoding,
     };
-  private:
-	Value value;
-  public:
-	EcHeader(): value{Value::Unexpected} {}
-	~EcHeader() {}
+
+ private:
+    Value value;
+
+ public:
+    inline EcHeader() : value{Value::Unexpected} {}
+
+    inline ~EcHeader() {}
+
+    inline bool Matched() const { return value != Value::Unexpected; }
+
+    inline Value Get() const { return value; }
 
     void Parse(const std::string &k);
-    inline bool Matched() const { return value != Value::Unexpected; }
-    inline Value Get() const { return value; }
-	std::string Name() const;
+
+    std::string Name() const;
 };
 
-#endif
+#endif  // BIN_EC_PROXY_HEADERS_H_

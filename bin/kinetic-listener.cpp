@@ -3,10 +3,6 @@
  * This Source Code Form is subject to the terms of the Mozilla Public License,
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
  * obtain one at https://mozilla.org/MPL/2.0/ */
-#include <cerrno>
-#include <thread>
-#include <mutex>
-#include <queue>
 
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -16,13 +12,14 @@
 #include <rapidjson/writer.h>
 #include <libmill.h>
 
-#include <utils/utils.h>
-#include <utils/net.h>
-#include <utils/Http.h>
+#include <queue>
 
-#include <oio/kinetic/coro/rpc/GetLog.h>
-#include <oio/kinetic/coro/client/CoroutineClient.h>
-#include <oio/kinetic/coro/client/CoroutineClientFactory.h>
+#include "utils/utils.h"
+#include "utils/net.h"
+#include "utils/Http.h"
+#include "oio/kinetic/coro/rpc/GetLog.h"
+#include "oio/kinetic/coro/client/CoroutineClient.h"
+#include "oio/kinetic/coro/client/CoroutineClientFactory.h"
 
 #ifndef PERIOD_REG
 #define PERIOD_REG          5000
@@ -53,13 +50,13 @@ using oio::kinetic::client::Sync;
 using oio::kinetic::rpc::Exchange;
 using oio::kinetic::rpc::GetLog;
 
-std::map<std::string, std::string> REGISTRATIONS;
+static std::map<std::string, std::string> REGISTRATIONS;
 
-std::string nsname;
-std::string url_proxy;
-std::string srvtype{OIO_KINE_DEFAULT_SRVTYPE};
+static char nsname[512];
+static char url_proxy[512];
+static char srvtype[32] = OIO_KINE_DEFAULT_SRVTYPE;
 
-CoroutineClientFactory factory;
+static CoroutineClientFactory factory;
 
 static volatile bool flag_running{true};
 
@@ -69,7 +66,6 @@ struct stat_s {
 
 static void
 proxy_register(const std::string &id, const std::string &url, const stat_s st) {
-
     // then forward them to the proxy
     std::shared_ptr<net::Socket> client(new net::MillSocket);
     client->connect(url_proxy);
@@ -82,9 +78,9 @@ proxy_register(const std::string &id, const std::string &url, const stat_s st) {
     // Pack the REGISTRATIONS
     writer.StartObject();
     writer.Key("ns");
-    writer.String(nsname.c_str());
+    writer.String(nsname);
     writer.Key("type");
-    writer.String(srvtype.c_str());
+    writer.String(srvtype);
     writer.Key("id");
     writer.String(id.c_str());
     writer.Key("addr");
@@ -111,12 +107,12 @@ proxy_register(const std::string &id, const std::string &url, const stat_s st) {
     std::string out;
     http::Call req(client);
     req.Method("POST")
-            .Selector("/v3.0/" + nsname + "/conscience/register")
+            .Selector("/v3.0/" + std::string(nsname) + "/conscience/register")
             .Field("Host", "proxy")
             .Field("Connection", "keep-alive")
             .Field("Content-Type", "application/json");
 
-    auto rc = req.Run(buf.GetString(), out);
+    auto rc = req.Run(buf.GetString(), &out);
     LOG_IF(WARNING, rc != http::Code::OK) << "Registration failed";
 
     client->close();
@@ -159,8 +155,7 @@ static coroutine void monitoring_loop(const std::string &id0) {
     }
 }
 
-static void manage_message(rapidjson::Document &msg) {
-
+static void manage_message(const rapidjson::Document &msg) {
     // Schema validation
     if (!msg.HasMember("network_interfaces") || !ITF.IsArray() ||
         ITF.Size() <= 0)
@@ -196,9 +191,9 @@ static coroutine void consumer(int fd, chan done) {
         auto rc = ::recvfrom(fd, buffer.data(), buffer.size() - 1, 0,
                              (struct sockaddr *) &sa, &salen);
         if (rc < 0) {
-            if (errno == EINTR)
+            if (errno == EINTR) {
                 continue;
-            else if (errno == EAGAIN) {
+            } else if (errno == EAGAIN) {
                 int evt = fdwait(fd, FDW_IN, mill_now() + 5000);
                 if (evt & FDW_ERR)
                     break;
@@ -265,8 +260,8 @@ int main(int argc UNUSED, char **argv) {
         return 1;
     }
 
-    nsname.assign(argv[1]);
-    url_proxy.assign(argv[2]);
+    ::strncpy(nsname, argv[1], sizeof(nsname));
+    ::strncpy(url_proxy, argv[2], sizeof(url_proxy));
     DLOG(INFO) << "Configuration: NS=" << nsname << " PROXY=" << url_proxy;
 
     int fd = make_kinetic_socket();

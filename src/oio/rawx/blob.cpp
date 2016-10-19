@@ -4,19 +4,20 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
+#include "oio/rawx/blob.h"
+
 #include <string>
 #include <functional>
 #include <sstream>
 #include <memory>
+#include <vector>
 #include <iomanip>
 #include <cstring>
 
-#include <utils/macros.h>
-#include <utils/net.h>
-#include <utils/Http.h>
-#include <oio/api/blob.h>
-
-#include "blob.h"
+#include "utils/macros.h"
+#include "utils/net.h"
+#include "utils/Http.h"
+#include "oio/api/blob.h"
 
 using oio::rawx::blob::RemovalBuilder;
 using oio::rawx::blob::UploadBuilder;
@@ -33,8 +34,8 @@ using oio::api::blob::Cause;
 class RawxRemoval : public Removal {
     friend class RemovalBuilder;
 
-  public:
-    RawxRemoval(Removal *sub): inner(sub) {}
+ public:
+    explicit RawxRemoval(Removal *sub) : inner(sub) {}
 
     virtual ~RawxRemoval() {}
 
@@ -44,23 +45,17 @@ class RawxRemoval : public Removal {
 
     Status Abort() override { return inner->Abort(); }
 
-  private:
+ private:
     std::unique_ptr<Removal> inner;
 };
 
-RemovalBuilder::RemovalBuilder() {
-}
+RemovalBuilder::RemovalBuilder() {}
 
-RemovalBuilder::~RemovalBuilder() {
-}
+RemovalBuilder::~RemovalBuilder() {}
 
-void RemovalBuilder::Name(const std::string &s) {
-    return inner.Name(s);
-}
+void RemovalBuilder::Name(const std::string &s) { return inner.Name(s); }
 
-void RemovalBuilder::Host(const std::string &s) {
-    return inner.Host(s);
-}
+void RemovalBuilder::Host(const std::string &s) { return inner.Host(s); }
 
 void RemovalBuilder::Field(const std::string &k, const std::string &v) {
     return inner.Field(k, v);
@@ -85,8 +80,8 @@ std::shared_ptr<Removal> RemovalBuilder::Build(
 class RawxUpload : public Upload {
     friend class UploadBuilder;
 
-  public:
-    RawxUpload(Upload *sub): inner(sub) {}
+ public:
+    explicit RawxUpload(Upload *sub) : inner(sub) {}
 
     ~RawxUpload() {}
 
@@ -104,23 +99,17 @@ class RawxUpload : public Upload {
         return inner->Write(buf, len);
     }
 
-  private:
+ private:
     std::unique_ptr<Upload> inner;
 };
 
-UploadBuilder::UploadBuilder() {
-}
+UploadBuilder::UploadBuilder() {}
 
-UploadBuilder::~UploadBuilder() {
-}
+UploadBuilder::~UploadBuilder() {}
 
-void UploadBuilder::Name(const std::string &s) {
-    return inner.Name(s);
-}
+void UploadBuilder::Name(const std::string &s) { return inner.Name(s); }
 
-void UploadBuilder::Host(const std::string &s) {
-    return inner.Host(s);
-}
+void UploadBuilder::Host(const std::string &s) { return inner.Host(s); }
 
 void UploadBuilder::Field(const std::string &k, const std::string &v) {
     return inner.Field(k, v);
@@ -139,53 +128,40 @@ std::shared_ptr<Upload> UploadBuilder::Build(
 }
 
 
-
 /**
  *
  */
 class RawxDownload : public Download {
     friend class DownloadBuilder;
 
-  public:
-    RawxDownload(Download *sub): inner(sub) {
-    }
+ public:
+    explicit RawxDownload(Download *sub) : inner(sub) {}
 
-    ~RawxDownload() {
-    }
+    ~RawxDownload() {}
 
-    bool IsEof() override {
-        return inner->IsEof();
-    }
+    bool IsEof() override { return inner->IsEof(); }
 
-    Status Prepare() override {
-        return inner->Prepare();
-    }
+    Status Prepare() override { return inner->Prepare(); }
 
-    int32_t Read(std::vector<uint8_t> &buf) override {
+    int32_t Read(std::vector<uint8_t> *buf) override {
         return inner->Read(buf);
     }
 
-  private:
+ private:
     std::unique_ptr<Download> inner;
 };
 
-DownloadBuilder::DownloadBuilder() {
-}
+DownloadBuilder::DownloadBuilder() {}
 
-DownloadBuilder::~DownloadBuilder() {
-}
+DownloadBuilder::~DownloadBuilder() {}
 
 void DownloadBuilder::Field(const std::string &k, const std::string &v) {
     return inner.Field(k, v);
 }
 
-void DownloadBuilder::Host(const std::string &s) {
-    return inner.Host(s);
-}
+void DownloadBuilder::Host(const std::string &s) { return inner.Host(s); }
 
-void DownloadBuilder::Name(const std::string &s) {
-    return inner.Name(s);
-}
+void DownloadBuilder::Name(const std::string &s) { return inner.Name(s); }
 
 std::shared_ptr<Download> DownloadBuilder::Build(
         std::shared_ptr<net::Socket> socket) {

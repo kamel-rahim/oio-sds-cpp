@@ -7,11 +7,13 @@
  * https://mozilla.org/MP:/2.0/.
  */
 
-#ifndef OIO_KINETIC_BIN__COMMON_SERVER_HEADERS_H
-#define OIO_KINETIC_BIN__COMMON_SERVER_HEADERS_H
+#ifndef BIN_COMMON_SERVER_HEADERS_H_
+#define BIN_COMMON_SERVER_HEADERS_H_
+
+#include <string>
 
 class HeaderCommon {
-  public:
+ public:
     enum Value {
         Unexpected = 0,
         ContentLength,
@@ -24,17 +26,22 @@ class HeaderCommon {
         Custom
     };
 
-    HeaderCommon(): value{Value::Unexpected} {}
-    ~HeaderCommon() {}
+    inline HeaderCommon() : value{Value::Unexpected} {}
+
+    inline ~HeaderCommon() {}
 
     void Parse(const std::string &k);
+
     std::string Name();
+
     inline bool Matched() const { return value != Value::Unexpected; }
+
     inline bool IsCustom() const { return value == Value::Custom; }
+
     inline Value Get() const { return value; }
 
-  private:
+ private:
     Value value;
 };
 
-#endif //OIO_KINETIC_BIN__COMMON_SERVER_HEADERS_H
+#endif  // BIN_COMMON_SERVER_HEADERS_H_

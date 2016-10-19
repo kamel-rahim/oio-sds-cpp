@@ -1,12 +1,16 @@
-/** Copyright 2016 Contributors (see the AUTHORS file)
+/**
+ * Copyright 2016 Contributors (see the AUTHORS file)
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License,
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
- * obtain one at https://mozilla.org/MPL/2.0/ */
+ * obtain one at https://mozilla.org/MPL/2.0/
+ */
+
+#include <libmill.h>
 
 #include <cstdint>
-#include <libmill.h>
-#include "PendingExchange.h"
+
+#include "oio/kinetic/coro/client/PendingExchange.h"
 
 using oio::kinetic::client::PendingExchange;
 
@@ -46,7 +50,7 @@ void PendingExchange::Wait() {
     (void) rc;
 }
 
-void PendingExchange::ManageReply(oio::kinetic::rpc::Request &rep) {
+void PendingExchange::ManageReply(oio::kinetic::rpc::Request *rep) {
     assert(exchange_ != nullptr);
     return exchange_->ManageReply(rep);
 }
@@ -56,10 +60,10 @@ void PendingExchange::ManageError(int errcode) {
     return exchange_->ManageError(errcode);
 }
 
-int PendingExchange::Write(net::Channel &chan, oio::kinetic::rpc::Context &ctx,
+int PendingExchange::Write(net::Channel *chan, oio::kinetic::rpc::Context *ctx,
         int64_t dl) {
     if (exchange_ == nullptr)
         return ECANCELED;
-    SetSequence(ctx.sequence_id_ ++);
-    return exchange_->Write(chan, ctx, dl);
+    SetSequence(ctx->sequence_id_ ++);
+    return exchange_->Write(chan, *ctx, dl);
 }

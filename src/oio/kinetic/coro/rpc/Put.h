@@ -1,23 +1,29 @@
-/** Copyright 2016 Contributors (see the AUTHORS file)
+/**
+ * Copyright 2016 Contributors (see the AUTHORS file)
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License,
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
- * obtain one at https://mozilla.org/MPL/2.0/ */
+ * obtain one at https://mozilla.org/MPL/2.0/
+ */
 
-#ifndef OIO_KINETIC_PUTEXCHANGE_H
-#define OIO_KINETIC_PUTEXCHANGE_H
+#ifndef SRC_OIO_KINETIC_CORO_RPC_PUT_H_
+#define SRC_OIO_KINETIC_CORO_RPC_PUT_H_
 
 #include <cstdint>
 #include <memory>
-#include "Exchange.h"
+#include <string>
+#include <vector>
+
+#include "./Exchange.h"
 
 namespace oio {
 namespace kinetic {
 namespace rpc {
 
 class Put : public oio::kinetic::rpc::Exchange {
-  public:
+ public:
     Put();
+
     FORBID_MOVE_CTOR(Put);
     FORBID_COPY_CTOR(Put);
 
@@ -31,12 +37,31 @@ class Put : public oio::kinetic::rpc::Exchange {
 
     void PostVersion(const char *p);
 
-    void Value(const Slice &v); // zero copy
-    void Value(const std::string &v); // copy
-    void Value(const std::vector<uint8_t> &v); // copy
-    void Value(std::vector<uint8_t> &v); // swap
+    /**
+     * Zero copy
+     * @param v
+     */
+    void Value(const Slice &v);
 
-    void ManageReply(oio::kinetic::rpc::Request &rep) override;
+    /**
+     * Copy the string
+     * @param v
+     */
+    void Value(const std::string &v);
+
+    /**
+     * Copy the vector
+     * @param v
+     */
+    void Value(const std::vector<uint8_t> &v);
+
+    /**
+     * Swap the vector's content
+     * @param v
+     */
+    void Value(std::vector<uint8_t> *v);
+
+    void ManageReply(oio::kinetic::rpc::Request *rep) override;
 
     /**
      *
@@ -44,16 +69,16 @@ class Put : public oio::kinetic::rpc::Exchange {
      */
     void Sync(bool on);
 
-  private:
-	void rehash();
+ private:
+    void rehash();
 
-  private:
+ private:
     std::vector<uint8_t> value_copy;
 };
 
 
-} // namespace rpc
-} // namespace kinetic
-} // namespace oio
+}  // namespace rpc
+}  // namespace kinetic
+}  // namespace oio
 
-#endif //OIO_KINETIC_PUTEXCHANGE_H
+#endif  // SRC_OIO_KINETIC_CORO_RPC_PUT_H_

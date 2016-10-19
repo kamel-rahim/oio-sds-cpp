@@ -1,30 +1,33 @@
-/** Copyright (c) 2016 Contributors (see the AUTHORS file)
+/**
+ * Copyright (c) 2016 Contributors (see the AUTHORS file)
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License,
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
- * obtain one at https://mozilla.org/MPL/2.0/ */
+ * obtain one at https://mozilla.org/MPL/2.0/
+ */
 
-#ifndef OIO_KINETIC_OIO_HTTP_BLOB_H
-#define OIO_KINETIC_OIO_HTTP_BLOB_H
+#ifndef SRC_OIO_HTTP_BLOB_H_
+#define SRC_OIO_HTTP_BLOB_H_
 
 #include <string>
 #include <memory>
 #include <map>
 #include <set>
-#include <utils/net.h>
-#include <oio/api/blob.h>
+
+#include "utils/net.h"
+#include "oio/api/blob.h"
 
 namespace oio {
 namespace http {
 namespace imperative {
 
 class DownloadBuilder {
-  public:
+ public:
     DownloadBuilder();
 
     ~DownloadBuilder();
 
-    void Host(const std::string &s) ;
+    void Host(const std::string &s);
 
     void Name(const std::string &s);
 
@@ -33,14 +36,14 @@ class DownloadBuilder {
     std::shared_ptr<oio::api::blob::Download> Build(
             std::shared_ptr<net::Socket> socket);
 
-  protected:
+ protected:
     std::string host;
     std::string name;
     std::map<std::string, std::string> fields;
 };
 
 class UploadBuilder {
-  public:
+ public:
     UploadBuilder();
 
     ~UploadBuilder();
@@ -56,7 +59,7 @@ class UploadBuilder {
     std::shared_ptr<oio::api::blob::Upload> Build(
             std::shared_ptr<net::Socket> socket);
 
-  private:
+ private:
     std::string host;
     std::string name;
     std::map<std::string, std::string> fields;
@@ -64,7 +67,7 @@ class UploadBuilder {
 };
 
 class RemovalBuilder {
-  public:
+ public:
     RemovalBuilder();
 
     ~RemovalBuilder();
@@ -80,15 +83,15 @@ class RemovalBuilder {
     std::shared_ptr<oio::api::blob::Removal> Build(
             std::shared_ptr<net::Socket> socket);
 
-  private:
+ private:
     std::string host;
     std::string name;
     std::map<std::string, std::string> fields;
     std::set<std::string> trailers;
 };
 
-} // namespace imperative
-} // namespace http
-} // namespace oio
+}  // namespace imperative
+}  // namespace http
+}  // namespace oio
 
-#endif //OIO_KINETIC_OIO_HTTP_BLOB_H
+#endif  // SRC_OIO_HTTP_BLOB_H_

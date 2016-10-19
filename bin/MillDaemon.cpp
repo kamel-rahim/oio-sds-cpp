@@ -4,17 +4,15 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
-#include <cstdint>
-#include <fstream>
-
 #include <rapidjson/filereadstream.h>
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 
-#include <utils/utils.h>
+#include <fstream>
 
-#include "MillDaemon.h"
-#include "common-server-headers.h"
+#include "utils/utils.h"
+
+#include "bin/MillDaemon.h"
 
 namespace blob = oio::api::blob;
 using blob::Upload;
@@ -45,7 +43,7 @@ static void _ignore_upload(BlobClient *ctx) {
 }
 
 static int _on_headers_complete_UPLOAD(http_parser *p) {
-    auto ctx = (BlobClient *) p->data;
+    auto ctx = reinterpret_cast<BlobClient *>(p->data);
     ctx->Reply100();
     ctx->upload = ctx->handler->GetUpload();
     auto rc = ctx->upload->Prepare();
@@ -78,7 +76,7 @@ static int _on_headers_complete_UPLOAD(http_parser *p) {
 }
 
 static int _on_body_UPLOAD(http_parser *p, const char *buf, size_t len) {
-    auto ctx = (BlobClient *) p->data;
+    auto ctx = reinterpret_cast<BlobClient *>(p->data);
 
     // We do not manage bodies exceeding 4GB at once
     if (len >= std::numeric_limits<uint32_t>::max()) {
@@ -104,8 +102,9 @@ static int _on_chunk_complete_UPLOAD(http_parser *p UNUSED) {
 }
 
 static int _on_message_complete_UPLOAD(http_parser *p) {
-    auto ctx = (BlobClient *) p->data;
-    DLOG_IF(INFO,FLAGS_verbose_daemon) << __FUNCTION__ << " fd=" << ctx->client->Debug();
+    auto ctx = reinterpret_cast<BlobClient *>(p->data);
+    DLOG_IF(INFO, FLAGS_verbose_daemon)
+    << __FUNCTION__ << " fd=" << ctx->client->Debug();
 
     auto rc = ctx->upload->Commit();
 
@@ -130,7 +129,7 @@ static int _on_message_complete_UPLOAD(http_parser *p) {
 }
 
 static int _on_headers_complete_DOWNLOAD(http_parser *p) {
-    auto ctx = (BlobClient *) p->data;
+    auto ctx = reinterpret_cast<BlobClient *>(p->data);
     ctx->download = ctx->handler->GetDownload();
     auto rc = ctx->download->Prepare();
     switch (rc.Why()) {
@@ -156,11 +155,11 @@ static int _on_headers_complete_DOWNLOAD(http_parser *p) {
 }
 
 static int _on_message_complete_DOWNLOAD(http_parser *p UNUSED) {
-    auto ctx = (BlobClient *) p->data;
+    auto ctx = reinterpret_cast<BlobClient *>(p->data);
 
     while (!ctx->download->IsEof()) {
         std::vector<uint8_t> buf;
-        ctx->download->Read(buf);
+        ctx->download->Read(&buf);
         if (buf.size() > 0) {
             std::stringstream ss;
             ss << std::hex << buf.size() << "\r\n";
@@ -179,7 +178,7 @@ static int _on_message_complete_DOWNLOAD(http_parser *p UNUSED) {
 }
 
 static int _on_headers_complete_REMOVAL(http_parser *p UNUSED) {
-    auto ctx = (BlobClient *) p->data;
+    auto ctx = reinterpret_cast<BlobClient *>(p->data);
     ctx->removal = ctx->handler->GetRemoval();
     auto rc = ctx->removal->Prepare();
     switch (rc.Why()) {
@@ -202,7 +201,7 @@ static int _on_headers_complete_REMOVAL(http_parser *p UNUSED) {
 }
 
 static int _on_message_complete_REMOVAL(http_parser *p UNUSED) {
-    auto ctx = (BlobClient *) p->data;
+    auto ctx = reinterpret_cast<BlobClient *>(p->data);
     assert(ctx->removal.get() != nullptr);
 
     auto rc = ctx->removal->Commit();
@@ -216,36 +215,38 @@ static int _on_message_complete_REMOVAL(http_parser *p UNUSED) {
 }
 
 static int _on_message_begin_COMMON(http_parser *p UNUSED) {
-    auto ctx = (BlobClient *) p->data;
-    DLOG_IF(INFO,FLAGS_verbose_daemon) << " REQUEST fd=" << ctx->client->fileno();
+    auto ctx = reinterpret_cast<BlobClient *>(p->data);
+    DLOG_IF(INFO, FLAGS_verbose_daemon)
+    << " REQUEST fd=" << ctx->client->fileno();
     ctx->Reset();
     return 0;
 }
 
 int _on_url_COMMON(http_parser *p, const char *buf, size_t len) {
-    auto ctx = (BlobClient *) p->data;
+    auto ctx = reinterpret_cast<BlobClient *>(p->data);
     std::string url(buf, len);
     ctx->SaveError(ctx->handler->SetUrl(url));
     return 0;
 }
 
 int _on_header_field_COMMON(http_parser *p, const char *buf, size_t len) {
-    auto ctx = (BlobClient *) p->data;
+    auto ctx = reinterpret_cast<BlobClient *>(p->data);
     assert(ctx->defered_error.Ok());
     ctx->last_field_name.assign(buf, len);
     return 0;
 }
 
 int _on_header_value_COMMON(http_parser *p, const char *buf, size_t len) {
-    auto ctx = (BlobClient *) p->data;
+    auto ctx = reinterpret_cast<BlobClient *>(p->data);
     assert(ctx->defered_error.Ok());
     HeaderCommon header;
     header.Parse(ctx->last_field_name);
     if (header.Matched()) {
         if (header.IsCustom()) {
-            ctx->handler->SetHeader(ctx->last_field_name, std::string(buf, len));
+            ctx->handler->SetHeader(ctx->last_field_name,
+                                    std::string(buf, len));
         } else {
-
+            DLOG(INFO) << "Header not matched";
         }
     }
     ctx->last_field_name.clear();
@@ -261,8 +262,9 @@ int _on_trailer_value_COMMON(http_parser *p, const char *buf, size_t len) {
 }
 
 int _on_headers_complete_COMMON(http_parser *p) {
-    auto ctx = (BlobClient *) p->data;
-    DLOG_IF(INFO,FLAGS_verbose_daemon) << __FUNCTION__ << " " << ctx->client->Debug();
+    auto ctx = reinterpret_cast<BlobClient *>(p->data);
+    DLOG_IF(INFO, FLAGS_verbose_daemon)
+    << __FUNCTION__ << " " << ctx->client->Debug();
 
     if (!ctx->defered_error.Ok()) {
         ctx->ReplyError(ctx->defered_error);
@@ -368,7 +370,7 @@ bool BlobService::Configure(const std::string &cfg) {
 }
 
 NOINLINE void BlobService::Run(volatile bool *flag_running) {
-	assert(flag_running != nullptr);
+    assert(flag_running != nullptr);
     bool input_ready = true;
     while (flag_running) {
         net::MillSocket client;
@@ -398,7 +400,7 @@ void BlobService::StartClient(volatile bool *flag_running,
 
 NOINLINE void BlobService::RunClient(volatile bool *flag_running,
         std::unique_ptr<net::Socket> s0) {
-	assert(flag_running != nullptr);
+    assert(flag_running != nullptr);
     BlobClient client(std::move(s0), repository);
     return client.Run(flag_running);
 }
@@ -411,15 +413,15 @@ BlobDaemon::~BlobDaemon() {
 }
 
 void BlobDaemon::Start(volatile bool *flag_running) {
-	assert(flag_running != nullptr);
+    assert(flag_running != nullptr);
     DLOG(INFO) << __FUNCTION__;
-    for (auto srv: services)
+    for (auto srv : services)
         srv->Start(flag_running);
 }
 
 void BlobDaemon::Join() {
     DLOG(INFO) << __FUNCTION__;
-    for (auto srv: services)
+    for (auto srv : services)
         srv->Join();
 }
 
@@ -488,9 +490,8 @@ BlobClient::BlobClient(std::unique_ptr<net::Socket> c,
 }
 
 void BlobClient::Run(volatile bool *flag_running) {
-
-	assert(flag_running != nullptr);
-    DLOG_IF(INFO,FLAGS_verbose_daemon) << "CLIENT fd=" << client->fileno();
+    assert(flag_running != nullptr);
+    DLOG_IF(INFO, FLAGS_verbose_daemon) << "CLIENT fd=" << client->fileno();
 
     http_parser_init(&parser, HTTP_REQUEST);
     parser.data = this;
@@ -499,37 +500,35 @@ void BlobClient::Run(volatile bool *flag_running) {
     std::vector<uint8_t> buffer(32768);
 
     while (*flag_running) {
-
         errno = EAGAIN;
         ssize_t sr = client->read(buffer.data(), buffer.size(),
-                                 mill_now() + 1000);
+                                  mill_now() + 1000);
 
         if (sr == -2) {
             DLOG_IF(INFO, FLAGS_verbose_daemon) << "CLIENT "
-                    << "fd=" << client->fileno() << " peer closed";
+                                                << "fd=" << client->fileno()
+                                                << " peer closed";
             break;
         } else if (sr == -1) {
             if (errno != EAGAIN) {
                 DLOG_IF(INFO, FLAGS_verbose_daemon) << "CLIENT "
-                    << "fd=" << client->fileno()
-                    << " error: (" << errno << ") " << strerror(errno);
+                                                    << "fd=" << client->fileno()
+                                                    << " error: (" << errno
+                                                    << ") " << strerror(errno);
                 break;
             }
         } else if (sr == 0) {
-            // TODO manage the data timeout
+            // TODO(jfs) manage the data timeout
         } else {
-
             for (ssize_t done = 0; done < sr;) {
-                size_t consumed = http_parser_execute(&parser, &settings,
-                                                      reinterpret_cast<const char *>(
-                                                              buffer.data() +
-                                                              done),
+                auto buf = reinterpret_cast<const char *>(buffer.data() + done);
+                size_t consumed = http_parser_execute(&parser, &settings, buf,
                                                       sr - done);
                 if (parser.http_errno != 0) {
                     DLOG(INFO) << "HTTP parsing error " << parser.http_errno
-                    << "/" << http_errno_name(
+                               << "/" << http_errno_name(
                             static_cast<http_errno>(parser.http_errno))
-                    << "/" << http_errno_description(
+                               << "/" << http_errno_description(
                             static_cast<http_errno>(parser.http_errno));
                     goto out;
                 }
@@ -539,8 +538,10 @@ void BlobClient::Run(volatile bool *flag_running) {
         }
     }
 out:
-    DLOG_IF(INFO,FLAGS_verbose_daemon) << "CLIENT " << client->fileno() << " done";
-    DLOG_IF(INFO,FLAGS_verbose_daemon) << "CLIENT " << client->fileno() << " done";
+    DLOG_IF(INFO, FLAGS_verbose_daemon)
+    << "CLIENT " << client->fileno() << " done";
+    DLOG_IF(INFO, FLAGS_verbose_daemon)
+    << "CLIENT " << client->fileno() << " done";
     client->close();
 }
 
@@ -589,7 +590,7 @@ void BlobClient::ReplyPreamble(int code, const char *msg, int64_t l) {
     iov[i++] = STR_IOV(first);
     iov[i++] = BUF_IOV("Host: nowhere\r\n");
     iov[i++] = BUF_IOV("User-Agent: OpenIO/oio-kinetic-proxy\r\n");
-    for (auto &e: reply_headers) {
+    for (auto &e : reply_headers) {
         iov[i++] = BUFLEN_IOV(e.first.data(), e.first.size());
         iov[i++] = BUF_IOV(": ");
         iov[i++] = BUFLEN_IOV(e.second.data(), e.second.size());
@@ -604,7 +605,7 @@ void BlobClient::ReplyPreamble(int code, const char *msg, int64_t l) {
 
 void BlobClient::ReplyError(SoftError err) {
     std::string payload;
-    err.Pack(payload);
+    err.Pack(&payload);
     ReplyPreamble(err.http, "Error", payload.size());
     client->send(payload.data(), payload.size(), mill_now() + 1000);
 }
@@ -635,7 +636,8 @@ void BlobClient::Reply100() {
     return ReplyPreamble(100, "Continue", 0);
 }
 
-void SoftError::Pack(std::string &dst) {
+void SoftError::Pack(std::string *dst) {
+    assert(dst != nullptr);
     rapidjson::StringBuffer buf;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
     writer.StartObject();
@@ -644,5 +646,5 @@ void SoftError::Pack(std::string &dst) {
     writer.Key("message");
     writer.String(why);
     writer.EndObject();
-    dst.assign(buf.GetString(), buf.GetSize());
+    dst->assign(buf.GetString(), buf.GetSize());
 }

@@ -7,11 +7,12 @@
  * https://mozilla.org/MP:/2.0/.
  */
 
-#ifndef OIO_KINETIC_BIN__HEADER_PARSER_H
-#define OIO_KINETIC_BIN__HEADER_PARSER_H
+#ifndef BIN_COMMON_HEADER_PARSER_H_
+#define BIN_COMMON_HEADER_PARSER_H_
+
+#include <http-parser/http_parser.h>
 
 #include <string>
-#include <http-parser/http_parser.h>
 
 struct SoftError {
     int http, soft;
@@ -25,7 +26,7 @@ struct SoftError {
 
     void Reset() { http = 0; soft = 0, why = nullptr; }
 
-    void Pack(std::string &dst);
+    void Pack(std::string *dst);
 
     bool Ok() const { return http == 0 || (http == 200 && soft == 200); }
 };
@@ -50,4 +51,4 @@ static inline std::string _http_url_field(const http_parser_url &u, int f,
     return std::string(buf + u.field_data[f].off, u.field_data[f].len);
 }
 
-#endif //OIO_KINETIC_BIN__HEADER_PARSER_H
+#endif  // BIN_COMMON_HEADER_PARSER_H_

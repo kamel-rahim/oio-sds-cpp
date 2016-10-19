@@ -1,26 +1,29 @@
-/** Copyright 2016 Contributors (see the AUTHORS file)
+/**
+ * Copyright 2016 Contributors (see the AUTHORS file)
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License,
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
- * obtain one at https://mozilla.org/MPL/2.0/ */
+ * obtain one at https://mozilla.org/MPL/2.0/
+ */
 
-#ifndef OIO_KINETIC_OIO_KINETIC_CORO_BLOB_H
-#define OIO_KINETIC_OIO_KINETIC_CORO_BLOB_H
+#ifndef SRC_OIO_KINETIC_CORO_BLOB_H_
+#define SRC_OIO_KINETIC_CORO_BLOB_H_
 
 #include <string>
 #include <map>
 #include <set>
 #include <memory>
-#include <oio/api/blob.h>
-#include <oio/kinetic/coro/client/ClientInterface.h>
+
+#include "oio/api/blob.h"
+#include "oio/kinetic/coro/client/ClientInterface.h"
 
 namespace oio {
 namespace kinetic {
 namespace blob {
 
 class UploadBuilder {
-  public:
-    UploadBuilder(
+ public:
+    explicit UploadBuilder(
             std::shared_ptr<oio::kinetic::client::ClientFactory> f);
 
     ~UploadBuilder();
@@ -37,7 +40,7 @@ class UploadBuilder {
 
     std::unique_ptr<oio::api::blob::Upload> Build();
 
-  private:
+ private:
     std::shared_ptr<oio::kinetic::client::ClientFactory> factory;
     std::set<std::string> targets;
     std::string name;
@@ -45,8 +48,8 @@ class UploadBuilder {
 };
 
 class DownloadBuilder {
-  public:
-    DownloadBuilder(
+ public:
+    explicit DownloadBuilder(
             std::shared_ptr<oio::kinetic::client::ClientFactory> f);
 
     ~DownloadBuilder();
@@ -61,15 +64,15 @@ class DownloadBuilder {
 
     std::unique_ptr<oio::api::blob::Download> Build();
 
-  private:
+ private:
     std::shared_ptr<oio::kinetic::client::ClientFactory> factory;
     std::set<std::string> targets;
     std::string name;
 };
 
 class RemovalBuilder {
-  public:
-    RemovalBuilder(
+ public:
+    explicit RemovalBuilder(
             std::shared_ptr<oio::kinetic::client::ClientFactory> f);
 
     bool Name(const std::string &n);
@@ -82,15 +85,15 @@ class RemovalBuilder {
 
     std::unique_ptr<oio::api::blob::Removal> Build();
 
-  private:
+ private:
     std::shared_ptr<oio::kinetic::client::ClientFactory> factory;
     std::set<std::string> targets;
     std::string name;
 };
 
 class ListingBuilder {
-  public:
-    ListingBuilder(
+ public:
+    explicit ListingBuilder(
             std::shared_ptr<oio::kinetic::client::ClientFactory> f);
 
     ~ListingBuilder();
@@ -105,14 +108,14 @@ class ListingBuilder {
 
     std::unique_ptr<oio::api::blob::Listing> Build();
 
-  private:
+ private:
     std::shared_ptr<oio::kinetic::client::ClientFactory> factory;
     std::set<std::string> targets;
     std::string name;
 };
 
-} // namespace rpc
-} // namespace kinetic
-} // namespace oio
+}  // namespace blob
+}  // namespace kinetic
+}  // namespace oio
 
-#endif //OIO_KINETIC_OIO_KINETIC_CORO_BLOB_H
+#endif  // SRC_OIO_KINETIC_CORO_BLOB_H_

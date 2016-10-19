@@ -1,18 +1,22 @@
-/** Copyright 2016 Contributors (see the AUTHORS file)
+/**
+ * Copyright 2016 Contributors (see the AUTHORS file)
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License,
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
- * obtain one at https://mozilla.org/MPL/2.0/ */
+ * obtain one at https://mozilla.org/MPL/2.0/
+ */
 
-#ifndef OIO_KINETIC_EXCHANGE_H
-#define OIO_KINETIC_EXCHANGE_H
+#ifndef SRC_OIO_KINETIC_CORO_RPC_EXCHANGE_H_
+#define SRC_OIO_KINETIC_CORO_RPC_EXCHANGE_H_
+
+#include <src/kinetic.pb.h>
 
 #include <cstdint>
 #include <memory>
+#include <vector>
 
-#include <utils/utils.h>
-#include <utils/net.h>
-#include <src/kinetic.pb.h>
+#include "utils/utils.h"
+#include "utils/net.h"
 
 namespace oio {
 namespace kinetic {
@@ -31,7 +35,7 @@ struct Context {
 
     Context();
 
-    ~Context() { }
+    ~Context() {}
 
     void Reset();
 };
@@ -44,11 +48,14 @@ struct Slice {
     void *buf;
     size_t len;
 
-    Slice() : buf{nullptr}, len{0} { }
+    Slice() : buf{nullptr}, len{0} {}
 
-    ~Slice() { }
+    ~Slice() {}
 
-    void Reset() { buf = nullptr; len = 0; }
+    void Reset() {
+        buf = nullptr;
+        len = 0;
+    }
 };
 
 /**
@@ -59,11 +66,11 @@ struct Frame {
     std::vector<uint8_t> msg;
     std::vector<uint8_t> val;
 
-    Frame() : msg(), val() { }
+    Frame() : msg(), val() {}
 
-    ~Frame() { }
+    ~Frame() {}
 
-    int Read(net::Channel &chan, int64_t dl);
+    int Read(net::Channel *chan, int64_t dl);
 };
 
 /**
@@ -75,19 +82,19 @@ struct Request {
     ::com::seagate::kinetic::proto::Message msg;
     std::vector<uint8_t> value;
 
-    ~Request() { }
+    ~Request() {}
 
-    Request() : cmd(), msg(), value() { }
+    Request() : cmd(), msg(), value() {}
 
-    Request(Request &o) = delete;
+    Request(Request &o) = delete;  // NOLINT
 
     Request(const Request &o) = delete;
 
     Request(Request &&o) = delete;
 
-    bool Parse(Frame &f);
+    bool Parse(Frame *f);
 
-    int Read(net::Channel &chan, int64_t dl);
+    int Read(net::Channel *chan, int64_t dl);
 };
 
 
@@ -95,7 +102,7 @@ struct Request {
  * Represents any RPC to a kinetic drive
  */
 class Exchange {
-  public:
+ public:
     Exchange();
     FORBID_COPY_CTOR(Exchange);
 
@@ -103,7 +110,7 @@ class Exchange {
 
     virtual ~Exchange() {}
 
-    int Write(net::Channel &chan, const Context &ctx, int64_t dl);
+    int Write(net::Channel *chan, const Context &ctx, int64_t dl);
 
     void SetSequence(int64_t s);
 
@@ -111,21 +118,21 @@ class Exchange {
         return status_;
     }
 
-    virtual void ManageReply(oio::kinetic::rpc::Request &rep) = 0;
+    virtual void ManageReply(oio::kinetic::rpc::Request *rep) = 0;
 
     void ManageError(int errcode);
 
-  protected:
-    void checkStatus(const oio::kinetic::rpc::Request &rep);
+ protected:
+    void checkStatus(const oio::kinetic::rpc::Request *rep);
 
-  protected:
+ protected:
     ::com::seagate::kinetic::proto::Command cmd;
     Slice payload_;
     bool status_;
 };
 
-} // namespace rpc
-} // namespace kinetic
-} // namespace oio
+}  // namespace rpc
+}  // namespace kinetic
+}  // namespace oio
 
-#endif //OIO_KINETIC_EXCHANGE_H
+#endif  // SRC_OIO_KINETIC_CORO_RPC_EXCHANGE_H_

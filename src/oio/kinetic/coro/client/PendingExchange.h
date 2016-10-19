@@ -1,11 +1,17 @@
-/** Copyright 2016 Contributors (see the AUTHORS file)
+/**
+ * Copyright 2016 Contributors (see the AUTHORS file)
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License,
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
- * obtain one at https://mozilla.org/MPL/2.0/ */
+ * obtain one at https://mozilla.org/MPL/2.0/
+ */
 
-#ifndef OIO_KINETIC_CLIENT_PENDINGEXCHANGE_H
-#define OIO_KINETIC_CLIENT_PENDINGEXCHANGE_H
+#ifndef SRC_OIO_KINETIC_CORO_CLIENT_PENDINGEXCHANGE_H_
+#define SRC_OIO_KINETIC_CORO_CLIENT_PENDINGEXCHANGE_H_
+
+#include <cstdint>
+#include "oio/kinetic/coro/rpc/Exchange.h"
+#include "oio/kinetic/coro/client/ClientInterface.h"
 
 /**
  * Default TTL for RPC.
@@ -16,10 +22,6 @@
 # define OIO_KINETIC_RPC_DEFAULT_TTL 10000
 #endif
 
-#include <cstdint>
-#include <oio/kinetic/coro/rpc/Exchange.h>
-#include "ClientInterface.h"
-
 struct mill_chan;
 
 namespace oio {
@@ -29,8 +31,8 @@ namespace client {
 extern int64_t rpc_default_ttl;
 
 class PendingExchange : public Sync {
-  public:
-    PendingExchange(oio::kinetic::rpc::Exchange *e);
+ public:
+    explicit PendingExchange(oio::kinetic::rpc::Exchange *e);
 
     ~PendingExchange();
 
@@ -42,35 +44,35 @@ class PendingExchange : public Sync {
 
     inline int64_t Deadline() const { return deadline_; }
 
-    int Write(net::Channel &chan, oio::kinetic::rpc::Context &ctx, int64_t dl);
+    int Write(net::Channel *chan, oio::kinetic::rpc::Context *ctx, int64_t dl);
 
     /**
      * A reply hass been received.
      * @param rep
      */
-    void ManageReply (oio::kinetic::rpc::Request &rep);
+    void ManageReply(oio::kinetic::rpc::Request *rep);
 
     /**
      * A Network error occured. No reply could be received, and there is no clue
      * the request has been received andd managed.
      * @param errcode the errno value
      */
-    void ManageError (int errcode);
+    void ManageError(int errcode);
 
     void Signal();
 
     void Wait();
 
-  private:
+ private:
     oio::kinetic::rpc::Exchange *exchange_;
     struct mill_chan *notification_;
     int64_t sequence_id_;
     int64_t deadline_;
 };
 
-} // namespace client
-} // namespace kinetic
-} // namespace oio
+}  // namespace client
+}  // namespace kinetic
+}  // namespace oio
 
 
-#endif //OIO_KINETIC_CLIENT_PENDINGEXCHANGE_H
+#endif  // SRC_OIO_KINETIC_CORO_CLIENT_PENDINGEXCHANGE_H_

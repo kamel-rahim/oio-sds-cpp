@@ -4,18 +4,15 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
-#include <iomanip>
-#include <sstream>
-#include <cstring>
-#include <cassert>
+#include "utils/Http.h"
+
 #include <sys/uio.h>
 
 #include <libmill.h>
-#include <http-parser/http_parser.h>
 
-#include "macros.h"
-#include "utils.h"
-#include "Http.h"
+#include <iomanip>
+#include <cstring>
+#include <cassert>
 
 using http::Request;
 using http::Reply;
@@ -23,8 +20,6 @@ using http::Call;
 using http::Code;
 
 namespace http {
-
-//static int _on_IGNORE(http_parser *p UNUSED) { return 0; }
 
 static int _on_data_IGNORE(http_parser *p UNUSED, const char *b UNUSED,
         size_t l UNUSED) {
@@ -75,30 +70,21 @@ static int _on_reply_complete(http_parser *p) {
     return 0;
 }
 
-static int _on_chunk_header(http_parser *p UNUSED) {
-    //auto ctx = reinterpret_cast<Context *>(p->data);
-    return 0;
-}
+static int _on_chunk_header(http_parser *p UNUSED) { return 0; }
 
-static int _on_chunk_complete(http_parser *p UNUSED) {
-    //auto ctx = reinterpret_cast<Context *>(p->data);
-    return 0;
-}
+static int _on_chunk_complete(http_parser *p UNUSED) { return 0; }
 
-}; // namespace http
+};  // namespace http
 
 Request::Request()
         : method("GET"), selector("/"), fields(), query(), trailers(),
-          socket(nullptr), content_length{-1}, sent{0} {
-}
+          socket(nullptr), content_length{-1}, sent{0} {}
 
 Request::Request(std::shared_ptr<net::Socket> s)
         : method("GET"), selector("/"), fields(), query(), trailers(),
-          socket(s), content_length{-1}, sent{0} {
-}
+          socket(s), content_length{-1}, sent{0} {}
 
-Request::~Request() {
-}
+Request::~Request() {}
 
 Code Request::WriteHeaders() {
     std::vector<std::string> headers;
@@ -109,9 +95,9 @@ Code Request::WriteHeaders() {
         ss << method << " " << selector;
         if (!query.empty()) {
             bool first = true;
-            for (const auto &e: query) {
+            for (const auto &e : query) {
                 ss << (first ? "?" : "&");
-                // TODO URL-encode the query string
+                // TODO(jfs): URL-encode the query string
                 ss << e.first << "=" << e.second;
                 first = false;
             }
@@ -132,7 +118,7 @@ Code Request::WriteHeaders() {
             std::stringstream ss;
             ss << "Trailers: ";
             bool first = true;
-            for (const auto t: trailers) {
+            for (const auto t : trailers) {
                 if (!first)
                     ss << ", ";
                 first = false;
@@ -143,7 +129,7 @@ Code Request::WriteHeaders() {
         }
     }
 
-    for (const auto &e: fields) {
+    for (const auto &e : fields) {
         std::stringstream ss;
         ss << e.first << ": " << e.second << "\r\n";
         headers.emplace_back(ss.str());
@@ -152,7 +138,7 @@ Code Request::WriteHeaders() {
     headers.emplace_back("\r\n");
 
     std::vector<struct iovec> iov;
-    for (const auto &h: headers) {
+    for (const auto &h : headers) {
         struct iovec item = STRING_IOV(h);
         iov.emplace_back(item);
     }
@@ -208,7 +194,7 @@ Code Request::FinishRequest() {
 
         // and there are maybe trailers
         std::vector<std::string> hdr;
-        for (const auto &k: trailers) {
+        for (const auto &k : trailers) {
             auto it = fields.find(k);
             if (it == fields.end())
                 continue;
@@ -218,7 +204,7 @@ Code Request::FinishRequest() {
         }
 
         std::vector<struct iovec> iov;
-        for (const auto &f: hdr) {
+        for (const auto &f : hdr) {
             struct iovec item = STRING_IOV(f);
             iov.emplace_back(item);
         }
@@ -247,14 +233,12 @@ Reply::Reply() : socket(nullptr), ctx() { init(); }
 
 Reply::Reply(std::shared_ptr<net::Socket> s) : socket(s), ctx() { init(); }
 
-Reply::~Reply() {
-}
+Reply::~Reply() {}
 
 Code Reply::consumeInput(int64_t dl) {
-
     assert(ctx.body_bytes.empty());
 
-    // TODO the default read timeout must be configurable
+    // TODO(jfs): the default read timeout must be configurable
     if (dl < 0)
         dl = mill_now() + 8000;
 
@@ -262,9 +246,9 @@ Code Reply::consumeInput(int64_t dl) {
     if (rc <= 0)
         return Code::NetworkError;
 
-    ssize_t consumed = http_parser_execute(&ctx.parser, &settings,
-                                           reinterpret_cast<const char *>(ctx.buffer.data()),
-                                           rc);
+    ssize_t consumed = http_parser_execute(
+            &ctx.parser, &settings,
+            reinterpret_cast<const char *>(ctx.buffer.data()), rc);
     if (ctx.parser.http_errno != 0) {
         LOG(INFO) << "Unexpected http error " << ctx.parser.http_errno;
         return Code::ServerError;
@@ -290,16 +274,17 @@ Code Reply::ReadHeaders() {
     return Code::OK;
 }
 
-Code Reply::ReadBody(Reply::Slice &out) {
+Code Reply::ReadBody(Reply::Slice *out) {
+    assert(out != nullptr);
     int64_t dl = mill_now() + 8000;
 
-    out.buf = nullptr;
-    out.len = 0;
+    out->buf = nullptr;
+    out->len = 0;
 
     for (;;) {
         // If some data already available, serve it
         if (!ctx.body_bytes.empty()) {
-            out = ctx.body_bytes.front();
+            *out = ctx.body_bytes.front();
             ctx.body_bytes.pop();
             return Code::OK;
         }
@@ -319,31 +304,28 @@ Code Reply::ReadBody(Reply::Slice &out) {
     }
 }
 
-Code Reply::AppendBody(std::vector<uint8_t> &out) {
+Code Reply::AppendBody(std::vector<uint8_t> *out) {
     Reply::Slice slice;
-    auto rc = ReadBody(slice);
+    auto rc = ReadBody(&slice);
     if (rc != Code::OK)
         return rc;
 
     if (slice.buf != nullptr && slice.len > 0) {
-        const auto len0 = out.size();
-        out.resize(len0 + slice.len);
-        memcpy(out.data() + len0, slice.buf, slice.len);
+        const auto len0 = out->size();
+        out->resize(len0 + slice.len);
+        memcpy(out->data() + len0, slice.buf, slice.len);
     }
     return Code::OK;
 }
 
-Call::Call(): request(nullptr), reply(nullptr) {
-}
+Call::Call() : request(nullptr), reply(nullptr) {}
 
-Call::Call(std::shared_ptr<net::Socket> s) : request(s), reply(s) {
-}
+Call::Call(std::shared_ptr<net::Socket> s) : request(s), reply(s) {}
 
-Call::~Call() {
-}
+Call::~Call() {}
 
-Code Call::Run(const std::string &in, std::string &out) {
-
+Code Call::Run(const std::string &in, std::string *out) {
+    assert(out != nullptr);
     request.ContentLength(in.length());
 
     auto rc = request.WriteHeaders();
@@ -370,11 +352,11 @@ Code Call::Run(const std::string &in, std::string &out) {
     LOG_IF(WARNING, rc != http::Code::OK) << "Read(headers) error " << rc;
 
     while (rc == http::Code::OK) {
-        rc = reply.AppendBody(tmp);
+        rc = reply.AppendBody(&tmp);
         LOG_IF(WARNING, rc != http::Code::OK && rc != http::Code::Done)
         << "Read(body) error " << rc;
     }
 
-    out.assign(reinterpret_cast<const char *>(tmp.data()), tmp.size());
+    out->assign(reinterpret_cast<const char *>(tmp.data()), tmp.size());
     return http::Code::OK;
 }

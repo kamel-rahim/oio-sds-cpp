@@ -1,24 +1,27 @@
-/** Copyright (c) 2016 Contributors (see the AUTHORS file)
+/**
+ * Copyright (c) 2016 Contributors (see the AUTHORS file)
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License,
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
- * obtain one at https://mozilla.org/MPL/2.0/ */
+ * obtain one at https://mozilla.org/MPL/2.0/
+ */
 
-#ifndef OIO_KINETIC__SRC_OIO_RAWX__BLOB_H
-#define OIO_KINETIC__SRC_OIO_RAWX__BLOB_H
+#ifndef SRC_OIO_RAWX_BLOB_H_
+#define SRC_OIO_RAWX_BLOB_H_
 
 #include <string>
 #include <memory>
 #include <map>
-#include <oio/api/blob.h>
-#include <oio/http/blob.h>
+
+#include "oio/api/blob.h"
+#include "oio/http/blob.h"
 
 namespace oio {
 namespace rawx {
 namespace blob {
 
 class DownloadBuilder {
-  public:
+ public:
     DownloadBuilder();
 
     ~DownloadBuilder();
@@ -31,12 +34,13 @@ class DownloadBuilder {
 
     std::shared_ptr<oio::api::blob::Download> Build(
             std::shared_ptr<net::Socket> socket);
-  private:
+
+ private:
     oio::http::imperative::DownloadBuilder inner;
 };
 
 class UploadBuilder {
-    public:
+ public:
     UploadBuilder();
 
     ~UploadBuilder();
@@ -51,12 +55,13 @@ class UploadBuilder {
 
     std::shared_ptr<oio::api::blob::Upload> Build(
             std::shared_ptr<net::Socket> socket);
-  private:
+
+ private:
     oio::http::imperative::UploadBuilder inner;
 };
 
 class RemovalBuilder {
-    public:
+ public:
     RemovalBuilder();
 
     ~RemovalBuilder();
@@ -72,13 +77,13 @@ class RemovalBuilder {
     std::shared_ptr<oio::api::blob::Removal> Build(
             std::shared_ptr<net::Socket> socket);
 
-  private:
+ private:
     oio::http::imperative::RemovalBuilder inner;
 };
 
 
-}; // namespace blob
-}; // namespace rawx
-}; // namespace oio
+}  // namespace blob
+}  // namespace rawx
+}  // namespace oio
 
-#endif //OIO_KINETIC__SRC_OIO_RAWX__BLOB_H
+#endif  // SRC_OIO_RAWX_BLOB_H_

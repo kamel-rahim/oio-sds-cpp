@@ -1,23 +1,27 @@
-/** Copyright 2016 Contributors (see the AUTHORS file)
+/**
+ * Copyright 2016 Contributors (see the AUTHORS file)
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License,
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
- * obtain one at https://mozilla.org/MPL/2.0/ */
+ * obtain one at https://mozilla.org/MPL/2.0/
+ */
 
-#ifndef OIO_KINETIC_CLIENT_COROUTINECLIENT_H
-#define OIO_KINETIC_CLIENT_COROUTINECLIENT_H
+#ifndef SRC_OIO_KINETIC_CORO_CLIENT_COROUTINECLIENT_H_
+#define SRC_OIO_KINETIC_CORO_CLIENT_COROUTINECLIENT_H_
+
+#include <src/kinetic.pb.h>
 
 #include <cstdint>
 #include <string>
 #include <vector>
 #include <queue>
 #include <cassert>
-#include <utils/utils.h>
-#include <utils/net.h>
-#include <src/kinetic.pb.h>
-#include <oio/kinetic/coro/rpc/Exchange.h>
-#include "ClientInterface.h"
-#include "PendingExchange.h"
+
+#include "utils/utils.h"
+#include "utils/net.h"
+#include "oio/kinetic/coro/rpc/Exchange.h"
+#include "oio/kinetic/coro/client/ClientInterface.h"
+#include "oio/kinetic/coro/client/PendingExchange.h"
 
 #define SIGNAL_AGENT_STOP 0
 #define SIGNAL_AGENT_DATA 1
@@ -32,28 +36,27 @@ namespace client {
 namespace proto = ::com::seagate::kinetic::proto;
 
 class CoroutineClient : public ClientInterface {
-
-  private:
+ private:
     std::string url_;
     std::shared_ptr<net::Socket> sock_;
     oio::kinetic::rpc::Context ctx;
 
     std::queue<std::shared_ptr<PendingExchange>> waiting_;
     std::vector<std::shared_ptr<PendingExchange>> pending_;
-    struct mill_chan *to_agent_; // <int>
+    struct mill_chan *to_agent_;  // <int>
     struct mill_chan *stopped_;
     bool running_;
 
-  private:
+ private:
     CoroutineClient() = delete;
 
-    CoroutineClient(CoroutineClient &o) = delete;
+    CoroutineClient(CoroutineClient &o) = delete;  // NOLINT
 
     CoroutineClient(const CoroutineClient &o) = delete;
 
     CoroutineClient(const CoroutineClient &&o) = delete;
 
-    std::string Id () const;
+    std::string Id() const;
 
     /**
      * @see ClientInterface::Start()
@@ -65,7 +68,7 @@ class CoroutineClient : public ClientInterface {
      * @param req
      * @return
      */
-    bool manage(oio::kinetic::rpc::Request &req);
+    bool manage(oio::kinetic::rpc::Request *req);
 
     /**
      * Start the RPC right out of the queue
@@ -80,7 +83,8 @@ class CoroutineClient : public ClientInterface {
      * @param pe the RPC to be removed and signaled.
      * @param errcode  the error that occured.
      */
-    void abort_rpc(std::shared_ptr<oio::kinetic::client::PendingExchange> pe, int errcode);
+    void abort_rpc(std::shared_ptr<oio::kinetic::client::PendingExchange> pe,
+            int errcode);
 
     /**
      * Call abort_rpc(ECONNRESET) on all the pending and waiting RPC
@@ -101,18 +105,18 @@ class CoroutineClient : public ClientInterface {
 
     NOINLINE void run_agents();
 
-  public:
+ public:
     ~CoroutineClient();
 
-    CoroutineClient(const std::string &u);
+    explicit CoroutineClient(const std::string &u);
 
     std::string DebugString() const;
 
-    void Boot ();
+    void Boot();
 };
 
-} // namespace client
-} // namespace kinetic
-} // namespace oio
+}  // namespace client
+}  // namespace kinetic
+}  // namespace oio
 
-#endif //OIO_KINETIC_CLIENT_COROUTINECLIENT_H
+#endif  // SRC_OIO_KINETIC_CORO_CLIENT_COROUTINECLIENT_H_

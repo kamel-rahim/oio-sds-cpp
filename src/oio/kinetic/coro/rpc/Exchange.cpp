@@ -1,15 +1,17 @@
-/** Copyright (c) 2016 Contributors (see the AUTHORS file)
+/**
+ * Copyright (c) 2016 Contributors (see the AUTHORS file)
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License,
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
- * obtain one at https://mozilla.org/MPL/2.0/ */
-
-#include "Exchange.h"
+ * obtain one at https://mozilla.org/MPL/2.0/
+ */
 
 #include <sys/uio.h>
 #include <netinet/in.h>
 
 #include <libmill.h>
+
+#include "oio/kinetic/coro/rpc/Exchange.h"
 
 using oio::kinetic::rpc::Context;
 using oio::kinetic::rpc::Exchange;
@@ -42,17 +44,19 @@ void Exchange::SetSequence(int64_t s) {
     cmd.mutable_header()->set_sequence(s);
 }
 
-void Exchange::checkStatus(const oio::kinetic::rpc::Request &rep) {
-    status_ = (rep.cmd.status().code() == proto::Command_Status::SUCCESS);
+void Exchange::checkStatus(const oio::kinetic::rpc::Request *rep) {
+    assert(rep!= nullptr);
+    status_ = (rep->cmd.status().code() == proto::Command_Status::SUCCESS);
 }
 
 void Exchange::ManageError(int errcode) {
-    LOG(INFO) << "RPC failed (errno=" << errcode << "): " << ::strerror(errcode);
+    LOG(INFO) << "RPC failed (errno=" << errcode << "): "
+              << ::strerror(errcode);
     status_ = false;
 }
 
-int Exchange::Write(net::Channel &chan, const Context &ctx, int64_t dl) {
-
+int Exchange::Write(net::Channel *chan, const Context &ctx, int64_t dl) {
+    assert(chan != nullptr);
     auto h = cmd.mutable_header();
     h->set_priority(proto::Command_Priority::Command_Priority_NORMAL);
     h->set_clusterversion(ctx.cluster_version_);
@@ -76,15 +80,15 @@ int Exchange::Write(net::Channel &chan, const Context &ctx, int64_t dl) {
                                        << " M=" << cmd.ShortDebugString();
 
     uint8_t hdr[9] = {'F', 0, 0, 0, 0, 0, 0, 0, 0};
-    *((uint32_t *) (hdr + 1)) = ::htonl(tmp.size());
-    *((uint32_t *) (hdr + 5)) = ::htonl(payload_.len);
+    *(reinterpret_cast<uint32_t*>(hdr + 1)) = ::htonl(tmp.size());
+    *(reinterpret_cast<uint32_t*>(hdr + 5)) = ::htonl(payload_.len);
 
     struct iovec iov[] = {
             BUFLEN_IOV(hdr, 9),
             BUFLEN_IOV(tmp.data(), tmp.size()),
             BUFLEN_IOV(payload_.buf, payload_.len)
     };
-    bool rc = chan.send(iov, payload_.buf ? 3 : 2, dl);
+    bool rc = chan->send(iov, payload_.buf ? 3 : 2, dl);
 
     DLOG_IF(INFO, FLAGS_dump_frames) << "Frame> "
                                      << " V.size=" << payload_.len
@@ -93,17 +97,18 @@ int Exchange::Write(net::Channel &chan, const Context &ctx, int64_t dl) {
     return rc ? 0 : errno;
 }
 
-int Frame::Read(net::Channel &chan, int64_t dl) {
+int Frame::Read(net::Channel *chan, int64_t dl) {
+    assert(chan != nullptr);
     uint8_t hdr[9] = {0};
     uint32_t lenmsg{0}, lenval{0};
 
-    if (!chan.read_exactly(hdr, 9, dl))
+    if (!chan->read_exactly(hdr, 9, dl))
         return errno;
     if (hdr[0] != 'F')
         return EBADMSG;
 
-    lenmsg = ::ntohl(*(uint32_t *) (hdr + 1));
-    lenval = ::ntohl(*(uint32_t *) (hdr + 5));
+    lenmsg = ::ntohl(*reinterpret_cast<uint32_t*>(hdr + 1));
+    lenval = ::ntohl(*reinterpret_cast<uint32_t*>(hdr + 5));
     if (lenval > FLAGS_max_frame_size || lenmsg > FLAGS_max_frame_size)
         return E2BIG;
 
@@ -111,11 +116,11 @@ int Frame::Read(net::Channel &chan, int64_t dl) {
     val.resize(lenval);
 
     if (lenmsg > 0) {
-        if (!chan.read_exactly(msg.data(), msg.size(), dl))
+        if (!chan->read_exactly(msg.data(), msg.size(), dl))
             return errno;
     }
     if (lenval > 0) {
-        if (!chan.read_exactly(val.data(), val.size(), dl))
+        if (!chan->read_exactly(val.data(), val.size(), dl))
             return errno;
     }
 
@@ -125,15 +130,16 @@ int Frame::Read(net::Channel &chan, int64_t dl) {
     return 0;
 }
 
-bool Request::Parse(Frame &f) {
+bool Request::Parse(Frame *f) {
+    assert(f != nullptr);
     value.clear();
-    if (!msg.ParseFromArray(f.msg.data(), f.msg.size()))
+    if (!msg.ParseFromArray(f->msg.data(), f->msg.size()))
         return false;
     if (msg.has_commandbytes()) {
         if (!cmd.ParseFromArray(msg.commandbytes().data(),
                                 msg.commandbytes().size()))
             return false;
-        value.swap(f.val);
+        value.swap(f->val);
     }
 
     DLOG_IF(INFO, FLAGS_dump_requests)
@@ -145,12 +151,12 @@ bool Request::Parse(Frame &f) {
     return true;
 }
 
-int Request::Read(net::Channel &chan, int64_t dl) {
+int Request::Read(net::Channel *chan, int64_t dl) {
     Frame frame;
     int rc = frame.Read(chan, dl);
     if (rc != 0)
         return rc;
-    if (!Parse(frame))
+    if (!Parse(&frame))
         return EINVAL;
     return 0;
 }

@@ -4,8 +4,10 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
-#ifndef OIO_KINETIC_HTTP_H
-#define OIO_KINETIC_HTTP_H
+#ifndef SRC_UTILS_HTTP_H_
+#define SRC_UTILS_HTTP_H_
+
+#include <http-parser/http_parser.h>
 
 #include <string>
 #include <map>
@@ -14,10 +16,8 @@
 #include <queue>
 #include <memory>
 
-#include <http-parser/http_parser.h>
-
-#include "net.h"
-#include "utils.h"
+#include "./net.h"
+#include "./utils.h"
 
 namespace http {
 
@@ -29,8 +29,7 @@ enum Code {
  * Uploads a (maybe huge) flow of bytes in the request.
  */
 class Request {
-  public:
-
+ public:
     /**
      * Default constructor.
      * builds a "GET /" request with no associated socket.
@@ -41,24 +40,18 @@ class Request {
      * Builds a "GET /" Request on the given socket.
      * @param s the socket to be used.
      */
-    Request(std::shared_ptr<net::Socket> s);
+    explicit Request(std::shared_ptr<net::Socket> s);
 
     /**
      * Destructor
      */
     ~Request();
 
-    inline void ContentLength(int64_t l) {
-        content_length = l;
-    }
+    inline void ContentLength(int64_t l) { content_length = l; }
 
-    inline void Selector(const std::string &sel) {
-        selector.assign(sel);
-    }
+    inline void Selector(const std::string &sel) { selector.assign(sel); }
 
-    inline void Method(const std::string &m) {
-        method.assign(m);
-    }
+    inline void Method(const std::string &m) { method.assign(m); }
 
     inline void Query(const std::string &k, const std::string &v) {
         query[k] = v;
@@ -68,17 +61,13 @@ class Request {
         fields[k] = v;
     }
 
-    inline void Trailer(const std::string &k) {
-        trailers.insert(k);
-    }
+    inline void Trailer(const std::string &k) { trailers.insert(k); }
 
     /**
      * Replaces the underlying socket.
      * @param s the new socket.
      */
-    inline void Socket(std::shared_ptr<net::Socket> s) {
-        socket = s;
-    }
+    inline void Socket(std::shared_ptr<net::Socket> s) { socket = s; }
 
     /**
      *
@@ -101,7 +90,7 @@ class Request {
      */
     Code FinishRequest();
 
-  private:
+ private:
     std::string method;
     std::string selector;
     std::map<std::string, std::string> fields;
@@ -116,17 +105,14 @@ class Request {
  * Downloads a HTTP reply.
  */
 class Reply {
-  public:
-
+ public:
     struct Slice {
         const uint8_t *buf;
         uint32_t len;
 
-        Slice() : buf{nullptr}, len{0} {
-        }
+        Slice() : buf{nullptr}, len{0} {}
 
-        Slice(const uint8_t *b, uint32_t l) : buf{b}, len{l} {
-        }
+        Slice(const uint8_t *b, uint32_t l) : buf{b}, len{l} {}
     };
 
     enum Step {
@@ -159,11 +145,12 @@ class Reply {
             Init();
         }
 
-        void Init () {
+        void Init() {
             http_parser_init(&parser, HTTP_RESPONSE);
             parser.data = this;
         }
-        void Reset () {
+
+        void Reset() {
             fields.clear();
             query.clear();
             trailers.clear();
@@ -176,8 +163,8 @@ class Reply {
         }
     };
 
-  public:
-
+ public:
+    /** Constructor */
     Reply();
 
     /**
@@ -185,7 +172,7 @@ class Reply {
      *
      * @param s an established socket.
      */
-    Reply(std::shared_ptr<net::Socket> s);
+    explicit Reply(std::shared_ptr<net::Socket> s);
 
     /**
      * Destructor.
@@ -198,9 +185,7 @@ class Reply {
      * Replaces the underlying socket.
      * @param s the new socket.
      */
-    inline void Socket(std::shared_ptr<net::Socket> s) {
-        socket = s;
-    }
+    inline void Socket(std::shared_ptr<net::Socket> s) { socket = s; }
 
     /**
      * Consumes the input until the reply's headers have been read.
@@ -214,29 +199,26 @@ class Reply {
      * the slices previously returned, because they all point to the same
      * internal buffer
      * @see consumeInput()
-     * @param out the output slice modified in place
+     * @param out the output slice modified in place, cannot be null
      * @return a status code indicating if iteratiosn might continue.
      */
-    Code ReadBody(Slice &out);
+    Code ReadBody(Slice *out);
 
     /**
      * Wraps ReadBody(Slice) and appends the slice into the output vector.
      * @see ReadBody()
-     * @param out the output vector.
+     * @param out the output vector, cannot be null
      * @return a status code indicating if iteratiosn might continue.
      */
-    Code AppendBody(std::vector<uint8_t> &out);
+    Code AppendBody(std::vector<uint8_t> *out);
 
     /**
      * Get a read-only access on the internal state of the reply.
      * @return the reply context
      */
-    const Context &Get() const {
-        return ctx;
-    }
+    const Context &Get() const { return ctx; }
 
-  private:
-
+ private:
     /**
      * Consumes the buffers and fills the internal buffer. by the way, it
      * invalidates all the slice that have been returned.
@@ -250,15 +232,14 @@ class Reply {
      */
     void init();
 
-  private:
+ private:
     std::shared_ptr<net::Socket> socket;
     Context ctx;
     http_parser_settings settings;
 };
 
 class Call {
-  public:
-
+ public:
     /**
      * Constructor of a HTTP call linked with no socket at all.
      * The application has to call Socket() before Run()
@@ -269,22 +250,22 @@ class Call {
      * Constructor of a HTTP call linked with a specific socket.
      * @param s the socket to be used
      */
-    Call(std::shared_ptr<net::Socket> s);
+    explicit Call(std::shared_ptr<net::Socket> s);
 
     /**
      * Destructor
      */
     ~Call();
 
-	/**
-	 * Tell the current HTTP call to work with the given socket.
-	 * @param s
-	 * @return
-	 */
+    /**
+     * Tell the current HTTP call to work with the given socket.
+     * @param s
+     * @return
+     */
     Call &Socket(std::shared_ptr<net::Socket> s) {
         request.Socket(s);
         reply.Socket(s);
-		return *this;
+        return *this;
     }
 
     Call &Method(const std::string &m) {
@@ -307,17 +288,25 @@ class Call {
         return *this;
     }
 
-    Code Run(const std::string &in, std::string &out);
+    /**
+     * Play the whole HTTP Request/Reply sequence, feeding 'in' as the request's
+     * body, and 'out' will be filled with the reply's body.
+     * @param in the request body. Can be empty.
+     * @param out cannot be null, will be erased.
+     * @return a Code depicting how things happened
+     */
+    Code Run(const std::string &in, std::string *out);
 
-  protected:
+ protected:
     Request request;
     Reply reply;
 
-  private:
-	FORBID_COPY_CTOR(Call);
-	FORBID_MOVE_CTOR(Call);
+ private:
+    FORBID_COPY_CTOR(Call);
+
+    FORBID_MOVE_CTOR(Call);
 };
 
-} // namespace http
+}  // namespace http
 
-#endif //OIO_KINETIC_HTTP_H
+#endif  // SRC_UTILS_HTTP_H_

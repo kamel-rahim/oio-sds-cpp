@@ -1,17 +1,18 @@
-/** Copyright 2016 Contributors (see the AUTHORS file)
+/**
+ * Copyright 2016 Contributors (see the AUTHORS file)
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License,
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
- * obtain one at https://mozilla.org/MPL/2.0/ */
+ * obtain one at https://mozilla.org/MPL/2.0/
+ */
 
 #include <memory>
 
-#include <utils/macros.h>
-#include <oio/kinetic/coro/client/ClientInterface.h>
-#include "Put.h"
+#include "utils/macros.h"
+#include "oio/kinetic/coro/client/ClientInterface.h"
+#include "oio/kinetic/coro/rpc/Put.h"
 
-using namespace oio::kinetic::client;
-using namespace oio::kinetic::rpc;
+using oio::kinetic::rpc::Put;
 namespace proto = ::com::seagate::kinetic::proto;
 
 Put::Put() : Exchange() {
@@ -23,12 +24,9 @@ Put::Put() : Exchange() {
     kv->set_force(true);
 }
 
-Put::~Put() {
-}
+Put::~Put() {}
 
-void Put::ManageReply(Request &rep) {
-    checkStatus(rep);
-}
+void Put::ManageReply(Request *rep) { return checkStatus(rep); }
 
 void Put::Key(const char *k) {
     cmd.mutable_body()->mutable_keyvalue()->set_key(k);
@@ -67,8 +65,9 @@ void Put::Value(const std::vector<uint8_t> &v) {
     rehash();
 }
 
-void Put::Value(std::vector<uint8_t> &v) {
-    value_copy.swap(v);
+void Put::Value(std::vector<uint8_t> *v) {
+    assert(v != nullptr);
+    v->swap(value_copy);
     payload_.buf = value_copy.data();
     payload_.len = value_copy.size();
     rehash();

@@ -7,8 +7,8 @@
  * https://mozilla.org/MP:/2.0/.
  */
 
-#ifndef OIO_KINETIC_UTILS_MACROS_H
-#define OIO_KINETIC_UTILS_MACROS_H
+#ifndef SRC_UTILS_MACROS_H_
+#define SRC_UTILS_MACROS_H_
 
 #ifndef GFLAGS_NAMESPACE
 #define GFLAGS_NAMESPACE google
@@ -30,7 +30,7 @@ namespace gflags = google;
 #endif
 
 #define FORBID_DEFAULT_CTOR(T) T() = delete
-#define FORBID_COPY_CTOR(T) T(T &o) = delete; T(const T &o) = delete
+#define FORBID_COPY_CTOR(T) T(T &o) = delete; T(const T &o) = delete // NOLINT
 #define FORBID_MOVE_CTOR(T) T(T &&o) = delete
 
 #define FORBID_ALL_CTOR(T) \
@@ -38,4 +38,4 @@ namespace gflags = google;
     FORBID_COPY_CTOR(T); \
     FORBID_MOVE_CTOR(T)
 
-#endif //OIO_KINETIC_UTILS_MACROS_H
+#endif  // SRC_UTILS_MACROS_H_

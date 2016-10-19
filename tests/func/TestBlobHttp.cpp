@@ -1,29 +1,35 @@
-/** Copyright 2016 Contributors (see the AUTHORS file)
+/**
+ * Copyright 2016 Contributors (see the AUTHORS file)
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License,
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
- * obtain one at https://mozilla.org/MPL/2.0/ */
+ * obtain one at https://mozilla.org/MPL/2.0/
+ */
 
 #include <libmill.h>
-#include <utils/macros.h>
-#include <utils/utils.h>
-#include <utils/net.h>
-#include <oio/http/blob.h>
+
+#include <cassert>
+
+#include "utils/macros.h"
+#include "utils/utils.h"
+#include "utils/net.h"
+#include "oio/http/blob.h"
 
 using oio::http::imperative::UploadBuilder;
 namespace blob = oio::api::blob;
 using blob::Cause;
 
-static void _load_env (std::string &dst, const char *key) {
+static void _load_env(std::string *dst, const char *key) {
+    assert(dst != nullptr);
     const char *v = ::getenv(key);
-    if (v)
-        dst.assign(v);
-    else {
+    if (v) {
+        dst->assign(v);
+    } else {
         LOG(FATAL) << "Missing environment key " << key;
     }
 }
 
-int main (int argc, char **argv) {
+int main(int argc, char **argv) {
     google::InitGoogleLogging(argv[0]);
     FLAGS_logtostderr = true;
 
@@ -35,11 +41,11 @@ int main (int argc, char **argv) {
     const char *hexa = "0123456789ABCDEF";
     std::string ns, account, user, host, chunk_id;
 
-    _load_env(ns, "OIO_NS");
-    _load_env(account, "OIO_ACCOUNT");
-    _load_env(user, "OIO_USER");
+    _load_env(&ns, "OIO_NS");
+    _load_env(&account, "OIO_ACCOUNT");
+    _load_env(&user, "OIO_USER");
     host.assign(argv[1]);
-    append_string_random(chunk_id, 64, hexa);
+    append_string_random(&chunk_id, 64, hexa);
 
     UploadBuilder builder;
     builder.Name(chunk_id);
@@ -68,7 +74,7 @@ int main (int argc, char **argv) {
     auto ul = builder.Build(socket);
     auto rc = ul->Prepare();
     if (rc.Ok()) {
-        ul->Write("", 0); // no-op!
+        ul->Write("", 0);  // no-op!
         builder.Field("chunk-size", std::to_string(0));
         builder.Field("chunk-hash", generate_string_random(32, hexa));
         if (ul->Commit().Ok()) {

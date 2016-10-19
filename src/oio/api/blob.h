@@ -6,8 +6,8 @@
  * obtain one at https://mozilla.org/MPL/2.0/
  */
 
-#ifndef OIO_KINETIC_OIO_API_BLOB_H
-#define OIO_KINETIC_OIO_API_BLOB_H
+#ifndef SRC_OIO_API_BLOB_H_
+#define SRC_OIO_API_BLOB_H_
 
 #include <cstdint>
 #include <string>
@@ -35,17 +35,18 @@ enum class Cause {
  * Associates a high-level error classs (the Cause) and an explanation message.
  */
 class Status {
-  protected:
+ protected:
     Cause rc_;
     std::string msg_;
-  public:
+
+ public:
     ~Status() {}
 
     /** Success constructor */
-    Status(): rc_{Cause::OK} {}
+    Status() : rc_{Cause::OK} {}
 
     /** Build a Status with a cause and a generic message */
-    explicit Status(Cause rc): rc_{rc} {}
+    explicit Status(Cause rc) : rc_{rc} {}
 
     /**
      * Tells if the Status depicts a success (true) or an failure (false)
@@ -64,14 +65,14 @@ class Status {
      * The returned pointer validity doesn't exceed the current Status lifetime.
      * @return
      */
-    inline const char * Message() const { return msg_.c_str(); }
+    inline const char *Message() const { return msg_.c_str(); }
 
     /**
      * Handy method to translate the underlying error cause into a pretty
      * string.
      * @return the textual representation of the underlying Cause
      */
-    const char * Name() const;
+    const char *Name() const;
 };
 
 /**
@@ -85,14 +86,13 @@ class Status {
  * }
  */
 class Errno : public Status {
-  public:
-
+ public:
     /**
      * Build a Status with the given errno.
      * @param err an errno value
      * @return a valid Status
      */
-    Errno(int err);
+    explicit Errno(int err);
 
     /**
      * Build a Status with the system's errno
@@ -120,12 +120,18 @@ class Errno : public Status {
  * }
  */
 class Listing {
-  public:
-    virtual ~Listing() { }
+ public:
+    virtual ~Listing() {}
 
     virtual Status Prepare() = 0;
 
-    virtual bool Next(std::string &id, std::string &key) = 0;
+    /**
+     * Get the next item of the list. Advances the iterator of one position.
+     * @param id cannot be null
+     * @param key cannot be null
+     * @return true if 'id' and 'key' have been set
+     */
+    virtual bool Next(std::string *id, std::string *key) = 0;
 };
 
 /**
@@ -143,8 +149,8 @@ class Listing {
  * }
  */
 class Removal {
-  public:
-    virtual ~Removal() { }
+ public:
+    virtual ~Removal() {}
 
     virtual Status Prepare() = 0;
 
@@ -172,8 +178,8 @@ class Removal {
  * }
  */
 class Upload {
-  public:
-    virtual ~Upload() { }
+ public:
+    virtual ~Upload() {}
 
     virtual void SetXattr(const std::string &k, const std::string &v) = 0;
 
@@ -191,7 +197,8 @@ class Upload {
     }
 
     void Write(const std::string &s) {
-        return this->Write(reinterpret_cast<const uint8_t *>(s.data()), s.size());
+        return this->Write(reinterpret_cast<const uint8_t *>(s.data()),
+                           s.size());
     }
 
     void Write(const std::vector<uint8_t> &s) {
@@ -214,8 +221,8 @@ class Upload {
  * }
  */
 class Download {
-  public:
-    virtual ~Download() { }
+ public:
+    virtual ~Download() {}
 
     virtual Status Prepare() = 0;
 
@@ -243,11 +250,11 @@ class Download {
      * the fetched data.
      * @return the size of the buffer. A negative size means an error occured.
      */
-    virtual int32_t Read(std::vector<uint8_t> &buf) = 0;
+    virtual int32_t Read(std::vector<uint8_t> *buf) = 0;
 };
 
-} // namespace blob
-} // namespace api
-} // namespace oio
+}  // namespace blob
+}  // namespace api
+}  // namespace oio
 
-#endif //OIO_KINETIC_OIO_API_BLOB_H
+#endif  // SRC_OIO_API_BLOB_H_

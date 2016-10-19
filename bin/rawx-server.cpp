@@ -1,21 +1,21 @@
-/** Copyright (c) 2016 Contributors (see the AUTHORS file)
+/**
+ * Copyright (c) 2016 Contributors (see the AUTHORS file)
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License,
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
- * obtain one at https://mozilla.org/MPL/2.0/ */
+ * obtain one at https://mozilla.org/MPL/2.0/
+ */
 
 #include <signal.h>
+#include <rapidjson/document.h>
 
 #include <string>
 #include <memory>
 
-#include <rapidjson/document.h>
-
-#include <utils/utils.h>
-#include <oio/local/blob.h>
-
-#include "MillDaemon.h"
-#include "rawx-server-headers.h"
+#include "utils/utils.h"
+#include "oio/local/blob.h"
+#include "./rawx-server-headers.h"
+#include "./MillDaemon.h"
 
 using oio::local::blob::UploadBuilder;
 using oio::local::blob::DownloadBuilder;
@@ -25,18 +25,19 @@ class RawxRepository;
 
 class RawxHandler : public BlobHandler {
     friend class RawxRepository;
-  private:
+
+ private:
     std::string basedir;
     std::string filename;
     std::map<std::string, std::string> xattrs;
     unsigned int hash_depth, hash_width;
 
-  private:
+ private:
     std::string path(const std::string &f) {
         std::stringstream ss;
         ss << basedir;
-        for (unsigned i=0; i<hash_depth ;++i) {
-            auto token = f.substr(i*hash_width, hash_width);
+        for (unsigned i = 0; i < hash_depth; ++i) {
+            auto token = f.substr(i * hash_width, hash_width);
             if (token == "")
                 break;
             ss << "/" << token;
@@ -45,13 +46,14 @@ class RawxHandler : public BlobHandler {
         return ss.str();
     }
 
-  public:
-    RawxHandler(const std::string &r): basedir{r}, filename(), xattrs(),
-                                       hash_depth{0}, hash_width{0} {}
+ public:
+    explicit RawxHandler(const std::string &r) : basedir{r}, filename(),
+                                                 xattrs(), hash_depth{0},
+                                                 hash_width{0} {}
 
-    virtual ~RawxHandler() override {}
+    ~RawxHandler() override {}
 
-    virtual SoftError SetUrl(const std::string &u) override {
+    SoftError SetUrl(const std::string &u) override {
         // Get the name, this is common to al the requests
         http_parser_url url;
         if (0 != http_parser_parse_url(u.data(), u.size(), false, &url))
@@ -66,7 +68,7 @@ class RawxHandler : public BlobHandler {
             return {400, 400, "URL has no/empty basename"};
 
         filename.assign(path, sep + 1, std::string::npos);
-        return {200,200,"OK"};
+        return {200, 200, "OK"};
     }
 
     SoftError SetHeader(const std::string &k, const std::string &v) override {
@@ -76,14 +78,14 @@ class RawxHandler : public BlobHandler {
             xattrs[header.StorageName()] = v;
         } else {
         }
-        return {200,200,"OK"};
+        return {200, 200, "OK"};
     }
 
     std::unique_ptr<oio::api::blob::Upload> GetUpload() override {
         UploadBuilder builder;
         builder.Path(path(filename));
         auto ul = builder.Build();
-        for (const auto &e: xattrs)
+        for (const auto &e : xattrs)
             ul->SetXattr(e.first, e.second);
         return ul;
     }
@@ -103,15 +105,17 @@ class RawxHandler : public BlobHandler {
 
 class RawxRepository : public BlobRepository {
     friend class RawxHandler;
-  private:
+
+ private:
     std::string repository;
     unsigned int hash_depth, hash_width;
 
-  public:
-    RawxRepository(): repository(), hash_depth{0}, hash_width{0} {}
-    virtual ~RawxRepository() override {}
+ public:
+    RawxRepository() : repository(), hash_depth{0}, hash_width{0} {}
 
-    BlobRepository* Clone() override {
+    ~RawxRepository() override {}
+
+    BlobRepository *Clone() override {
         auto repo = new RawxRepository;
         repo->repository.assign(repository);
         repo->hash_depth = hash_depth;
@@ -119,7 +123,7 @@ class RawxRepository : public BlobRepository {
         return repo;
     }
 
-    bool Configure (const std::string &cfg UNUSED) override {
+    bool Configure(const std::string &cfg UNUSED) override {
         rapidjson::Document doc;
         if (doc.Parse<0>(cfg.c_str()).HasParseError()) {
             return false;
@@ -158,7 +162,7 @@ class RawxRepository : public BlobRepository {
         return true;
     }
 
-    BlobHandler* Handler () {
+    BlobHandler *Handler() {
         auto handler = new RawxHandler(repository);
         handler->hash_width = hash_width;
         handler->hash_depth = hash_depth;
@@ -169,35 +173,35 @@ class RawxRepository : public BlobRepository {
 static volatile bool flag_running{true};
 
 static void _sighandler_stop(int s UNUSED) {
-	flag_running = 0;
+    flag_running = 0;
 }
 
 int main(int argc, char **argv) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
     google::InitGoogleLogging(argv[0]);
 
-	if (argc < 2) {
-		LOG(ERROR) << "Usage: " << argv[0] << " FILE [FILE...]";
-		return 1;
-	}
+    if (argc < 2) {
+        LOG(ERROR) << "Usage: " << argv[0] << " FILE [FILE...]";
+        return 1;
+    }
 
-	signal(SIGINT, _sighandler_stop);
-	signal(SIGTERM, _sighandler_stop);
-	signal(SIGUSR1, SIG_IGN);
-	signal(SIGUSR2, SIG_IGN);
-	signal(SIGHUP, SIG_IGN);
-	signal(SIGPIPE, SIG_IGN);
-	stdin = freopen("/dev/null", "r", stdin);
-	stdout = freopen("/dev/null", "a", stdout);
-	mill_goprepare(1024, 16384, sizeof(uint32_t));
+    signal(SIGINT, _sighandler_stop);
+    signal(SIGTERM, _sighandler_stop);
+    signal(SIGUSR1, SIG_IGN);
+    signal(SIGUSR2, SIG_IGN);
+    signal(SIGHUP, SIG_IGN);
+    signal(SIGPIPE, SIG_IGN);
+    stdin = freopen("/dev/null", "r", stdin);
+    stdout = freopen("/dev/null", "a", stdout);
+    mill_goprepare(1024, 16384, sizeof(uint32_t));
 
-	std::shared_ptr<BlobRepository> repo(new RawxRepository);
-	BlobDaemon daemon(repo);
-	for (int i = 1; i < argc; ++i) {
-		if (!daemon.LoadJsonFile(argv[i]))
-			return 1;
-	}
-	daemon.Start(&flag_running);
-	daemon.Join();
-	return 0;
+    std::shared_ptr<BlobRepository> repo(new RawxRepository);
+    BlobDaemon daemon(repo);
+    for (int i = 1; i < argc; ++i) {
+        if (!daemon.LoadJsonFile(argv[i]))
+            return 1;
+    }
+    daemon.Start(&flag_running);
+    daemon.Join();
+    return 0;
 }

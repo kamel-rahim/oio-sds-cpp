@@ -1,22 +1,25 @@
-/** Copyright (c) 2016 Contributors (see the AUTHORS file)
+/**
+ * Copyright (c) 2016 Contributors (see the AUTHORS file)
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License,
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
- * obtain one at https://mozilla.org/MPL/2.0/ */
+ * obtain one at https://mozilla.org/MPL/2.0/
+ */
+
+#include "oio/local/blob.h"
+
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <attr/xattr.h>
 
-#include <cassert>
-#include <string>
-#include <map>
-
 #include <libmill.h>
 
-#include <utils/macros.h>
-#include <utils/utils.h>
-#include <oio/local/blob.h>
+#include <cassert>
+#include <map>
+#include <vector>
+
+#include "utils/macros.h"
 
 using oio::local::blob::DownloadBuilder;
 using oio::local::blob::RemovalBuilder;
@@ -27,7 +30,7 @@ using oio::api::blob::Cause;
 
 DEFINE_uint64(mode_mkdir, 0755, "Mode for freshly create directories");
 DEFINE_uint64(mode_create, 0644, "Mode for freshly created files");
-DEFINE_uint64(read_batch_size, 1024*1024, "Default size of the read buffer");
+DEFINE_uint64(read_batch_size, 1024 * 1024, "Default size of the read buffer");
 DEFINE_uint64(read_eintr_attempts, 5, "Number of attempts when interrupted");
 
 /**
@@ -36,8 +39,8 @@ DEFINE_uint64(read_eintr_attempts, 5, "Number of attempts when interrupted");
 class LocalDownload : public oio::api::blob::Download {
     friend class DownloadBuilder;
 
-  private:
-    enum class Step { Init, Ready, Finished};
+ private:
+    enum class Step { Init, Ready, Finished };
 
     std::string path;
     std::vector<uint8_t> buffer;
@@ -46,15 +49,12 @@ class LocalDownload : public oio::api::blob::Download {
 
     Step step;
 
-  private:
+ private:
     FORBID_MOVE_CTOR(LocalDownload);
     FORBID_COPY_CTOR(LocalDownload);
 
-
-    LocalDownload()
-            : path(), buffer(),
-              offset_{0}, size_expected_{0}, size_read_{0},
-              fd_{-1}, step{Step::Init} {}
+    LocalDownload() : path(), buffer(), offset_{0}, size_expected_{0},
+                      size_read_{0}, fd_{-1}, step{Step::Init} {}
 
     unsigned int loadBufferAndRetry(int nb_attempts) {
         ssize_t rc = ::read(fd_, buffer.data(), buffer.size());
@@ -63,7 +63,7 @@ class LocalDownload : public oio::api::blob::Download {
                 int evt = fdwait(fd_, FDW_IN, mill_now() + 1000);
                 if (evt & FDW_IN) {
                     if (nb_attempts > 0)
-                        return loadBufferAndRetry(nb_attempts-1);
+                        return loadBufferAndRetry(nb_attempts - 1);
                     return 0;
                 }
                 return 0;
@@ -87,7 +87,8 @@ class LocalDownload : public oio::api::blob::Download {
         buffer.resize(FLAGS_read_batch_size);
         if (size_expected_ > 0) {
             const auto remaining = size_expected_ - size_read_;
-            if (remaining > 0 && static_cast<uint64_t>(remaining) < FLAGS_read_batch_size)
+            if (remaining > 0 &&
+                static_cast<uint64_t>(remaining) < FLAGS_read_batch_size)
                 buffer.resize(remaining);
         }
 
@@ -97,9 +98,7 @@ class LocalDownload : public oio::api::blob::Download {
         return rc > 0;
     }
 
-    Status closeAndErrno() {
-        return closeAndErrno(errno);
-    }
+    Status closeAndErrno() { return closeAndErrno(errno); }
 
     Status closeAndErrno(int err) {
         Errno result(err);
@@ -108,7 +107,7 @@ class LocalDownload : public oio::api::blob::Download {
         return result;
     }
 
-  public:
+ public:
     ~LocalDownload() {
         if (fd_ >= 0) {
             ::close(fd_);
@@ -150,24 +149,22 @@ class LocalDownload : public oio::api::blob::Download {
         return Status(Cause::OK);
     }
 
-    bool IsEof() override {
-        return step == Step::Finished;
-    }
+    bool IsEof() override { return step == Step::Finished; }
 
-    int32_t Read(std::vector<uint8_t> &buf) override {
+    int32_t Read(std::vector<uint8_t> *buf) override {
+        assert(buf != nullptr);
         if (step != Step::Ready)
             return 0;
-
         if (buffer.size() <= 0) {
             if (!loadBuffer())
                 return 0;
         }
-        buffer.swap(buf);
+        buf->swap(buffer);
         buffer.resize(0);
-        return buf.size();
+        return buf->size();
     }
 
-    virtual Status SetRange(uint32_t offset, uint32_t size) override {
+    Status SetRange(uint32_t offset, uint32_t size) override {
         if (step != Step::Ready)
             return Status(Cause::Forbidden);
         offset_ = offset;
@@ -176,15 +173,11 @@ class LocalDownload : public oio::api::blob::Download {
     }
 };
 
-DownloadBuilder::DownloadBuilder() {
-}
+DownloadBuilder::DownloadBuilder() {}
 
-DownloadBuilder::~DownloadBuilder() {
-}
+DownloadBuilder::~DownloadBuilder() {}
 
-void DownloadBuilder::Path(const std::string &p) {
-    path.assign(p);
-}
+void DownloadBuilder::Path(const std::string &p) { path.assign(p); }
 
 std::unique_ptr<oio::api::blob::Download> DownloadBuilder::Build() {
     auto dl = new LocalDownload;
@@ -199,12 +192,10 @@ std::unique_ptr<oio::api::blob::Download> DownloadBuilder::Build() {
 class LocalRemoval : public oio::api::blob::Removal {
     friend class RemovalBuilder;
 
-  public:
-    LocalRemoval() {
-    }
+ public:
+    LocalRemoval() {}
 
-    ~LocalRemoval() {
-    }
+    ~LocalRemoval() {}
 
     Status Prepare() override {
         struct stat st;
@@ -225,20 +216,16 @@ class LocalRemoval : public oio::api::blob::Removal {
         return Status();
     }
 
-  private:
+ private:
     std::string path;
     int fd;
 };
 
-RemovalBuilder::RemovalBuilder() {
-}
+RemovalBuilder::RemovalBuilder() {}
 
-RemovalBuilder::~RemovalBuilder() {
-}
+RemovalBuilder::~RemovalBuilder() {}
 
-void RemovalBuilder::Path(const std::string &p) {
-    path.assign(p);
-}
+void RemovalBuilder::Path(const std::string &p) { path.assign(p); }
 
 std::unique_ptr<oio::api::blob::Removal> RemovalBuilder::Build() {
     auto rem = new LocalRemoval;
@@ -253,10 +240,8 @@ std::unique_ptr<oio::api::blob::Removal> RemovalBuilder::Build() {
 class LocalUpload : public oio::api::blob::Upload {
     friend class UploadBuilder;
 
-  public:
-
-    virtual ~LocalUpload() override {
-    }
+ public:
+    ~LocalUpload() override {}
 
     void SetXattr(const std::string &k, const std::string &v) override {
         attributes[k] = v;
@@ -269,13 +254,13 @@ class LocalUpload : public oio::api::blob::Upload {
 
         if (fd >= 0)
             return Status(Cause::InternalError);
-        retry:
+retry:
         fd = ::open(path_temp.c_str(),
                     O_WRONLY | O_CREAT | O_EXCL | O_NONBLOCK,
                     fmode);
         if (fd < 0) {
             if (errno == ENOENT) {
-                // TODO Lazy directory creation
+                // TODO(jfs) Lazy directory creation
                 if (!retryable)
                     return Status(Cause::Forbidden);
                 retryable = false;
@@ -288,7 +273,7 @@ class LocalUpload : public oio::api::blob::Upload {
             } else if (errno == EPERM || errno == EACCES) {
                 return Status(Cause::Forbidden);
             } else {
-                // TODO have a code for storage full or unavailable
+                // TODO(jfs) have a code for storage full or unavailable
                 return Status(Cause::InternalError);
             }
         } else {
@@ -303,12 +288,11 @@ class LocalUpload : public oio::api::blob::Upload {
     }
 
     Status Commit() override {
-
         if (fd < 0)
             return Status(Cause::InternalError);
 
-        // TODO allow seeting all the xattr in a single record
-        for (auto e: attributes) {
+        // TODO(jfs) allow seeting all the xattr in a single record
+        for (auto e : attributes) {
             std::string k = "user.grid." + e.first;
             int rc = ::fsetxattr(fd, k.c_str(),
                                  e.second.data(), e.second.size(), 0);
@@ -336,7 +320,7 @@ class LocalUpload : public oio::api::blob::Upload {
 
     void Write(const uint8_t *buf, uint32_t len) override {
         ssize_t rc;
-        retry:
+retry:
         rc = ::write(fd, buf, len);
         if (rc < 0) {
             if (errno == EINTR)
@@ -358,14 +342,15 @@ class LocalUpload : public oio::api::blob::Upload {
         }
     }
 
-  private:
+ private:
     FORBID_COPY_CTOR(LocalUpload);
 
     FORBID_MOVE_CTOR(LocalUpload);
 
-    LocalUpload(const std::string &p) : path_final(p), path_temp(), fd{-1},
-                                        fmode(FLAGS_mode_create),
-                                        dmode(FLAGS_mode_mkdir) {
+    explicit LocalUpload(const std::string &p) : path_final(p), path_temp(),
+                                                 fd{-1},
+                                                 fmode(FLAGS_mode_create),
+                                                 dmode(FLAGS_mode_mkdir) {
         path_temp = path_final + ".pending";
     }
 
@@ -387,9 +372,9 @@ class LocalUpload : public oio::api::blob::Upload {
     int createParent(std::string path) {
         // get the parent path
         auto slash = path.rfind('/');
-        if (slash == 0) // the VFS root already exists
+        if (slash == 0)  // the VFS root already exists
             return 0;
-        if (slash == std::string::npos) // relative path head, CWD exists
+        if (slash == std::string::npos)  // relative path head, CWD exists
             return 0;
         auto parent = path.substr(0, slash);
 
@@ -400,7 +385,7 @@ class LocalUpload : public oio::api::blob::Upload {
         return errno != ENOENT ? errno : createParent(std::move(parent));
     }
 
-  private:
+ private:
     std::string path_final;
     std::string path_temp;
     int fd;
@@ -414,21 +399,13 @@ UploadBuilder::UploadBuilder() : path(),
 
 UploadBuilder::~UploadBuilder() {}
 
-void UploadBuilder::Path(const std::string &p) {
-    path.assign(p);
-}
+void UploadBuilder::Path(const std::string &p) { path.assign(p); }
 
-void UploadBuilder::FileMode(unsigned int mode) {
-    fmode = mode;
-}
+void UploadBuilder::FileMode(unsigned int mode) { fmode = mode; }
 
-void UploadBuilder::DirMode(unsigned int mode) {
-    dmode = mode;
-}
+void UploadBuilder::DirMode(unsigned int mode) { dmode = mode; }
 
-std::string UploadBuilder::PathPending() const {
-    return path + ".pending";
-}
+std::string UploadBuilder::PathPending() const { return path + ".pending"; }
 
 std::unique_ptr<oio::api::blob::Upload> UploadBuilder::Build() {
     auto ul = new LocalUpload(path);

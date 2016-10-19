@@ -1,13 +1,15 @@
-/** Copyright 2016 Contributors (see the AUTHORS file)
+/**
+ * Copyright 2016 Contributors (see the AUTHORS file)
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License,
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
- * obtain one at https://mozilla.org/MPL/2.0/ */
+ * obtain one at https://mozilla.org/MPL/2.0/
+ */
 
 #include <array>
 
-#include <utils/macros.h>
-#include <utils/utils.h>
+#include "utils/macros.h"
+#include "utils/utils.h"
 #include "oio/kinetic/coro/client/ClientInterface.h"
 #include "oio/kinetic/coro/client/CoroutineClientFactory.h"
 #include "oio/api/blob.h"
@@ -26,18 +28,19 @@ using blob::Download;
 using blob::Removal;
 using blob::Cause;
 
-const char * envkey_URL = "OIO_KINETIC_URL";
-const char * target = ::getenv(envkey_URL);
+const char *envkey_URL = "OIO_KINETIC_URL";
+const char *target = ::getenv(envkey_URL);
 
-static void test_upload_empty (std::string chunkid, std::shared_ptr<ClientFactory> factory) {
+static void
+test_upload_empty(std::string chunkid, std::shared_ptr<ClientFactory> factory) {
     DLOG(INFO) << __FUNCTION__;
-    std::array<uint8_t,8> buf;
+    std::array<uint8_t, 8> buf;
     buf.fill('0');
 
     auto builder = UploadBuilder(factory);
-    builder.BlockSize(1024*1024);
+    builder.BlockSize(1024 * 1024);
     builder.Name(chunkid);
-    for (int i=0; i<5 ;++i)
+    for (int i = 0; i < 5; ++i)
         builder.Target(target);
 
     auto up = builder.Build();
@@ -46,15 +49,16 @@ static void test_upload_empty (std::string chunkid, std::shared_ptr<ClientFactor
     up->Commit();
 }
 
-static void test_upload_2blocks (std::string chunkid, std::shared_ptr<ClientFactory> factory) {
+static void test_upload_2blocks(std::string chunkid,
+        std::shared_ptr<ClientFactory> factory) {
     DLOG(INFO) << __FUNCTION__;
-    std::array<uint8_t,8192> buf;
+    std::array<uint8_t, 8192> buf;
     buf.fill('0');
 
     auto builder = UploadBuilder(factory);
-    builder.BlockSize(1024*1024);
+    builder.BlockSize(1024 * 1024);
     builder.Name(chunkid);
-    for (int i=0; i<5 ;++i)
+    for (int i = 0; i < 5; ++i)
         builder.Target(target);
 
     auto up = builder.Build();
@@ -65,7 +69,8 @@ static void test_upload_2blocks (std::string chunkid, std::shared_ptr<ClientFact
     up->Commit();
 }
 
-static void test_listing (std::string chunkid, std::shared_ptr<ClientFactory> factory) {
+static void
+test_listing(std::string chunkid, std::shared_ptr<ClientFactory> factory) {
     DLOG(INFO) << __FUNCTION__;
     auto builder = ListingBuilder(factory);
     builder.Name(chunkid);
@@ -76,12 +81,13 @@ static void test_listing (std::string chunkid, std::shared_ptr<ClientFactory> fa
     auto rc = list->Prepare();
     assert(rc.Ok());
     std::string id, key;
-    while (list->Next(id, key)) {
+    while (list->Next(&id, &key)) {
         DLOG(INFO) << "id:" << id << " key:" << key;
     }
 }
 
-static void test_download (std::string chunkid, std::shared_ptr<ClientFactory> factory) {
+static void
+test_download(std::string chunkid, std::shared_ptr<ClientFactory> factory) {
     DLOG(INFO) << __FUNCTION__;
     auto builder = DownloadBuilder(factory);
     builder.Target(target);
@@ -93,24 +99,25 @@ static void test_download (std::string chunkid, std::shared_ptr<ClientFactory> f
 
     while (!dl->IsEof()) {
         std::vector<uint8_t> buf;
-        dl->Read(buf);
+        dl->Read(&buf);
     }
 }
 
-static void test_removal (std::string chunkid, std::shared_ptr<ClientFactory> factory) {
+static void
+test_removal(std::string chunkid, std::shared_ptr<ClientFactory> factory) {
     DLOG(INFO) << __FUNCTION__;
     auto builder = RemovalBuilder(factory);
     builder.Target(target);
     builder.Name(chunkid);
     auto rem = builder.Build();
     auto rc = rem->Prepare();
-    assert (rc.Ok());
+    assert(rc.Ok());
     rem->Commit();
 }
 
-static void test_cycle (std::shared_ptr<ClientFactory> factory) {
+static void test_cycle(std::shared_ptr<ClientFactory> factory) {
     std::string chunkid;
-    append_string_random(chunkid, 32, "0123456789ABCDEF");
+    append_string_random(&chunkid, 32, "0123456789ABCDEF");
 
     test_upload_empty(chunkid, factory);
     test_listing(chunkid, factory);
@@ -123,7 +130,7 @@ static void test_cycle (std::shared_ptr<ClientFactory> factory) {
     test_removal(chunkid, factory);
 }
 
-int main (int argc UNUSED, char **argv) {
+int main(int argc UNUSED, char **argv) {
     google::InitGoogleLogging(argv[0]);
     FLAGS_logtostderr = true;
 

@@ -375,7 +375,7 @@ NOINLINE void BlobService::Run(volatile bool *flag_running) {
         if (input_ready) {
             auto cli = front.accept();
             if (cli->fileno() >= 0) {
-                mill_go(RunClient(flag_running, std::move(cli)));
+                StartClient(flag_running, std::move(cli));
                 continue;
             }
         }
@@ -391,11 +391,16 @@ NOINLINE void BlobService::Run(volatile bool *flag_running) {
     chs(done, uint32_t, 0);
 }
 
+void BlobService::StartClient(volatile bool *flag_running,
+        std::unique_ptr<net::Socket> s0) {
+    mill_go(RunClient(flag_running, std::move(s0)));
+}
+
 NOINLINE void BlobService::RunClient(volatile bool *flag_running,
         std::unique_ptr<net::Socket> s0) {
 	assert(flag_running != nullptr);
     BlobClient client(std::move(s0), repository);
-    client.Run(flag_running);
+    return client.Run(flag_running);
 }
 
 BlobDaemon::BlobDaemon(std::shared_ptr<BlobRepository> rp)

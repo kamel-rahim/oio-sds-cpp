@@ -45,6 +45,8 @@ PARTICULAR PURPOSE. See the Mozilla Public License for more details.
 * [glog](https://github.com/google/glog)
 * [gtest](https://github.com/google/googletest)
 * [gflags](https://github.com/gflags/gflags)
+* [liberasurecode](https://github.com/openstack/liberasurecode)
+* attr, libattr, libattr-devel
 
 
 ## Build & Install

@@ -213,7 +213,7 @@ static coroutine void consumer(int fd, chan done) {
         buffer[rc] = 0;
         rapidjson::Document msg;
         if (msg.Parse<0>((const char *) buffer.data()).HasParseError()) {
-            LOG_EVERY_N(ERROR, 512) << "Invalid Frame";
+            LOG(ERROR) << "Invalid Frame";
         } else {
             manage_message(msg);
         }

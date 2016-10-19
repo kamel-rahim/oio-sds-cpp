@@ -1,10 +1,23 @@
-link_directories(
-		${MILL_LIBRARY_DIRS}
-		${EC_LIBRARY_DIRS})
-
 include_directories(BEFORE
-		${MILL_INCLUDE_DIRECTORIES}
-		${EC_INCLUDE_DIRECTORIES})
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_BINARY_DIR}
+        ${HTTPPARSER_INCLUDE_DIRS}
+		${MILL_INCLUDE_DIRS}
+		${GFLAGS_INCLUDE_DIRS}
+		${GTEST_INCLUDE_DIRS}
+		${GLOG_INCLUDE_DIRS}
+		${EC_INCLUDE_DIRS}
+		${ATTR_INCLUDE_DIRS}
+		${PROTOBUF_INCLUDE_DIRS}
+        ${RAPIDJSON_INCLUDE_DIRS})
+
+link_directories(
+        ${MILL_LIBRARY_DIRS}
+        ${GFLAGS_LIBRARY_DIRS}
+        ${GLOG_LIBRARY_DIRS}
+        ${EC_LIBRARY_DIRS}
+        ${ATTR_LIBRARY_DIRS}
+        ${PROTOBUF_LIBRARY_DIRS})
 
 add_custom_command(OUTPUT
         ${CMAKE_CURRENT_BINARY_DIR}/kinetic.pb.cc
@@ -85,4 +98,4 @@ add_library(oio-data-kinetic SHARED
 target_link_libraries(oio-data-kinetic
         oio-utils oio-data oio-http-parser
         ${MILL_LIBRARIES} ${PROTOBUF_LIBRARIES} ${CRYPTO_LIBRARIES}
-        ${GLOG_LIBRARIES})
+        ${GLOG_LIBRARIES} ${ATTR_LIBRARIES})

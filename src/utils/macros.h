@@ -14,7 +14,6 @@
 #define GFLAGS_NAMESPACE google
 #endif
 
-#include <gflags/gflags_declare.h>
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 

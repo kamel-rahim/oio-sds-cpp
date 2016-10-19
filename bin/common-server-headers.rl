@@ -10,8 +10,8 @@
 #include <cassert>
 #include <string>
 
-#include "common-server-headers.h"
-#include "common-header-parser.h"
+#include <bin/common-server-headers.h>
+#include <bin/common-header-parser.h>
 
 #define token(T) return (T)
 

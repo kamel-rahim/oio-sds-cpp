@@ -187,8 +187,8 @@ int main(int argc, char **argv) {
 	signal(SIGUSR2, SIG_IGN);
 	signal(SIGHUP, SIG_IGN);
 	signal(SIGPIPE, SIG_IGN);
-	freopen("/dev/null", "r", stdin);
-	freopen("/dev/null", "a", stdout);
+	stdin = freopen("/dev/null", "r", stdin);
+	stdout = freopen("/dev/null", "a", stdout);
 	mill_goprepare(1024, 16384, sizeof(uint32_t));
 
 	std::shared_ptr<BlobRepository> repo(new RawxRepository);

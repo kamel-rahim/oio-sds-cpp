@@ -36,7 +36,8 @@ void GetLog::ManageReply(oio::kinetic::rpc::Request &rep) {
 		LOG(ERROR) << "no capacity returned";
 	}
 
-	if (!gl.temperatures().empty()) {
+	// TODO replace the check on size() by empty() as soon as empty() is available on all target distros
+	if (0 < gl.temperatures().size()) {
 		double t0 = 100.0;
 		for (const auto &temperature : gl.temperatures()) {
 			const double min = temperature.minimum();
@@ -50,7 +51,8 @@ void GetLog::ManageReply(oio::kinetic::rpc::Request &rep) {
 		LOG(ERROR) << "no temperature returned";
 	}
 
-	if (!gl.utilizations().empty()) {
+	// TODO replace the check on size() by empty() as soon as empty() is available on all target distros
+	if (0 < gl.utilizations().size()) {
 		for (const auto &u: gl.utilizations()) {
 			const double val = 100.0 * (1.0 - u.value());
 			if (0 == u.name().compare(0, 3, "CPU"))

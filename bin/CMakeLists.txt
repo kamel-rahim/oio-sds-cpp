@@ -1,7 +1,17 @@
-include_directories(. ..)
+include_directories(BEFORE
+		${CMAKE_SOURCE_DIR}/
+		${CMAKE_SOURCE_DIR}/src
+		${CMAKE_SOURCE_DIR}/3rd
+		${CMAKE_BINARY_DIR}
+        ${GFLAGS_INCLUDE_DIRS}
+        ${GLOG_INCLUDE_DIRS}
+        ${MILL_INCLUDE_DIRS}
+        ${RAPIDJSON_INCLUDE_DIRS})
 
 link_directories(
-	${MILL_LIBRARY_DIRS})
+        ${MILL_LIBRARY_DIRS}
+        ${GFLAGS_LIBRARY_DIRS}
+        ${GLOG_LIBRARY_DIRS})
 
 add_library(oio-server SHARED
         MillDaemon.h

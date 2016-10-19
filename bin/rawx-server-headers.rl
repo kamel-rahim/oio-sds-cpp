@@ -8,8 +8,8 @@
  */
 
 #include <cassert>
-#include "common-header-parser.h"
-#include "rawx-server-headers.h"
+#include <bin/common-header-parser.h>
+#include <bin/rawx-server-headers.h>
 
 #define token(T) return (T)
 

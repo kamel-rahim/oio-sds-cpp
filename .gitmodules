@@ -17,3 +17,6 @@
 [submodule "3rd/glog"]
 	path = 3rd/glog
 	url = https://github.com/google/glog.git
+[submodule "3rd/rapidjson"]
+	path = 3rd/rapidjson
+	url = https://github.com/miloyip/rapidjson

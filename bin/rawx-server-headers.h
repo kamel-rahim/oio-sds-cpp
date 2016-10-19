@@ -7,16 +7,16 @@
  * https://mozilla.org/MP:/2.0/.
  */
 
-#ifndef OIO_KINETIC_RAWX_SERVER_HEADERS_H
-#define OIO_KINETIC_RAWX_SERVER_HEADERS_H
+#ifndef BIN_RAWX_SERVER_HEADERS_H_
+#define BIN_RAWX_SERVER_HEADERS_H_
 
 #include <string>
-#include "common-server-headers.h"
+#include "./common-server-headers.h"
 
 #define OIO_RAWX_HEADER_PREFIX "X-oio-chunk-meta-"
 
 class RawxHeader {
-  public:
+ public:
     enum Value {
         Unexpected,
         ContainerId,
@@ -29,17 +29,24 @@ class RawxHeader {
         ChunkSize,
         ChunkPosition,
     };
-  private:
+
+ private:
     Value value;
-  public:
-    RawxHeader(): value{Unexpected} {}
+
+ public:
+    RawxHeader() : value{Unexpected} {}
+
     ~RawxHeader() {}
 
     void Parse(const std::string &k);
+
     inline bool Matched() const { return value != Value::Unexpected; }
+
     inline Value Get() const { return value; }
+
     std::string NetworkName() const;
+
     std::string StorageName() const;
 };
 
-#endif //OIO_KINETIC_RAWX_SERVER_HEADERS_H
+#endif  // BIN_RAWX_SERVER_HEADERS_H_

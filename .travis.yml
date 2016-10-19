@@ -7,6 +7,7 @@ install:
   - sudo apt-add-repository "deb http://mirror.openio.io/pub/repo/openio/sds/15.12/ trusty/"
   - sudo apt-get update -qq
   - sudo apt-get install -y --force-yes ragel protobuf-compiler libprotobuf-dev liberasurecode-dev attr libattr1 libattr1-dev
+  - pip install --upgrade pip cpplint
 script:
   - set -e
   - OPTS=-DCMAKE_INSTALL_PREFIX=/tmp/oio
@@ -22,4 +23,4 @@ script:
   - cmake $OPTS .
   - make all
   - make -C tests/unit test
-  - make -C tests/func test
+  - echo make -C tests/func test

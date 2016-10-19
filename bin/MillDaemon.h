@@ -9,9 +9,9 @@
 
 #include <sys/uio.h>
 
+#include <http-parser/http_parser.h>
 #include <rapidjson/document.h>
 #include <libmill.h>
-#include <http-parser/http_parser.h>
 
 #include <vector>
 #include <map>
@@ -19,11 +19,11 @@
 #include <memory>
 #include <string>
 
-#include <utils/macros.h>
-#include <utils/net.h>
-#include <oio/api/blob.h>
-#include <bin/common-header-parser.h>
-#include <bin/common-server-headers.h>
+#include "utils/macros.h"
+#include "utils/net.h"
+#include "oio/api/blob.h"
+#include "./common-header-parser.h"
+#include "./common-server-headers.h"
 
 class BlobRepository;
 
@@ -57,7 +57,7 @@ class BlobRepository {
  public:
     virtual ~BlobRepository() {}
 
-    virtual BlobRepository* Clone() = 0;
+    virtual BlobRepository *Clone() = 0;
 
     virtual bool Configure(const std::string &cfg) = 0;
 
@@ -70,7 +70,7 @@ struct BlobClient {
     ~BlobClient();
 
     BlobClient(std::unique_ptr<net::Socket> c,
-               std::shared_ptr<BlobRepository> r);
+            std::shared_ptr<BlobRepository> r);
 
     void Run(volatile bool *flag_running);
 
@@ -170,4 +170,4 @@ class BlobDaemon {
     std::shared_ptr<BlobRepository> repository_prototype;
 };
 
-#endif // BIN_MILLDAEMON_H_
+#endif  // BIN_MILLDAEMON_H_

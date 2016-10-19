@@ -1,11 +1,14 @@
-/** Copyright 2016 Contributors (see the AUTHORS file)
+/**
+ * Copyright 2016 Contributors (see the AUTHORS file)
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License,
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
- * obtain one at https://mozilla.org/MPL/2.0/ */
+ * obtain one at https://mozilla.org/MPL/2.0/
+ */
 
 #include <src/kinetic.pb.h>
-#include "GetKeyRange.h"
+
+#include "oio/kinetic/coro/rpc/GetKeyRange.h"
 
 namespace proto = ::com::seagate::kinetic::proto;
 using oio::kinetic::rpc::Exchange;
@@ -21,14 +24,14 @@ GetKeyRange::GetKeyRange(): Exchange() {
     r->set_maxreturned(200);
 }
 
-GetKeyRange::~GetKeyRange() { }
+GetKeyRange::~GetKeyRange() {}
 
-void GetKeyRange::ManageReply(Request &rep) {
+void GetKeyRange::ManageReply(Request *rep) {
     checkStatus(rep);
-    if (!status_)
-        return;
-    for (const auto &k: rep.cmd.body().range().keys())
-        out_.push_back(k);
+    if (status_) {
+        for (const auto &k : rep->cmd.body().range().keys())
+            out_.push_back(k);
+    }
 }
 
 void GetKeyRange::Start(const char *k) {
@@ -59,6 +62,7 @@ void GetKeyRange::MaxItems(int32_t v) {
     cmd.mutable_body()->mutable_range()->set_maxreturned(v);
 }
 
-void GetKeyRange::Steal (std::vector<std::string> &v) {
-    out_.swap(v);
+void GetKeyRange::Steal(std::vector<std::string> *v) {
+    assert(v != nullptr);
+    v->swap(out_);
 }

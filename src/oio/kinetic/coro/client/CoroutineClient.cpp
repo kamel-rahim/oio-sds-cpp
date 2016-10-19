@@ -1,21 +1,23 @@
-/** Copyright 2016 Contributors (see the AUTHORS file)
+/**
+ * Copyright 2016 Contributors (see the AUTHORS file)
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License,
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
- * obtain one at https://mozilla.org/MPL/2.0/ */
+ * obtain one at https://mozilla.org/MPL/2.0/
+ */
 
 #include <netinet/in.h>
+
+#include <libmill.h>
 
 #include <utility>
 #include <algorithm>
 #include <sstream>
 
-#include <libmill.h>
-
-#include <utils/macros.h>
-#include <utils/utils.h>
-#include <utils/net.h>
-#include "CoroutineClient.h"
+#include "utils/macros.h"
+#include "utils/utils.h"
+#include "utils/net.h"
+#include "oio/kinetic/coro/client/CoroutineClient.h"
 
 using net::MillSocket;
 using oio::kinetic::rpc::Request;
@@ -48,7 +50,7 @@ std::string CoroutineClient::Id() const {
 
 std::string CoroutineClient::DebugString() const {
     std::stringstream ss;
-    ss << "CoroKC{url:"<< url_ << ",sock:" << sock_->Debug() << '}';
+    ss << "CoroKC{url:" << url_ << ",sock:" << sock_->Debug() << '}';
     return ss.str();
 }
 
@@ -67,13 +69,12 @@ CoroutineClient::pop_rpc(int64_t seqid) {
     return pe;
 }
 
-bool CoroutineClient::manage(oio::kinetic::rpc::Request &req) {
-
-    const auto id = req.cmd.header().connectionid();
+bool CoroutineClient::manage(oio::kinetic::rpc::Request *req) {
+    const auto id = req->cmd.header().connectionid();
     if (id > 0)
         ctx.cnx_id_ = id;
 
-    auto ack = req.cmd.header().acksequence();
+    auto ack = req->cmd.header().acksequence();
     auto pe = pop_rpc(ack);
     if (pe.get() != nullptr) {
         pe->ManageReply(req);
@@ -86,16 +87,17 @@ bool CoroutineClient::manage(oio::kinetic::rpc::Request &req) {
 }
 
 coroutine void CoroutineClient::run_agent_consumer(chan done) {
-
-    assert (sock_->fileno() < 0);
+    assert(sock_->fileno() < 0);
     int evt{0};
     int64_t handshake_deadline = mill_now() + 5000;
 
     DLOG(INFO) << "K< starting";
-    //sock_->setcork();
-    //sock_->setnodelay();
-    sock_->setrcvbuf(1024*1024);
-    sock_->setsndbuf(1024*1024);
+
+    // TODO(jfs) we need a sock factory, here
+    // sock_->setcork();
+    // sock_->setnodelay();
+    sock_->setrcvbuf(1024 * 1024);
+    sock_->setsndbuf(1024 * 1024);
 
     // Wait for an established connection
     if (0 > (sock_->connect(url_.c_str()))) {
@@ -107,7 +109,7 @@ coroutine void CoroutineClient::run_agent_consumer(chan done) {
         DLOG(ERROR) << "K< connection error (network)";
         goto out;
     }
-    if (!(evt & MILLSOCKET_EVENT)) { // timeout
+    if (!(evt & MILLSOCKET_EVENT)) {  // timeout
         DLOG(ERROR) << "K< connection timeout";
         goto out;
     }
@@ -115,14 +117,14 @@ coroutine void CoroutineClient::run_agent_consumer(chan done) {
     // wait for a banner
     while (running_) {
         oio::kinetic::rpc::Request banner;
-        int err = banner.Read(*(sock_.get()), handshake_deadline);
+        int err = banner.Read(sock_.get(), handshake_deadline);
         if (err == 0) {
             if (banner.cmd.status().code() !=
-                    proto::Command_Status_StatusCode_SUCCESS) {
+                proto::Command_Status_StatusCode_SUCCESS) {
                 LOG(ERROR) << "K< device about to close the CNX";
                 goto out;
             } else {
-                manage(banner);
+                manage(&banner);
                 break;
             }
         }
@@ -138,9 +140,9 @@ coroutine void CoroutineClient::run_agent_consumer(chan done) {
         // consume frames from the device
         while (running_) {
             oio::kinetic::rpc::Request msg;
-            int err = msg.Read(*(sock_.get()), mill_now() + 1000);
+            int err = msg.Read(sock_.get(), mill_now() + 1000);
             if (err == 0) {
-                if (!manage(msg)) {
+                if (!manage(&msg)) {
                     DLOG(INFO) << "K< Frame management error";
                     break;
                 }
@@ -157,7 +159,7 @@ coroutine void CoroutineClient::run_agent_consumer(chan done) {
         chclose(from_producer);
     }
 
-    out:
+out:
     DLOG(INFO) << "K< exiting!";
     chs(done, int, SIGNAL_AGENT_STOP);
 }
@@ -171,7 +173,6 @@ void CoroutineClient::abort_rpc(
 }
 
 void CoroutineClient::abort_all_rpc() {
-
     LOG(INFO) << "Aborting waiting & pending RPC";
     while (!waiting_.empty()) {
         auto pe = waiting_.front();
@@ -181,15 +182,15 @@ void CoroutineClient::abort_all_rpc() {
 
     decltype(pending_) tmp;
     tmp.swap(pending_);
-    for (auto pe: tmp)
+    for (auto pe : tmp)
         pe->ManageError(ECONNRESET);
-    for (auto pe: tmp)
+    for (auto pe : tmp)
         pe->Signal();
     tmp.clear();
 }
 
 void CoroutineClient::abort_stalled_rpc(int64_t now) {
-    for (auto pe: pending_) {
+    for (auto pe : pending_) {
         if (now > pe->Deadline()) {
             abort_rpc(pe, ETIMEDOUT);
         }
@@ -198,7 +199,7 @@ void CoroutineClient::abort_stalled_rpc(int64_t now) {
 
 bool CoroutineClient::start_rpc(std::shared_ptr<PendingExchange> pe) {
     pending_.push_back(pe);
-    int errcode = pe->Write(*(sock_.get()), ctx, mill_now()+1000);
+    int errcode = pe->Write(sock_.get(), &ctx, mill_now() + 1000);
     if (errcode == 0) {
         return true;
     } else {
@@ -241,7 +242,7 @@ coroutine void CoroutineClient::run_agent_producer(chan done) {
 out:
     // shut the reading so that the consumer ends (the producer is already
     // being stopped)
-    // TODO make shutdown available as a socket method
+    // TODO(jfs) make shutdown available as a socket method
     ::shutdown(sock_->fileno(), SHUT_RD);
 
     DLOG(INFO) << "K> exiting!";
@@ -250,7 +251,6 @@ out:
 
 coroutine void CoroutineClient::run_agents() {
     while (running_) {
-
         DLOG(INFO) << "Starting agents for " << DebugString();
 
         // New connection, new sequence ID!

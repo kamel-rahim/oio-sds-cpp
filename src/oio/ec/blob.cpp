@@ -1,25 +1,29 @@
-/** Copyright (c) 2016 Contributors (see the AUTHORS file)
+/**
+ * Copyright (c) 2016 Contributors (see the AUTHORS file)
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License,
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
- * obtain one at https://mozilla.org/MPL/2.0/ */
+ * obtain one at https://mozilla.org/MPL/2.0/
+ */
+
 #include <fcntl.h>
 #include <unistd.h>
 #include <pwd.h>
 
-#include <string>
-#include <iostream>
-#include <sstream>
-#include <vector>
-#include <map>
-
-#include <glog/logging.h>
 #include <libmill.h>
+#include <glog/logging.h>
 #include <liberasurecode/erasurecode.h>
 #include <liberasurecode/erasurecode_helpers.h>
 
-#include <utils/utils.h>
-#include <oio/ec/blob.h>
+#include <iostream>
+#include <map>
+#include <vector>
+#include <algorithm>
+#include <cassert>
+
+#include "utils/utils.h"
+#include "oio/ec/blob.h"
+#include "oio/local/blob.h"
 
 
 using oio::ec::blob::DownloadBuilder;
@@ -29,44 +33,37 @@ using oio::api::blob::Status;
 using oio::api::blob::Errno;
 using oio::api::blob::Cause;
 
-
 namespace blob = ::oio::api::blob;
 
-#include <oio/local/blob.h>
 
 struct frag_array_set {
     unsigned int num_fragments;
     char **array;
 
-    frag_array_set(): num_fragments{0}, array{nullptr} {}
+    frag_array_set() : num_fragments{0}, array{nullptr} {}
 };
 
 class EcDownload : public oio::api::blob::Download {
     friend class DownloadBuilder;
 
-  public:
+ public:
     bool Target(const oio::ec::blob::rawxSet &to) {
         targets.insert(to);
         return true;
-    };
+    }
 
     void SetXattr(const std::string &k, const std::string &v) {
         xattr[k] = v;
         DLOG(INFO) << "Received xattr [" << k << "]";
-    };
-
-    ~EcDownload() {
-        DLOG(INFO) << __FUNCTION__;
-
     }
 
-    size_t add_item_to_missing_mask(unsigned long mask, long pos) {
-        if (pos < 0) {
+    ~EcDownload() { DLOG(INFO) << __FUNCTION__; }
+
+    uint64_t add_item_to_missing_mask(uint64_t mask, int pos) {
+        if (pos < 0)
             return mask;
-        }
-        unsigned long f = 1L << pos;
-        mask |= f;
-        return mask;
+        register uint64_t f = 1L << pos;
+        return mask | f;
     }
 
     static int create_frags_array_set(struct frag_array_set *set,
@@ -74,26 +71,24 @@ class EcDownload : public oio::api::blob::Download {
             unsigned int num_data_frags,
             char **parity,
             unsigned int num_parity_frags,
-            unsigned long missing_mask) {
+            uint64_t missing_mask) {
         int rc = 0;
         unsigned int num_frags = 0;
-        unsigned long i = 0;
         fragment_header_t *header = NULL;
         size_t size = (num_data_frags + num_parity_frags) * sizeof(char *);
-        char **array = (char **) malloc(size);
+        char **array = reinterpret_cast<char **>(malloc(size));
 
         if (array == NULL) {
             rc = -1;
             goto out;
         }
 
-        //add data frags
+        // add data frags
         memset(array, 0, size);
-        for (i = 0; i < num_data_frags; i++) {
-            if ((missing_mask | 1L << i) == 1) {
+        for (unsigned int i = 0; i < num_data_frags; i++) {
+            if ((missing_mask | 1L << i) == 1)
                 continue;
-            }
-            header = (fragment_header_t *) data[i];
+            header = reinterpret_cast<fragment_header_t *>(data[i]);
             if (header == NULL ||
                 header->magic != LIBERASURECODE_FRAG_HEADER_MAGIC) {
                 continue;
@@ -101,12 +96,11 @@ class EcDownload : public oio::api::blob::Download {
             array[num_frags++] = data[i];
         }
 
-        //add parity frags
-        for (i = 0; i < num_parity_frags; i++) {
-            if ((missing_mask | 1L << (i + num_data_frags)) == 1) {
+        // add parity frags
+        for (unsigned int i = 0; i < num_parity_frags; i++) {
+            if ((missing_mask | 1L << (i + num_data_frags)) == 1)
                 continue;
-            }
-            header = (fragment_header_t *) parity[i];
+            header = reinterpret_cast<fragment_header_t*>(parity[i]);
             if (header == NULL ||
                 header->magic != LIBERASURECODE_FRAG_HEADER_MAGIC) {
                 continue;
@@ -127,7 +121,7 @@ out:
         fragments_needed = NULL;
         char *out_data = NULL;
         uint64_t out_data_len = 0;
-        unsigned long mask = 0;
+        uint64_t mask = 0;
         int rc = 0;
 
         struct frag_array_set frags;
@@ -139,14 +133,11 @@ out:
         args.m = mVal;
         args.hd = 3;
 
-        /*
-         * Set up data and parity fragments.
-         */
-
-        fragments_needed = (int *) malloc(kVal * mVal * sizeof(int));
+        // Set up data and parity fragments.
+        fragments_needed =
+                reinterpret_cast<int *>(malloc(kVal * mVal * sizeof(int)));
         if (!fragments_needed) {
-            LOG(ERROR)
-                    << "LIBERASURECODE: Could not allocate memory for fragments";
+            LOG(ERROR) << "LIBERASURECODE: Memory allocation failure";
             return Status(Cause::InternalError);
         }
         memset(fragments_needed, 0, kVal * mVal * sizeof(int));
@@ -158,27 +149,30 @@ out:
             return Status(Cause::InternalError);
         }
 
-        /*
-         * read data and parity
-         */
-        encoded_data = (char **) malloc(sizeof(char *) * kVal);
+        // read data and parity
+        encoded_data =
+                reinterpret_cast<char **>(malloc(sizeof(char *) * kVal));
         if (NULL == *encoded_data) {
             LOG(ERROR) << "LIBERASURECODE: Could not allocate data buffer";
             return Status(Cause::InternalError);
         }
 
-        encoded_parity = (char **) malloc(sizeof(char *) * mVal);
+        encoded_parity =
+                reinterpret_cast<char **>(malloc(sizeof(char *) * mVal));
         if (NULL == *encoded_parity) {
             LOG(ERROR) << "LIBERASURECODE: Could not allocate parity buffer";
             return Status(Cause::InternalError);
         }
 
         // read from rawx
-        for (const auto &to: targets) {
+        for (const auto &to : targets) {
+            char buf[1024];
             const char *homedir;
 
             if ((homedir = getenv("HOME")) == NULL) {
-                homedir = getpwuid(getuid())->pw_dir;
+                struct passwd pwd, *ppwd{nullptr};
+                ::getpwuid_r(getuid(), &pwd, buf, sizeof(buf), &ppwd);
+                homedir = pwd.pw_dir;
             }
 
             std::string path = std::string(homedir) + "/oio/rawx-" +
@@ -194,11 +188,11 @@ out:
             if (rc.Ok()) {
                 std::vector<uint8_t> buf;
                 while (!dl->IsEof()) {
-                    dl->Read(buf);
+                    dl->Read(&buf);
                 }
                 int size = buf.size();
                 encoded_fragment_len = size;
-                p = (char *) malloc(sizeof(char) * size);
+                p = reinterpret_cast<char*>(malloc(sizeof(char) * size));
                 memcpy(p, &buf[0], buf.size());
             }
 
@@ -207,23 +201,20 @@ out:
             else
                 encoded_parity[to.chunk_number - kVal] = p;
 
-            if (p == NULL)  // oups!!!  missing chunk!
-                mask = add_item_to_missing_mask(mask, kVal + mVal - 1 -
-                                                      to.chunk_number);
+            if (p == NULL) {  // oups!!!  missing chunk!
+                mask = add_item_to_missing_mask(
+                        mask, kVal + mVal - 1 - to.chunk_number);
+            }
         }
 
-
-        /*
-         * Run Decode
-         */
+        // Run Decode
         create_frags_array_set(&frags, encoded_data, args.k, encoded_parity,
                                args.m, mask);
         rc = liberasurecode_decode(desc, frags.array, frags.num_fragments,
                                    encoded_fragment_len, 1,
                                    &out_data, &out_data_len);
 
-        if (rc == 0) { // decode ok we are done!
-//                bok = true ;
+        if (rc == 0) {  // decode ok we are done!
             if (out_data_len < size_expected) {
                 buffer.resize(out_data_len);
                 memcpy(&buffer[0], out_data, out_data_len);
@@ -239,29 +230,27 @@ out:
         CleanUp();
         liberasurecode_instance_destroy(desc);
 
-        if (rc == 0) // decode ok we are done!
+        if (rc == 0)  // decode ok we are done!
             return Status(Cause::OK);
         else
             return Status(Cause::InternalError);
     }
 
-    bool IsEof() override {
-        return done;
-    }
+    bool IsEof() override { return done; }
 
-    int32_t Read(std::vector<uint8_t> &buf) override {
+    int32_t Read(std::vector<uint8_t> *buf) override {
+        assert(buf != nullptr);
         if (buffer.size() <= 0) {
             return 0;
         }
 
-        buffer.swap(buf);
+        buf->swap(buffer);
         buffer.resize(0);
         done = true;
-        return buf.size();
+        return buf->size();
     }
 
     void CleanUp() {
-
         if (encoded_data) {
             for (int j = 0; j < kVal; j++) {
                 if (encoded_data[j])
@@ -283,14 +272,13 @@ out:
         fragments_needed = NULL;
     }
 
-  private:
+ private:
     FORBID_MOVE_CTOR(EcDownload);
     FORBID_COPY_CTOR(EcDownload);
 
-    EcDownload() {
-    }
+    EcDownload() {}
 
-  private:
+ private:
     std::vector<uint8_t> buffer;
     std::set<oio::ec::blob::rawxSet> targets;
     std::map<std::string, std::string> xattr;
@@ -305,28 +293,22 @@ out:
     uint64_t offset, size_expected;
 };
 
-DownloadBuilder::DownloadBuilder() {
-}
+DownloadBuilder::DownloadBuilder() {}
 
-DownloadBuilder::~DownloadBuilder() {
-}
+DownloadBuilder::~DownloadBuilder() {}
 
 std::unique_ptr<blob::Download> DownloadBuilder::Build() {
-    EcDownload *ul = new EcDownload();
-
+    auto ul = new EcDownload();
     ul->kVal = kVal;
     ul->mVal = mVal;
     ul->nbChunks = nbChunks;
     ul->chunkSize = chunkSize;
     ul->offset = offset;
     ul->size_expected = size_expected;
-
-    for (const auto &to: targets)
+    for (const auto &to : targets)
         ul->Target(to);
-
-    for (const auto &e: xattrs)
+    for (const auto &e : xattrs)
         ul->SetXattr(e.first, e.second);
-
     return std::unique_ptr<EcDownload>(ul);
 }
 
@@ -334,48 +316,36 @@ std::unique_ptr<blob::Download> DownloadBuilder::Build() {
 class EcRemoval : public oio::api::blob::Removal {
     friend class RemovalBuilder;
 
-  public:
-    EcRemoval() {
-    }
+ public:
+    EcRemoval() {}
 
-    ~EcRemoval() {
-    }
+    ~EcRemoval() {}
 
-    Status Prepare() override {
-        return Status(Cause::OK);
-    }
+    Status Prepare() override { return Status(Cause::OK); }
 
-    Status Commit() override {
-        return Status();
-    }
+    Status Commit() override { return Status(); }
 
-
-    Status Abort() override {
-        return Status();
-    }
-
-  private:
+    Status Abort() override { return Status(); }
 };
 
-RemovalBuilder::RemovalBuilder() {
-}
+RemovalBuilder::RemovalBuilder() {}
 
-RemovalBuilder::~RemovalBuilder() {
-}
+RemovalBuilder::~RemovalBuilder() {}
+
 
 class EcUpload : public oio::api::blob::Upload {
     friend class UploadBuilder;
 
-  public:
+ public:
     bool Target(const oio::ec::blob::rawxSet &to) {
         targets.insert(to);
         return true;
-    };
+    }
 
     void SetXattr(const std::string &k, const std::string &v) override {
         xattr[k] = v;
         DLOG(INFO) << "Received xattr [" << k << "]";
-    };
+    }
 
     Status Prepare() {
         encoded_data = NULL;
@@ -394,16 +364,15 @@ class EcUpload : public oio::api::blob::Upload {
         args.m = mVal;
         args.hd = 3;
 
-        int err = posix_memalign((void **) &data, 16, ChunkSize);
+        int err = ::posix_memalign(
+                reinterpret_cast<void**>(&data), 16, ChunkSize);
         if (err != 0 || !data) {
             LOG(ERROR) << "LIBERASURECODE: Could not allocate memory for data";
             return Status(Cause::InternalError);
         }
         memcpy(data, &buffer[0], ChunkSize);
 
-        /*
-        * Get handle
-        */
+        /* Get handle */
 
         int desc = liberasurecode_instance_create(
                 EC_BACKEND_LIBERASURECODE_RS_VAND, &args);
@@ -412,9 +381,7 @@ class EcUpload : public oio::api::blob::Upload {
             return Status(Cause::InternalError);
         }
 
-        /*
-        * Get encode
-        */
+        /* Get encode */
 
         int rc = liberasurecode_encode(desc, data, ChunkSize,
                                        &encoded_data, &encoded_parity,
@@ -424,11 +391,14 @@ class EcUpload : public oio::api::blob::Upload {
             return Status(Cause::InternalError);
         }
 
-        for (const auto &to: targets) {
+        for (const auto &to : targets) {
+            char buf[1024];
             const char *homedir;
 
-            if ((homedir = getenv("HOME")) == NULL) {
-                homedir = getpwuid(getuid())->pw_dir;
+            if ((homedir = ::getenv("HOME")) == NULL) {
+                struct passwd pwd, *ppwd{nullptr};
+                ::getpwuid_r(getuid(), &pwd, buf, sizeof(buf), &ppwd);
+                homedir = pwd.pw_dir;
             }
 
             std::string path = std::string(homedir) + "/oio/rawx-" +
@@ -450,8 +420,9 @@ class EcUpload : public oio::api::blob::Upload {
                 std::string s(tmp, encoded_fragment_len);
                 ul->Write(s);
                 ul->Commit();
-            } else
+            } else {
                 ul->Abort();
+            }
         }
 
         CleanUp();
@@ -504,18 +475,16 @@ class EcUpload : public oio::api::blob::Upload {
         yield();
     }
 
-    ~EcUpload() {
-    }
+    ~EcUpload() {}
 
-  private:
+ private:
     FORBID_COPY_CTOR(EcUpload);
 
     FORBID_MOVE_CTOR(EcUpload);
 
-    EcUpload() {
-    }
+    EcUpload() {}
 
-  private:
+ private:
     std::vector<uint8_t> buffer;
     uint32_t buffer_limit;
     std::string chunkid;
@@ -530,29 +499,20 @@ class EcUpload : public oio::api::blob::Upload {
     char *data, **parity;
 };
 
-UploadBuilder::UploadBuilder() {
-}
+UploadBuilder::UploadBuilder() {}
 
-UploadBuilder::~UploadBuilder() {
-}
+UploadBuilder::~UploadBuilder() {}
 
 std::unique_ptr<blob::Upload> UploadBuilder::Build() {
-    EcUpload *ul = new EcUpload();
-
+    auto ul = new EcUpload();
     ul->buffer_limit = block_size;
     ul->kVal = kVal;
     ul->mVal = mVal;
     ul->nbChunks = nbChunks;
     ul->offset_pos = offset_pos;
-
-    for (const auto &to: targets)
+    for (const auto &to : targets)
         ul->Target(to);
-
-    for (const auto &e: xattrs)
+    for (const auto &e : xattrs)
         ul->SetXattr(e.first, e.second);
-
     return std::unique_ptr<EcUpload>(ul);
 }
-
-
-

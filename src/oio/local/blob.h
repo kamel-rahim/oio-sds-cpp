@@ -1,22 +1,25 @@
-/** Copyright (c) 2016 Contributors (see the AUTHORS file)
+/**
+ * Copyright (c) 2016 Contributors (see the AUTHORS file)
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License,
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
- * obtain one at https://mozilla.org/MPL/2.0/ */
+ * obtain one at https://mozilla.org/MPL/2.0/
+ */
 
-#ifndef OIO_KINETIC__OIO_LOCAL__BLOB_H
-#define OIO_KINETIC__OIO_LOCAL__BLOB_H
+#ifndef SRC_OIO_LOCAL_BLOB_H_
+#define SRC_OIO_LOCAL_BLOB_H_
 
 #include <string>
 #include <memory>
-#include <oio/api/blob.h>
+
+#include "oio/api/blob.h"
 
 namespace oio {
 namespace local {
 namespace blob {
 
 class UploadBuilder {
-  public:
+ public:
     UploadBuilder();
 
     ~UploadBuilder();
@@ -48,13 +51,13 @@ class UploadBuilder {
      */
     std::string PathPending() const;
 
-  private:
+ private:
     std::string path;
     unsigned int fmode, dmode;
 };
 
 class DownloadBuilder {
-  public:
+ public:
     DownloadBuilder();
 
     ~DownloadBuilder();
@@ -63,12 +66,12 @@ class DownloadBuilder {
 
     std::unique_ptr<oio::api::blob::Download> Build();
 
-  private:
+ private:
     std::string path;
 };
 
 class RemovalBuilder {
-  public:
+ public:
     RemovalBuilder();
 
     ~RemovalBuilder();
@@ -77,12 +80,12 @@ class RemovalBuilder {
 
     std::unique_ptr<oio::api::blob::Removal> Build();
 
-  private:
+ private:
     std::string path;
 };
 
 class ListingBuilder {
-  public:
+ public:
     ListingBuilder();
 
     ~ListingBuilder();
@@ -93,12 +96,12 @@ class ListingBuilder {
 
     std::unique_ptr<oio::api::blob::Listing> Build();
 
-  private:
+ private:
     std::string start, end;
 };
 
-} // namespace rpc
-} // namespace local
-} // namespace oio
+}  // namespace blob
+}  // namespace local
+}  // namespace oio
 
-#endif //OIO_KINETIC__OIO_LOCAL__BLOB_H
+#endif  // SRC_OIO_LOCAL_BLOB_H_

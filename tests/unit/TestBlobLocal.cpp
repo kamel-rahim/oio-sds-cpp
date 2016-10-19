@@ -10,9 +10,9 @@
 
 #include <gtest/gtest.h>
 
-#include <utils/macros.h>
-#include <utils/utils.h>
-#include <oio/local/blob.h>
+#include "utils/macros.h"
+#include "utils/utils.h"
+#include "oio/local/blob.h"
 
 using oio::local::blob::UploadBuilder;
 using oio::local::blob::DownloadBuilder;
@@ -20,8 +20,9 @@ using oio::local::blob::RemovalBuilder;
 using oio::api::blob::Cause;
 
 DEFINE_string(test_file_path, "/tmp/blob", "Path of the random file");
-DEFINE_uint64(test_file_size, 8*1024*1024, "Size of the sample file");
-DEFINE_uint64(test_batch_size, 1024*1024, "Size of the batches to write in the sample file");
+DEFINE_uint64(test_file_size, 8 * 1024 * 1024, "Size of the sample file");
+DEFINE_uint64(test_batch_size, 1024 * 1024,
+              "Size of the batches to write in the sample file");
 
 #define ASSERT_ABSENT(Builder) do { \
     ASSERT_FALSE(isPresent(FLAGS_test_file_path)); \
@@ -41,7 +42,7 @@ static int getMode(const std::string &path) {
     return st.st_mode;
 }
 
-static void test_remove (void) {
+static void test_remove(void) {
     RemovalBuilder builder;
     builder.Path(FLAGS_test_file_path);
     auto rem = builder.Build();
@@ -51,7 +52,7 @@ static void test_remove (void) {
     ASSERT_TRUE(rc.Ok());
 }
 
-static void test_download (void) {
+static void test_download(void) {
     DownloadBuilder builder;
     builder.Path(FLAGS_test_file_path);
     auto dl = builder.Build();
@@ -60,22 +61,21 @@ static void test_download (void) {
 
     while (!dl->IsEof()) {
         std::vector<uint8_t> buf;
-        int32_t r = dl->Read(buf);
+        int32_t r = dl->Read(&buf);
         (void) r;
     }
 }
 
-static void test_upload (void) {
+static void test_upload(void) {
     UploadBuilder builder;
     builder.Path(FLAGS_test_file_path);
     auto ul = builder.Build();
     auto rc = ul->Prepare();
     ASSERT_TRUE(rc.Ok());
 
-
     std::string blah;
     uint64_t max{FLAGS_test_file_size};
-    append_string_random(blah, FLAGS_test_batch_size, "0123456789ABCDEF");
+    append_string_random(&blah, FLAGS_test_batch_size, "0123456789ABCDEF");
     for (uint64_t written = 0; written < max;) {
         if (written + blah.size() > max)
             blah.resize(blah.size() - written);
@@ -87,14 +87,14 @@ static void test_upload (void) {
     ASSERT_TRUE(rc.Ok());
 }
 
-TEST(Local,Cycle) {
+TEST(Local, Cycle) {
     test_upload();
     test_download();
     test_remove();
 }
 
 // Test Abort() before Prepare()
-TEST(Local,UploadInit) {
+TEST(Local, UploadInit) {
     UploadBuilder builder;
     builder.Path(FLAGS_test_file_path);
     auto ul = builder.Build();
@@ -105,8 +105,8 @@ TEST(Local,UploadInit) {
 }
 
 // Test Abort() after Prepare()
-TEST(Local,UploadAbort) {
-    const int mode{0615}; // dummy mode different from the default
+TEST(Local, UploadAbort) {
+    const int mode{0615};  // dummy mode different from the default
     UploadBuilder builder;
     builder.Path(FLAGS_test_file_path);
     builder.FileMode(mode);
@@ -123,14 +123,15 @@ TEST(Local,UploadAbort) {
 }
 
 // Test Prepare() when the temp file already exists
-TEST(Local,UploadAlreadyPending) {
+TEST(Local, UploadAlreadyPending) {
     UploadBuilder builder;
     builder.Path(FLAGS_test_file_path);
     builder.FileMode(0610);
     auto ul = builder.Build();
 
-    int fd = ::open(builder.PathPending().c_str(), O_CREAT|O_EXCL|O_WRONLY, 0600);
-    ASSERT_GE(fd,0);
+    int fd = ::open(builder.PathPending().c_str(), O_CREAT | O_EXCL | O_WRONLY,
+                    0600);
+    ASSERT_GE(fd, 0);
     ASSERT_EQ(getMode(builder.PathPending()), 0600);
     ASSERT_FALSE(isPresent(FLAGS_test_file_path));
 
@@ -152,14 +153,15 @@ TEST(Local,UploadAlreadyPending) {
 }
 
 // Test Prepare() when the final file already exists
-TEST(Local,UploadAlreadyFinal) {
+TEST(Local, UploadAlreadyFinal) {
     UploadBuilder builder;
     builder.Path(FLAGS_test_file_path);
     builder.FileMode(0610);
     auto ul = builder.Build();
 
-    int fd = ::open(FLAGS_test_file_path.c_str(), O_CREAT|O_EXCL|O_WRONLY, 0600);
-    ASSERT_GE(fd,0);
+    int fd = ::open(FLAGS_test_file_path.c_str(), O_CREAT | O_EXCL | O_WRONLY,
+                    0600);
+    ASSERT_GE(fd, 0);
     ASSERT_FALSE(isPresent(builder.PathPending()));
     ASSERT_EQ(getMode(FLAGS_test_file_path), 0600);
 
@@ -185,6 +187,6 @@ int main(int argc, char **argv) {
     google::InitGoogleLogging(argv[0]);
     ::testing::InitGoogleTest(&argc, argv);
     FLAGS_logtostderr = true;
-    append_string_random(FLAGS_test_file_path, 16, "0123456789ABCDEF");
+    append_string_random(&FLAGS_test_file_path, 16, "0123456789ABCDEF");
     return RUN_ALL_TESTS();
 }

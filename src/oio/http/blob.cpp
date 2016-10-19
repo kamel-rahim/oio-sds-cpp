@@ -1,24 +1,19 @@
-/** Copyright (c) 2016 Contributors (see the AUTHORS file)
+/**
+ * Copyright (c) 2016 Contributors (see the AUTHORS file)
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License,
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
- * obtain one at https://mozilla.org/MPL/2.0/ */
-
-#include <string>
-#include <functional>
-#include <sstream>
-#include <memory>
-#include <iomanip>
-#include <cstring>
+ * obtain one at https://mozilla.org/MPL/2.0/
+ */
 
 #include <http-parser/http_parser.h>
 
-#include <utils/macros.h>
-#include <utils/net.h>
-#include <utils/Http.h>
-#include <oio/api/blob.h>
+#include <iomanip>
+#include <cstring>
+#include <vector>
 
-#include "blob.h"
+#include "utils/Http.h"
+#include "oio/http/blob.h"
 
 using oio::http::imperative::RemovalBuilder;
 using oio::http::imperative::UploadBuilder;
@@ -32,7 +27,7 @@ using oio::api::blob::Cause;
 class HttpRemoval : public Removal {
     friend class RemovalBuilder;
 
-  public:
+ public:
     HttpRemoval();
 
     virtual ~HttpRemoval();
@@ -43,14 +38,14 @@ class HttpRemoval : public Removal {
 
     Status Abort() override;
 
-  private:
+ private:
     http::Call rpc;
 };
 
 class HttpUpload : public Upload {
     friend class UploadBuilder;
 
-  public:
+ public:
     HttpUpload();
 
     ~HttpUpload();
@@ -65,7 +60,7 @@ class HttpUpload : public Upload {
 
     void Write(const uint8_t *buf, uint32_t len) override;
 
-  private:
+ private:
     http::Request request;
     http::Reply reply;
 };
@@ -73,7 +68,7 @@ class HttpUpload : public Upload {
 class HttpDownload : public Download {
     friend class DownloadBuilder;
 
-  public:
+ public:
     HttpDownload();
 
     ~HttpDownload();
@@ -82,22 +77,19 @@ class HttpDownload : public Download {
 
     Status Prepare() override;
 
-    int32_t Read(std::vector<uint8_t> &buf) override;
+    int32_t Read(std::vector<uint8_t> *buf) override;
 
-  private:
+ private:
     http::Request request;
     http::Reply reply;
 };
 
 
+HttpRemoval::HttpRemoval() {}
 
-HttpRemoval::HttpRemoval() {
-}
+HttpRemoval::~HttpRemoval() {}
 
-HttpRemoval::~HttpRemoval() {
-}
-
-/* TODO Manage prepare/commit/abort semantics.
+/* TODO(jfs) Manage prepare/commit/abort semantics.
  * For example, we could prepare the request here, just sending the headers with
  * the Transfer-Enncoding set to chunked. So we could wait for the commit to
  * finish the request */
@@ -107,10 +99,10 @@ Status HttpRemoval::Prepare() {
 
 Status HttpRemoval::Commit() {
     std::string out;
-    auto rc = rpc.Run("", out);
+    auto rc = rpc.Run("", &out);
     if (rc == http::Code::OK || rc == http::Code::Done)
         return Status();
-    // TODO better manage the error
+    // TODO(jfs) better error management
     return Status(Cause::InternalError);
 }
 
@@ -119,27 +111,19 @@ Status HttpRemoval::Abort() {
     return Status(Cause::Unsupported);
 }
 
-RemovalBuilder::RemovalBuilder() {
-}
+RemovalBuilder::RemovalBuilder() {}
 
-RemovalBuilder::~RemovalBuilder() {
-}
+RemovalBuilder::~RemovalBuilder() {}
 
-void RemovalBuilder::Name(const std::string &s) {
-    name.assign(s);
-}
+void RemovalBuilder::Name(const std::string &s) { name.assign(s); }
 
-void RemovalBuilder::Host(const std::string &s) {
-    host.assign(s);
-}
+void RemovalBuilder::Host(const std::string &s) { host.assign(s); }
 
 void RemovalBuilder::Field(const std::string &k, const std::string &v) {
     fields[k] = v;
 }
 
-void RemovalBuilder::Trailer(const std::string &k) {
-    trailers.insert(k);
-}
+void RemovalBuilder::Trailer(const std::string &k) { trailers.insert(k); }
 
 std::shared_ptr<oio::api::blob::Removal> RemovalBuilder::Build(
         std::shared_ptr<net::Socket> socket) {
@@ -150,11 +134,9 @@ std::shared_ptr<oio::api::blob::Removal> RemovalBuilder::Build(
 }
 
 
-HttpUpload::HttpUpload() : request(), reply() {
-}
+HttpUpload::HttpUpload() : request(), reply() {}
 
-HttpUpload::~HttpUpload() {
-}
+HttpUpload::~HttpUpload() {}
 
 void HttpUpload::SetXattr(const std::string &k, const std::string &v) {
     request.Field(k, v);
@@ -166,7 +148,7 @@ Status HttpUpload::Commit() {
     rc = reply.ReadHeaders();
     while (rc == http::Code::OK) {
         std::vector<uint8_t> out;
-        rc = reply.AppendBody(out);
+        rc = reply.AppendBody(&out);
     }
 
     if (reply.Get().parser.status_code / 100 == 2)
@@ -174,9 +156,7 @@ Status HttpUpload::Commit() {
     return Status(Cause::InternalError);
 }
 
-Status HttpUpload::Abort() {
-    return Status(Cause::Unsupported);
-}
+Status HttpUpload::Abort() { return Status(Cause::Unsupported); }
 
 Status HttpUpload::Prepare() {
     auto rc = request.WriteHeaders();
@@ -190,27 +170,19 @@ void HttpUpload::Write(const uint8_t *buf, uint32_t len) {
     request.Write(buf, len);
 }
 
-UploadBuilder::UploadBuilder() {
-}
+UploadBuilder::UploadBuilder() {}
 
-UploadBuilder::~UploadBuilder() {
-}
+UploadBuilder::~UploadBuilder() {}
 
-void UploadBuilder::Name(const std::string &s) {
-    name.assign(s);
-}
+void UploadBuilder::Name(const std::string &s) { name.assign(s); }
 
-void UploadBuilder::Host(const std::string &s) {
-    host.assign(s);
-}
+void UploadBuilder::Host(const std::string &s) { host.assign(s); }
 
 void UploadBuilder::Field(const std::string &k, const std::string &v) {
     fields[k] = v;
 }
 
-void UploadBuilder::Trailer(const std::string &k) {
-    trailers.emplace(k);
-}
+void UploadBuilder::Trailer(const std::string &k) { trailers.emplace(k); }
 
 std::shared_ptr<oio::api::blob::Upload> UploadBuilder::Build(
         std::shared_ptr<net::Socket> socket) {
@@ -219,31 +191,24 @@ std::shared_ptr<oio::api::blob::Upload> UploadBuilder::Build(
     ul->request.Method("PUT");
     ul->request.Selector(name);
     ul->request.Field("Host", host);
-    for (const auto &t: trailers)
+    for (const auto &t : trailers)
         ul->request.Trailer(t);
-    for (const auto &e: fields)
+    for (const auto &e : fields)
         ul->request.Field(e.first, e.second);
-
     ul->reply.Socket(socket);
-
-    std::shared_ptr<Upload> shared(ul);
-    return shared;
+    return std::shared_ptr<Upload>(ul);
 }
 
 
+HttpDownload::HttpDownload() : request(), reply() {}
 
-HttpDownload::HttpDownload() : request(), reply() {
-}
-
-HttpDownload::~HttpDownload() {
-}
+HttpDownload::~HttpDownload() {}
 
 bool HttpDownload::IsEof() {
     return reply.Get().step == http::Reply::Step::Done;
 }
 
 Status HttpDownload::Prepare() {
-
     auto rc = request.WriteHeaders();
     if (rc != http::Code::OK && rc != http::Code::Done) {
         if (rc == http::Code::NetworkError)
@@ -268,29 +233,23 @@ Status HttpDownload::Prepare() {
     return Status(Cause::OK);
 }
 
-int32_t HttpDownload::Read(std::vector<uint8_t> &buf) {
-    buf.clear();
+int32_t HttpDownload::Read(std::vector<uint8_t> *buf) {
+    buf->clear();
     reply.AppendBody(buf);
-    return buf.size();
+    return buf->size();
 }
 
-DownloadBuilder::DownloadBuilder() {
-}
+DownloadBuilder::DownloadBuilder() {}
 
-DownloadBuilder::~DownloadBuilder() {
-}
+DownloadBuilder::~DownloadBuilder() {}
 
 void DownloadBuilder::Field(const std::string &k, const std::string &v) {
     fields[k] = v;
 }
 
-void DownloadBuilder::Host(const std::string &s) {
-    host.assign(s);
-}
+void DownloadBuilder::Host(const std::string &s) { host.assign(s); }
 
-void DownloadBuilder::Name(const std::string &s) {
-    name.assign(s);
-}
+void DownloadBuilder::Name(const std::string &s) { name.assign(s); }
 
 std::shared_ptr<oio::api::blob::Download> DownloadBuilder::Build(
         std::shared_ptr<net::Socket> socket) {
@@ -299,11 +258,8 @@ std::shared_ptr<oio::api::blob::Download> DownloadBuilder::Build(
     dl->request.Method("GET");
     dl->request.Selector(name);
     dl->request.Field("Host", host);
-    for (const auto &e: fields)
+    for (const auto &e : fields)
         dl->request.Field(e.first, e.second);
-
     dl->reply.Socket(socket);
-
-    std::shared_ptr<Download> shared(dl);
-    return shared;
+    return std::shared_ptr<Download>(dl);
 }

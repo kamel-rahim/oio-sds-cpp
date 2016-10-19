@@ -6,8 +6,8 @@
  * obtain one at https://mozilla.org/MPL/2.0/
  */
 
-#include "blob.h"
-#include <utils/macros.h>
+#include "oio/api/blob.h"
+#include "utils/macros.h"
 
 using oio::api::blob::Download;
 using oio::api::blob::Errno;
@@ -41,7 +41,7 @@ static inline const char *Status2Str(Cause s) {
     }
 }
 
-const char* Status::Name() const { return Status2Str(rc_); }
+const char *Status::Name() const { return Status2Str(rc_); }
 
 Cause _map(int err) {
     switch (err) {
@@ -65,11 +65,10 @@ Cause _map(int err) {
     }
 }
 
-Errno::Errno(int err): Status() {
+Errno::Errno(int err) : Status() {
     if (err != 0)
         rc_ = _map(err);
     msg_.assign(::strerror(err));
 }
 
-Errno::Errno(): Errno(errno) {
-}
+Errno::Errno() : Errno(errno) {}

@@ -1,20 +1,22 @@
-/** Copyright 2016 Contributors (see the AUTHORS file)
+/**
+ * Copyright 2016 Contributors (see the AUTHORS file)
  *
  * This Source Code Form is subject to the terms of the Mozilla Public License,
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
- * obtain one at https://mozilla.org/MPL/2.0/ */
+ * obtain one at https://mozilla.org/MPL/2.0/
+ */
 
-#ifndef OIO_KINETIC_PROXY__HEADERS_H
-#define OIO_KINETIC_PROXY__HEADERS_H 1
+#ifndef BIN_KINETIC_PROXY_HEADERS_H_
+#define BIN_KINETIC_PROXY_HEADERS_H_
 
 #include <string>
 
 #define OIO_HEADER_KINETIC_PREFIX "X-oio-meta-"
 
 class KineticHeader {
-  public:
-	enum Value {
-		Unexpected,
+ public:
+    enum Value {
+        Unexpected,
         Target,
         ContainerId,
         ContentId,
@@ -26,16 +28,22 @@ class KineticHeader {
         ChunkSize,
         ChunkPosition,
     };
-  private:
-	Value value;
-  public:
-	KineticHeader(): value{Value::Unexpected} {}
-	~KineticHeader() {}
+
+ private:
+    Value value;
+
+ public:
+    KineticHeader() : value{Value::Unexpected} {}
+
+    ~KineticHeader() {}
+
+    inline bool Matched() const { return value == Value::Unexpected; }
+
+    inline Value Get() const { return value; }
 
     void Parse(const std::string &k);
-    inline bool Matched() const { return value == Value::Unexpected; }
-    inline Value Get() const { return value; }
-	std::string Name() const;
+
+    std::string Name() const;
 };
 
-#endif
+#endif  // BIN_KINETIC_PROXY_HEADERS_H_

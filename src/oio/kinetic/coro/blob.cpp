@@ -6,24 +6,25 @@
  * obtain one at https://mozilla.org/MPL/2.0/
  */
 
-#include <string>
-#include <functional>
-#include <queue>
-#include <forward_list>
-
 #include <libmill.h>
 #include <rapidjson/filereadstream.h>
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
 
-#include <utils/macros.h>
-#include <oio/api/blob.h>
-#include <oio/kinetic/coro/blob.h>
-#include <oio/kinetic/coro/client/ClientInterface.h>
-#include <oio/kinetic/coro/rpc/Get.h>
-#include <oio/kinetic/coro/rpc/Put.h>
-#include <oio/kinetic/coro/rpc/Delete.h>
-#include <oio/kinetic/coro/rpc/GetKeyRange.h>
+#include <vector>
+#include <utility>
+#include <functional>
+#include <algorithm>
+#include <forward_list>
+#include <queue>
+
+#include "utils/macros.h"
+#include "oio/api/blob.h"
+#include "oio/kinetic/coro/blob.h"
+#include "oio/kinetic/coro/rpc/Get.h"
+#include "oio/kinetic/coro/rpc/Put.h"
+#include "oio/kinetic/coro/rpc/Delete.h"
+#include "oio/kinetic/coro/rpc/GetKeyRange.h"
 
 using oio::kinetic::blob::ListingBuilder;
 using oio::kinetic::blob::DownloadBuilder;
@@ -63,7 +64,7 @@ struct PendingGetSorter {
 class KineticDownload : public blob::Download {
     friend class DownloadBuilder;
 
-  public:
+ public:
     KineticDownload(const std::string &n, std::shared_ptr<ClientFactory> f,
             std::vector<std::string> t)
             : chunkid{n}, targets(), factory(f), running(), waiting(), done(),
@@ -72,14 +73,13 @@ class KineticDownload : public blob::Download {
         targets.swap(t);
     };
 
-    virtual ~KineticDownload() { }
+    virtual ~KineticDownload() {}
 
     Status Prepare() override {
-
         // List the chunks
         ListingBuilder builder(factory);
         builder.Name(chunkid);
-        for (const auto &to: targets)
+        for (const auto &to : targets)
             builder.Target(to);
 
         auto listing = builder.Build();
@@ -93,7 +93,7 @@ class KineticDownload : public blob::Download {
 
         std::string id, key;
         std::forward_list<PendingGet> chunks;
-        while (listing->Next(id, key)) {
+        while (listing->Next(&id, &key)) {
             std::string k(key);
             auto dash = k.rfind('-');
             if (dash == std::string::npos) {
@@ -125,17 +125,15 @@ class KineticDownload : public blob::Download {
             return p0.sequence < p1.sequence;
         });
 
-        for (auto &p: chunks)
+        for (auto &p : chunks)
             waiting.push(p);
 
         return Status();
     }
 
-    bool IsEof() override {
-        return waiting.empty() && running.empty();
-    }
+    bool IsEof() override { return waiting.empty() && running.empty(); }
 
-    int32_t Read(std::vector<uint8_t> &buf) override {
+    int32_t Read(std::vector<uint8_t> *buf) override {
         DLOG(INFO) << "Currently " << running.size() <<
                    " chunks downbloads running";
         while (running.size() < parallel_factor) {
@@ -157,11 +155,11 @@ class KineticDownload : public blob::Download {
         auto pg = running.front();
         running.pop();
         pg.sync->Wait();
-        pg.op->Steal(buf);
-        return buf.size();
+        pg.op->Steal(*buf);
+        return buf->size();
     }
 
-  private:
+ private:
     std::string chunkid;
     std::vector<std::string> targets;
     std::shared_ptr<ClientFactory> factory;
@@ -173,12 +171,12 @@ class KineticDownload : public blob::Download {
     unsigned int parallel_factor;
 };
 
-DownloadBuilder::DownloadBuilder(std::shared_ptr<ClientFactory> f):
+DownloadBuilder::DownloadBuilder(std::shared_ptr<ClientFactory> f) :
         factory(f), targets(), name() {
     assert(factory.get() != nullptr);
 }
 
-DownloadBuilder::~DownloadBuilder() { }
+DownloadBuilder::~DownloadBuilder() {}
 
 bool DownloadBuilder::Name(const std::string &n) {
     name.assign(n);
@@ -205,39 +203,40 @@ std::unique_ptr<blob::Download> DownloadBuilder::Build() {
     assert(!name.empty());
 
     std::vector<std::string> v;
-    for (const auto &t: targets)
+    for (const auto &t : targets)
         v.emplace_back(t);
-    return std::unique_ptr<KineticDownload>(new KineticDownload(name, factory, std::move(v)));
+    return std::unique_ptr<KineticDownload>(
+            new KineticDownload(name, factory, std::move(v)));
 }
 
 
 class KineticListing : public blob::Listing {
     friend class ListingBuilder;
 
-  public:
-    KineticListing(): clients(), name(), items(), next_item{0} { }
+ public:
+    KineticListing() : clients(), name(), items(), next_item{0} {}
 
-    ~KineticListing() { }
+    ~KineticListing() {}
 
     // Concurrently get the lists on each node
-    // TODO limit the parallelism to N (configurable) items
+    // TODO(jfs) limit the parallelism to N (configurable) items
     Status Prepare() override {
         items.clear();
 
         // Mark clients tat still have key
         std::vector<bool> readyv(clients.size());
         std::vector<std::string> markers;
-        for (int i=0,max=readyv.size(); i<max ;++i)
+        for (int i = 0, max = readyv.size(); i < max; ++i)
             readyv[i] = true;
-        for (int i=0,max=clients.size(); i<max ;++i)
+        for (int i = 0, max = clients.size(); i < max; ++i)
             markers.push_back(name + "-");
 
 
         for (;;) {
             // Stop iterating if not any drive reports it still has keys
-            // TODO this cann be a one-liner with the help of a lambda
+            // TODO(jfs) this cann be a one-liner with the help of a lambda
             bool any = false;
-            for (int i=0,max=readyv.size(); i<max && !any ;++i)
+            for (int i = 0, max = readyv.size(); i < max && !any; ++i)
                 any = readyv[i];
             if (!any)
                 break;
@@ -246,7 +245,7 @@ class KineticListing : public blob::Listing {
             std::vector<std::shared_ptr<Sync>> syncs;
 
             // Initial batch of listings
-            for (int i=0,max=readyv.size(); i<max ;++i) {
+            for (int i = 0, max = readyv.size(); i < max; ++i) {
                 if (!readyv[i])
                     continue;
                 auto gkr = new GetKeyRange;
@@ -257,19 +256,19 @@ class KineticListing : public blob::Listing {
                 ops[i].reset(gkr);
                 syncs.emplace_back(clients[i]->RPC(gkr));
             }
-            for (auto sync: syncs)
+            for (auto sync : syncs)
                 sync->Wait();
 
             for (unsigned int i = 0; i < ops.size(); ++i) {
                 if (!readyv[i])
                     continue;
                 std::vector<std::string> keys;
-                ops[i]->Steal(keys);
-                if (keys.empty())
+                ops[i]->Steal(&keys);
+                if (keys.empty()) {
                     readyv[i] = false;
-                else {
+                } else {
                     markers[i] = std::string(keys.back());
-                    for (auto &k: keys) {
+                    for (auto &k : keys) {
                         // We try here to avoid copies
                         std::string s;
                         s.swap(k);
@@ -286,17 +285,18 @@ class KineticListing : public blob::Listing {
         return Status();
     }
 
-    bool Next(std::string &id, std::string &key) override {
+    bool Next(std::string *id, std::string *key) override {
+        assert(id != nullptr);
+        assert(key != nullptr);
         if (next_item >= items.size())
             return false;
-
         const auto &item = items[next_item++];
-        id.assign(clients[std::get<0>(item)]->Id());
-        key.assign(std::get<1>(item));
+        id->assign(clients[std::get<0>(item)]->Id());
+        key->assign(std::get<1>(item));
         return true;
     }
 
-  private:
+ private:
     std::vector<std::shared_ptr<ClientInterface>> clients;
     std::string name;
 
@@ -304,7 +304,7 @@ class KineticListing : public blob::Listing {
     unsigned int next_item;
 };
 
-ListingBuilder::~ListingBuilder() { }
+ListingBuilder::~ListingBuilder() {}
 
 ListingBuilder::ListingBuilder(std::shared_ptr<ClientFactory> f)
         : factory(f), targets(), name() {
@@ -338,7 +338,7 @@ std::unique_ptr<blob::Listing> ListingBuilder::Build() {
 
     auto listing = new KineticListing;
     listing->name.assign(name);
-    for (auto to: targets)
+    for (auto to : targets)
         listing->clients.emplace_back(factory->Get(to));
     return std::unique_ptr<KineticListing>(listing);
 }
@@ -353,6 +353,7 @@ struct PendingDelete {
             : op(new Delete), client{c}, sync(nullptr) {
         op->Key(k);
     }
+
     void Start() {
         assert(sync.get() == nullptr);
         sync = client->RPC(op.get());
@@ -361,26 +362,27 @@ struct PendingDelete {
 
 class KineticRemoval : public blob::Removal {
     friend class RemovalBuilder;
-  public:
+
+ public:
     KineticRemoval(std::shared_ptr<ClientFactory> f,
             std::vector<std::string> tv)
             : parallelism_factor{8}, chunkid(), targets(), factory(f), ops() {
         targets.swap(tv);
     }
 
-    ~KineticRemoval() { }
+    ~KineticRemoval() {}
 
     Status Prepare() override {
         ListingBuilder builder(factory);
         builder.Name(chunkid);
-        for (const auto &to: targets)
+        for (const auto &to : targets)
             builder.Target(to);
         auto listing = builder.Build();
 
         auto rc = listing->Prepare();
         if (rc.Ok()) {
             std::string id, key;
-            while (listing->Next(id, key)) {
+            while (listing->Next(&id, &key)) {
                 PendingDelete del(factory->Get(id), key);
                 DLOG(INFO) << "rem(" << id << "," << key << ")";
                 ops.push_back(del);
@@ -406,7 +408,7 @@ class KineticRemoval : public blob::Removal {
 
     Status Abort() override { return Status(Cause::Unsupported); }
 
-  private:
+ private:
     unsigned int parallelism_factor;
     std::string chunkid;
     std::vector<std::string> targets;
@@ -455,14 +457,14 @@ std::unique_ptr<blob::Removal> RemovalBuilder::Build() {
 class KineticUpload : public blob::Upload {
     friend class UploadBuilder;
 
-  public:
+ public:
     KineticUpload();
 
     ~KineticUpload();
 
     Status Prepare() override;
 
-    void SetXattr (const std::string &k, const std::string &v) override;
+    void SetXattr(const std::string &k, const std::string &v) override;
 
     Status Commit() override;
 
@@ -470,12 +472,12 @@ class KineticUpload : public blob::Upload {
 
     void Write(const uint8_t *buf, uint32_t len) override;
 
-  private:
+ private:
     void TriggerUpload();
 
     void TriggerUpload(const std::string &suffix);
 
-  private:
+ private:
     std::vector<std::shared_ptr<ClientInterface>> clients;
     uint32_t next_client;
     std::vector<std::shared_ptr<Put>> puts;
@@ -484,16 +486,12 @@ class KineticUpload : public blob::Upload {
     std::vector<uint8_t> buffer;
     uint32_t buffer_limit;
     std::string chunkid;
-    std::map<std::string,std::string> xattr;
+    std::map<std::string, std::string> xattr;
 };
 
-KineticUpload::~KineticUpload() {
+KineticUpload::~KineticUpload() {}
 
-}
-
-KineticUpload::KineticUpload(): clients(), next_client{0}, puts(), syncs() {
-
-}
+KineticUpload::KineticUpload() : clients(), next_client{0}, puts(), syncs() {}
 
 void KineticUpload::SetXattr(const std::string &k, const std::string &v) {
     xattr[k] = v;
@@ -552,7 +550,6 @@ void KineticUpload::Write(const uint8_t *buf, uint32_t len) {
 }
 
 Status KineticUpload::Commit() {
-
     // Flush the internal buffer so that we don't mix payload with xattr
     if (buffer.size() > 0)
         TriggerUpload();
@@ -561,35 +558,32 @@ Status KineticUpload::Commit() {
     rapidjson::StringBuffer buf;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
     writer.StartObject();
-    for (const auto &e: xattr) {
+    for (const auto &e : xattr) {
         writer.Key(e.first.c_str());
         writer.String(e.second.c_str());
     }
     writer.EndObject();
-    this->Write(reinterpret_cast<const uint8_t *>(buf.GetString()), buf.GetSize());
+    this->Write(reinterpret_cast<const uint8_t *>(buf.GetString()),
+                buf.GetSize());
     TriggerUpload("#");
 
     // Wait for all the single PUT to finish
-    for (auto &s: syncs)
+    for (auto &s : syncs)
         s->Wait();
 
     return Status();
 }
 
-Status KineticUpload::Abort() {
-    return Status();
-}
+Status KineticUpload::Abort() { return Status(); }
 
 Status KineticUpload::Prepare() {
-
     // Send the same listing request to all the clients, GetKeyRange allows this
     // even if it won't cleanly manage mixed errors and successes
-
     const std::string key_manifest(chunkid + "-#");
 
     std::vector<std::shared_ptr<GetKeyRange>> ops;
     std::vector<std::shared_ptr<Sync>> syncs;
-    for (auto cli: clients) {
+    for (auto cli : clients) {
         std::shared_ptr<GetKeyRange> gkr(new GetKeyRange);
         gkr->Start(key_manifest);
         gkr->End(key_manifest);
@@ -599,19 +593,19 @@ Status KineticUpload::Prepare() {
         ops.push_back(gkr);
     }
     int i = 0;
-    for (auto cli: clients) {
+    for (auto cli : clients) {
         auto op = ops[i];
         syncs.push_back(cli->RPC(op.get()));
     }
-    for (auto sync: syncs)
+    for (auto sync : syncs)
         sync->Wait();
-    for (auto op: ops) {
+    for (auto op : ops) {
         if (!op->Ok())
             return Status(Cause::NetworkError);
     }
-    for (auto op: ops) {
+    for (auto op : ops) {
         std::vector<std::string> keys;
-        op->Steal(keys);
+        op->Steal(&keys);
         if (!keys.empty())
             return Status(Cause::Already);
     }
@@ -619,14 +613,10 @@ Status KineticUpload::Prepare() {
     return Status();
 }
 
-UploadBuilder::~UploadBuilder() {
+UploadBuilder::~UploadBuilder() {}
 
-}
-
-UploadBuilder::UploadBuilder(std::shared_ptr<ClientFactory> f):
-        factory(f), targets(), block_size{1024 * 1024} {
-
-}
+UploadBuilder::UploadBuilder(std::shared_ptr<ClientFactory> f) :
+        factory(f), targets(), block_size{1024 * 1024} {}
 
 bool UploadBuilder::Target(const std::string &to) {
     targets.insert(to);
@@ -654,11 +644,10 @@ void UploadBuilder::BlockSize(uint32_t s) {
 
 std::unique_ptr<blob::Upload> UploadBuilder::Build() {
     assert(!name.empty());
-
-    KineticUpload *ul = new KineticUpload();
+    auto ul = new KineticUpload();
     ul->buffer_limit = block_size;
     ul->chunkid.assign(name);
-    for (const auto &to: targets)
+    for (const auto &to : targets)
         ul->clients.emplace_back(factory->Get(to.c_str()));
     return std::unique_ptr<KineticUpload>(ul);
 }

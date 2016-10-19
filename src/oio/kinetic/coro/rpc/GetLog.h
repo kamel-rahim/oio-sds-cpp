@@ -4,8 +4,8 @@
  * v. 2.0. If a copy of the MPL was not distributed with this file, you can
  * obtain one at https://mozilla.org/MPL/2.0/ */
 
-#ifndef OIO_KINETIC_GETLOG_H
-#define OIO_KINETIC_GETLOG_H
+#ifndef SRC_OIO_KINETIC_CORO_RPC_GETLOG_H_
+#define SRC_OIO_KINETIC_CORO_RPC_GETLOG_H_
 
 #include <memory>
 #include "Exchange.h"
@@ -15,30 +15,30 @@ namespace kinetic {
 namespace rpc {
 
 class GetLog : public oio::kinetic::rpc::Exchange {
-  public:
-	GetLog();
+ public:
+    GetLog();
 
-	FORBID_MOVE_CTOR(GetLog);
-	FORBID_COPY_CTOR(GetLog);
+    FORBID_MOVE_CTOR(GetLog);
+    FORBID_COPY_CTOR(GetLog);
 
-	virtual ~GetLog();
-	
-	void ManageReply(oio::kinetic::rpc::Request &rep) override;
+    virtual ~GetLog();
 
-	double getCpu() const;
+    void ManageReply(oio::kinetic::rpc::Request *rep) override;
 
-	double getTemp() const;
+    double getCpu() const;
 
-	double getSpace() const;
+    double getTemp() const;
 
-	double getIo() const;
+    double getSpace() const;
 
-  private:
-	double cpu, temp, space, io;
+    double getIo() const;
+
+ private:
+    double cpu, temp, space, io;
 };
 
-}
-}
-}
+}  // namespace rpc
+}  // namespace kinetic
+}  // namespace oio
 
-#endif //OIO_KINETIC_GETLOG_H
+#endif  // SRC_OIO_KINETIC_CORO_RPC_GETLOG_H_

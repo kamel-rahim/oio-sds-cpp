@@ -23,3 +23,18 @@ add_executable(test-blob-local TestBlobLocal.cpp)
 target_link_libraries(test-blob-local oio-data-local
         ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES} ${GTEST_LIBRARIES})
 add_test(NAME blob/local COMMAND test-blob-local)
+
+if (CPPLINT_EXE)
+	file(GLOB_RECURSE files RELATIVE "${CMAKE_SOURCE_DIR}"
+		${CMAKE_SOURCE_DIR}/src/*.h*
+		${CMAKE_SOURCE_DIR}/src/*.c*
+		${CMAKE_SOURCE_DIR}/tests/unit/*.h*
+		${CMAKE_SOURCE_DIR}/tests/func/*.c*
+		${CMAKE_SOURCE_DIR}/bin/*.h*
+		${CMAKE_SOURCE_DIR}/bin/*.c*)
+	foreach(f ${files})
+		add_test(NAME format:${f}
+			COMMAND ${CPPLINT_EXE} ${CMAKE_SOURCE_DIR}/${f})
+	endforeach()
+endif()
+

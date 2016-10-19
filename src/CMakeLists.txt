@@ -99,3 +99,4 @@ target_link_libraries(oio-data-kinetic
         oio-utils oio-data oio-http-parser
         ${MILL_LIBRARIES} ${PROTOBUF_LIBRARIES} ${CRYPTO_LIBRARIES}
         ${GLOG_LIBRARIES} ${ATTR_LIBRARIES})
+

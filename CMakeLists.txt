@@ -16,6 +16,10 @@ message(" libdir: ${${_DEP}_LIBRARY_DIRS}")
 message(" lib: ${${_DEP}_LIBRARIES}")
 endmacro()
 
+if (NOT DEFINED CPPLINT_EXE)
+	find_program(CPPLINT_EXE cpplint)
+endif()
+
 ################################################################################
 ### liberasurecode
 ### Often poorly packaged, it lacks a .pc file for pkg-config. We accept

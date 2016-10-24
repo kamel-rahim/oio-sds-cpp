@@ -43,6 +43,7 @@ struct frag_array_set {
     frag_array_set() : num_fragments{0}, array{nullptr} {}
 };
 
+
 class EcDownload : public oio::api::blob::Download {
     friend class DownloadBuilder;
 
@@ -57,7 +58,7 @@ class EcDownload : public oio::api::blob::Download {
         DLOG(INFO) << "Received xattr [" << k << "]";
     }
 
-    ~EcDownload() { DLOG(INFO) << __FUNCTION__; }
+    ~EcDownload() override { DLOG(INFO) << __FUNCTION__; }
 
     uint64_t add_item_to_missing_mask(uint64_t mask, int pos) {
         if (pos < 0)
@@ -355,7 +356,6 @@ class EcUpload : public oio::api::blob::Upload {
         parity = NULL;
         return Status(Cause::OK);
     }
-
 
     Status Commit() override {
         uint ChunkSize = buffer.size();

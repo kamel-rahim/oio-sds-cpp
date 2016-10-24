@@ -19,15 +19,24 @@ target_link_libraries(test-utils oio-utils oio-data
         ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES} ${GTEST_LIBRARIES})
 add_test(NAME utils/hash COMMAND test-utils)
 
-add_executable(test-blob-local TestBlobLocal.cpp)
+add_executable(test-blob-local TestBlobLocal.cpp
+		../common/BlobTestSuite.h)
 target_link_libraries(test-blob-local oio-data-local
         ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES} ${GTEST_LIBRARIES})
 add_test(NAME blob/local COMMAND test-blob-local)
+
+add_executable(test-blob-mem TestBlobMem.cpp
+		../common/BlobTestSuite.h)
+target_link_libraries(test-blob-mem oio-data-mem
+		${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES} ${GTEST_LIBRARIES})
+add_test(NAME blob/mem COMMAND test-blob-mem)
+
 
 if (CPPLINT_EXE)
 	file(GLOB_RECURSE files RELATIVE "${CMAKE_SOURCE_DIR}"
 		${CMAKE_SOURCE_DIR}/src/*.h*
 		${CMAKE_SOURCE_DIR}/src/*.c*
+		${CMAKE_SOURCE_DIR}/tests/common/*.h*
 		${CMAKE_SOURCE_DIR}/tests/unit/*.h*
 		${CMAKE_SOURCE_DIR}/tests/func/*.c*
 		${CMAKE_SOURCE_DIR}/bin/*.h*

@@ -44,13 +44,6 @@ class UploadBuilder {
 
     std::unique_ptr<oio::api::blob::Upload> Build();
 
-    /**
-     * The upload internally works with a temporary file, then the method
-     * returns the path. For testing purposes.
-     * @return the path to the pending file
-     */
-    std::string PathPending() const;
-
  private:
     std::string path;
     unsigned int fmode, dmode;

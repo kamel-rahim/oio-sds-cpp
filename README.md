@@ -1,4 +1,4 @@
-# OpenIO Kinetic backend
+# OpenIO Data backends
 
 The present repository provides several tools:
 
@@ -111,3 +111,29 @@ For each dependency, 4 options are available: \_SYSTEM, \_GUESS, \_INCDIR and \_
 The precedence order is always the same: \_INCDIR/LIBDIR >> SYSTEM >> GUESS.
 If no explicit INCDIR/LIBDIR is set, if SYSTEM is set to OFF, and GUESS also set to OFF, then cmake will use an [ExternalProject](https://cmake.org/cmake/help/v3.0/module/ExternalProject.html) and build it on the moment.
 
+## Modules
+
+### oio::api::blob
+
+### oio::mem::blob
+
+Implemention of a blob store where all blobs are completely held in memory.
+Currently for testing purposes, there is neither thread safety at all managed around the shared map of items, nor any capacity limit on the cache.
+
+### oio::local::blob
+
+File based implementation of a blob store, "à la" RAWX.
+
+### oio::http::blob
+
+HTTP-based classes used in **oio**, all written in an imperative style. Two ways to parallelize the communicaitons are offered: either you play with a combination of `std::thread` and `net::RegularSocket`, or you play with libmill's coroutines and `net::MillSocket`.
+
+Though incompatible with reactive frameworks where all the sockets are explicitely organized around a main event loop, the imperative way of `oio::http::blob` offers the advantage of an extreme simplicity.
+
+### oio::rawx::blob
+
+Wrapper around `oio::http::blob` with few additional checks to match the expectations of a RAWX service.
+
+### oio::kinetic::blob
+
+Kinetic based backend, written around libmill's coroutines.

@@ -192,33 +192,44 @@ std::unique_ptr<oio::api::blob::Download> DownloadBuilder::Build() {
 class LocalRemoval : public oio::api::blob::Removal {
     friend class RemovalBuilder;
 
+ private:
+    enum class Step { Init, Prepared, Done };
+
+ private:
+    std::string path;
+    Step step_;
+
  public:
-    LocalRemoval() {}
+    LocalRemoval(): step_{Step::Init} {}
 
     ~LocalRemoval() {}
 
     Status Prepare() override {
+        if (step_ != Step::Init)
+            return Status(Cause::InternalError);
         struct stat st;
-        if (0 == ::stat(path.c_str(), &st))
-            return Status(Cause::OK);
-        if (errno == ENOENT)
-            return Status(Cause::NotFound);
-        return Status(Cause::InternalError);
+        if (0 == ::stat(path.c_str(), &st)) {
+            step_ = Step::Prepared;
+            return Status();
+        }
+        return Errno();
     }
 
     Status Commit() override {
+        if (step_ != Step::Prepared)
+            return Status(Cause::InternalError);
+        step_ = Step::Done;
         if (0 == ::unlink(path.c_str()))
             return Status();
-        return Errno(errno);
+        return Errno();
     }
 
     Status Abort() override {
+        if (step_ != Step::Prepared)
+            return Status(Cause::InternalError);
+        step_ = Step::Done;
         return Status();
     }
-
- private:
-    std::string path;
-    int fd;
 };
 
 RemovalBuilder::RemovalBuilder() {}
@@ -240,15 +251,61 @@ std::unique_ptr<oio::api::blob::Removal> RemovalBuilder::Build() {
 class LocalUpload : public oio::api::blob::Upload {
     friend class UploadBuilder;
 
- public:
-    ~LocalUpload() override {}
+ private:
+    enum class Step { Init, Prepared, Done };
 
-    void SetXattr(const std::string &k, const std::string &v) override {
-        attributes[k] = v;
-        DLOG(INFO) << "Received xattr [" << k << "]";
+    std::string path_final;
+    std::string path_temp;
+    std::map<std::string, std::string> attributes;
+    int fd;
+    mode_t fmode, dmode;
+    Step step_;
+
+ private:
+    FORBID_COPY_CTOR(LocalUpload);
+
+    FORBID_MOVE_CTOR(LocalUpload);
+
+    explicit LocalUpload(const std::string &p) : path_final(p), path_temp(),
+                                                 fd{-1},
+                                                 fmode(FLAGS_mode_create),
+                                                 dmode(FLAGS_mode_mkdir),
+                                                 step_{Step::Init} {
+        path_temp = path_final + ".pending";
     }
 
-    Status Prepare() override {
+    bool resetFD() {
+        if (fd < 0)
+            return false;
+        ::close(fd);
+        fd = -1;
+        return true;
+    }
+
+    Status unlinkTempAndReset(Status rc) {
+        if (0 != ::unlink(path_temp.c_str()))
+            LOG(ERROR) << "Leaving pending file " << path_temp;
+        resetFD();
+        return rc;
+    }
+
+    int createParent(std::string path) {
+        // get the parent path
+        auto slash = path.rfind('/');
+        if (slash == 0)  // the VFS root already exists
+            return 0;
+        if (slash == std::string::npos)  // relative path head, CWD exists
+            return 0;
+        auto parent = path.substr(0, slash);
+
+        int rc = ::mkdir(parent.c_str(), dmode);
+        if (rc == 0)
+            return 0;
+
+        return errno != ENOENT ? errno : createParent(std::move(parent));
+    }
+
+    Status prepare_without_check_on_step() {
         bool retryable{true};
         struct stat st;
 
@@ -287,7 +344,7 @@ retry:
         }
     }
 
-    Status Commit() override {
+    Status commit_without_check_on_step() {
         if (fd < 0)
             return Status(Cause::InternalError);
 
@@ -312,13 +369,48 @@ retry:
         return unlinkTempAndReset(Errno());
     }
 
-    Status Abort() override {
+    Status abort_without_check_on_step() {
         if (!resetFD())
             return Status();
         return unlinkTempAndReset(Status());
     }
 
+ public:
+    ~LocalUpload() override {}
+
+    void SetXattr(const std::string &k, const std::string &v) override {
+        attributes[k] = v;
+        DLOG(INFO) << "Received xattr [" << k << "]";
+    }
+
+    Status Prepare() override {
+        if (step_ != Step::Init)
+            return Status(Cause::InternalError);
+        auto rc = prepare_without_check_on_step();
+        if (rc.Ok())
+            step_ = Step::Prepared;
+        return rc;
+    }
+
+    Status Commit() override {
+        if (step_ != Step::Prepared)
+            return Status(Cause::InternalError);
+        step_ = Step::Done;
+        return commit_without_check_on_step();
+    }
+
+    Status Abort() override {
+        if (step_ != Step::Prepared)
+            return Status(Cause::InternalError);
+        step_ = Step::Done;
+        return abort_without_check_on_step();
+    }
+
     void Write(const uint8_t *buf, uint32_t len) override {
+        assert(buf != nullptr);
+        assert(step_ == Step::Prepared);
+        assert(fd >= 0);
+
         ssize_t rc;
 retry:
         rc = ::write(fd, buf, len);
@@ -341,56 +433,6 @@ retry:
             goto retry;
         }
     }
-
- private:
-    FORBID_COPY_CTOR(LocalUpload);
-
-    FORBID_MOVE_CTOR(LocalUpload);
-
-    explicit LocalUpload(const std::string &p) : path_final(p), path_temp(),
-                                                 fd{-1},
-                                                 fmode(FLAGS_mode_create),
-                                                 dmode(FLAGS_mode_mkdir) {
-        path_temp = path_final + ".pending";
-    }
-
-    bool resetFD() {
-        if (fd < 0)
-            return false;
-        ::close(fd);
-        fd = -1;
-        return true;
-    }
-
-    Status unlinkTempAndReset(Status rc) {
-        if (0 != ::unlink(path_temp.c_str()))
-            LOG(ERROR) << "Leaving pending file " << path_temp;
-        resetFD();
-        return rc;
-    }
-
-    int createParent(std::string path) {
-        // get the parent path
-        auto slash = path.rfind('/');
-        if (slash == 0)  // the VFS root already exists
-            return 0;
-        if (slash == std::string::npos)  // relative path head, CWD exists
-            return 0;
-        auto parent = path.substr(0, slash);
-
-        int rc = ::mkdir(parent.c_str(), dmode);
-        if (rc == 0)
-            return 0;
-
-        return errno != ENOENT ? errno : createParent(std::move(parent));
-    }
-
- private:
-    std::string path_final;
-    std::string path_temp;
-    int fd;
-    mode_t fmode, dmode;
-    std::map<std::string, std::string> attributes;
 };
 
 UploadBuilder::UploadBuilder() : path(),
@@ -404,8 +446,6 @@ void UploadBuilder::Path(const std::string &p) { path.assign(p); }
 void UploadBuilder::FileMode(unsigned int mode) { fmode = mode; }
 
 void UploadBuilder::DirMode(unsigned int mode) { dmode = mode; }
-
-std::string UploadBuilder::PathPending() const { return path + ".pending"; }
 
 std::unique_ptr<oio::api::blob::Upload> UploadBuilder::Build() {
     auto ul = new LocalUpload(path);

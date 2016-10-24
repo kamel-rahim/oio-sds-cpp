@@ -10,17 +10,7 @@ install:
   - pip install --upgrade pip cpplint
 script:
   - set -e
-  - OPTS=-DCMAKE_INSTALL_PREFIX=/tmp/oio
-  - OPTS="$OPTS -DLD_LIBDIR=lib"
-  - OPTS="$OPTS -DCMAKE_BUILD_TYPE=Release"
-  - OPTS="$OPTS -DRAPIDJSON_SYSTEM=OFF -DRAPIDJSON_GUESS=OFF"
-  - OPTS="$OPTS -DGFLAGS_SYSTEM=OFF    -DGFLAGS_GUESS=OFF"
-  - OPTS="$OPTS -DGTEST_SYSTEM=OFF     -DGTEST_GUESS=OFF"
-  - OPTS="$OPTS -DGLOG_SYSTEM=OFF      -DGLOG_GUESS=OFF"
-  - OPTS="$OPTS -DMILL_SYSTEM=OFF      -DMILL_GUESS=OFF"
-  - OPTS="$OPTS -DATTR_SYSTEM=OFF      -DATTR_GUESS=OFF"
-  - OPTS="$OPTS -DEC_SYSTEM=OFF        -DEC_GUESS=ON"
-  - cmake $OPTS .
+  - cmake -DCMAKE_INSTALL_PREFIX=/tmp/oio -DCMAKE_BUILD_TYPE=Release -DSYS=OFF .
   - make all
   - make -C tests/unit test
   - echo make -C tests/func test

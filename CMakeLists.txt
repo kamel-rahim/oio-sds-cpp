@@ -20,13 +20,16 @@ if (NOT DEFINED CPPLINT_EXE)
 	find_program(CPPLINT_EXE cpplint)
 endif()
 
+option(SYS "General trigger superseding all *_SYSTEM options" ON)
+option(GUESS "General trigger superseding all *_GUESS options" ON)
+
 ################################################################################
 ### liberasurecode
 ### Often poorly packaged, it lacks a .pc file for pkg-config. We accept
 ### explicit paths, but try to guess if not specified
 
 option(EC_SYSTEM "Use system's liberasurecode" ON)
-option(EC_GUESS "Try to find liberasurecode in standard places" OFF)
+option(EC_GUESS "Try to find liberasurecode in standard places" ON)
 if (DEFINED EC_INCDIR AND DEFINED EC_LIBDIR)
     find_library(EC_LIBRARIES
             NAMES erasurecode
@@ -34,15 +37,18 @@ if (DEFINED EC_INCDIR AND DEFINED EC_LIBDIR)
     find_path(EC_INCLUDE_DIRS
             NAMES liberasurecode/erasurecode.h
             PATHS ${EC_INCDIR})
-elseif (EC_SYSTEM)
-    pkg_check_modules(EC erasurecode REQUIRED)
-elseif (EC_GUESS)
+elseif (SYS AND EC_SYSTEM)
+    pkg_check_modules(EC erasurecode-1 REQUIRED)
+elseif (GUESS AND EC_GUESS)
     find_library(EC_LIBRARIES
             NAMES erasurecode
             HINTS /usr/lib /usr/lib64)
     find_path(EC_INCLUDE_DIRS
             NAMES liberasurecode/erasurecode.h
             PATHS /usr/include)
+else ()
+    set(EC_LIBRARIES EC_LIBRARIES-NOTFOUND)
+    set(EC_INCLUDE_DIRS EC_INCLUDE_DIRS-NOTFOUND)
 endif ()
 dump_dependency_components("EC")
 
@@ -60,9 +66,9 @@ if (DEFINED GFLAGS_INCDIR AND DEFINED GFLAGS_LIBDIR)
     find_path(GFLAGS_INCLUDE_DIRS
             NAMES gflags/gflags.h
             PATHS ${GFLAGS_INCDIR})
-elseif (GFLAGS_SYSTEM)
+elseif (SYS AND GFLAGS_SYSTEM)
     pkg_check_modules(GFLAGS gflags REQUIRED)
-elseif (GFLAGS_GUESS)
+elseif (GUESS AND GFLAGS_GUESS)
     find_library(GFLAGS_LIBRARIES
             NAMES gflags
             HINTS /usr/lib /usr/lib64)
@@ -105,9 +111,9 @@ if (DEFINED GTEST_INCDIR AND DEFINED GTEST_LIBDIR)
     find_path(GTEST_INCLUDE_DIRS
             NAMES gtest/gtest.h
             PATHS ${GTEST_INCDIR})
-elseif (GTEST_SYSTEM)
+elseif (SYS AND GTEST_SYSTEM)
     pkg_check_modules(GTEST libgtest REQUIRED)
-elseif (GTEST_GUESS)
+elseif (GUESS AND GTEST_GUESS)
     find_library(GTEST_LIBRARIES
             NAMES gtest
             HINTS /usr/lib /usr/lib64)
@@ -150,9 +156,9 @@ if (DEFINED GLOG_INCDIR AND DEFINED GLOG_LIBDIR)
 	find_path(GLOG_INCLUDE_DIRS
             NAMES glog/logging.h
             PATHS ${GLOG_INCDIR})
-elseif (GLOG_SYSTEM)
+elseif (SYS AND GLOG_SYSTEM)
     pkg_check_modules(GLOG libglog REQUIRED)
-elseif (GLOG_GUESS)
+elseif (GUESS AND GLOG_GUESS)
     find_library(GLOG_LIBRARIES
             NAMES glog
             HINTS /usr/lib /usr/lib64)
@@ -195,9 +201,9 @@ if (DEFINED MILL_INCDIR AND DEFINED MILL_LIBDIR)
 	find_path(MILL_INCLUDE_DIRS
             NAMES libmill.h
             PATHS ${MILL_INCDIR})
-elseif (MILL_SYSTEM)
+elseif (SYS AND MILL_SYSTEM)
     pkg_check_modules(MILL mill REQUIRED)
-elseif (MILL_GUESS)
+elseif (GUESS AND MILL_GUESS)
     find_library(MILL_LIBRARIES
             NAMES mill
             HINTS /usr/lib /usr/lib64)
@@ -254,6 +260,7 @@ dump_dependency_components("RAGEL")
 ### ATTR
 
 option(ATTR_SYSTEM "Use system's libattr" ON)
+option(ATTR_GUESS "Guess the libattr places at system's standards" ON)
 if (DEFINED ATTR_INCDIR AND DEFINED ATTR_LIBDIR)
     find_library(ATTR_LIBRARIES
             NAMES attr
@@ -261,15 +268,18 @@ if (DEFINED ATTR_INCDIR AND DEFINED ATTR_LIBDIR)
     find_path(ATTR_INCLUDE_DIRS
             NAMES attr/xattr.h
             PATHS ${ATTR_INCDIR})
-elseif (ATTR_SYSTEM)
+elseif (SYS AND ATTR_SYSTEM)
     pkg_check_modules(ATTR libattr REQUIRED)
-else ()
+elseif (GUESS AND ATTR_GUESS)
     find_library(ATTR_LIBRARIES
             NAMES attr
             HINTS /usr/lib /usr/lib64)
     find_path(ATTR_INCLUDE_DIRS
             NAMES attr/xattr.h
             PATHS /usr/include)
+else ()
+    set(ATTR_INCLUDE_DIRS ATTR_INCLUDE_DIRS-NOTFOUND)
+    set(ATTR_LIBRARIES ATTR_LIBRARIES-NOTFOUND)
 endif ()
 dump_dependency_components("ATTR")
 
@@ -282,9 +292,9 @@ if (DEFINED RAPIDJSON_INCDIR AND DEFINED RAPIDJSON_LIBDIR)
     find_path(RAPIDJSON_INCLUDE_DIRS
             NAMES rapidjson/document.h rapidjson/filereadstream.h rapidjson/writer.h
             PATHS ${RAPIDJSON_INCDIR})
-elseif (RAPIDJSON_SYSTEM)
+elseif (SYS AND RAPIDJSON_SYSTEM)
     pkg_check_modules(RAPIDJSON rapidjson REQUIRED)
-elseif (RAPIDJSON_GUESS)
+elseif (GUESS AND RAPIDJSON_GUESS)
     find_path(RAPIDJSON_INCLUDE_DIRS
             NAMES rapidjson/document.h rapidjson/filereadstream.h rapidjson/writer.h
             PATHS /usr/include)

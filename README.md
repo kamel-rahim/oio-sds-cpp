@@ -61,13 +61,26 @@ Get the sources and all the dependencies
     git submodule init
     git submodule update
 
-Build the project:
+Build the project using the pkg-config management for the dependencies:
 
     cmake .
     make
     make install
 
+Alternatively, you could only use shipped third-party dependencies:
+
+    cmake -DSYS=OFF -DGUESS=OFF .
+    make
+    make install
+
 Possible CMake options:
+
+Name | Value | Description
+---- | ----- | -----------
+SYS   | ON/OFF | ON by default, allows locating dependencies with pkg-config
+GUESS | ON/OFF | ON by default, allows locating dependencies at standard places
+RAGEL_EXE | PATH | Specify the absolute path to the `ragel` CLI tool. If not set, `ragel` will be located in the `PATH` environment variable.
+PROTOBUF\_EXE | PATH | Specify the absolute path to the `protoc` CLI tool. If not set, `protoc` will be located in the `PATH`  environment variable.
 
 Name | Value | Description
 ---- | ----- | -----------
@@ -104,6 +117,25 @@ MILL\_GUESS  | ON/OFF | Guess the system-wide place of libmill
 MILL\_INCDIR | path | Custom path to libmill headers directory
 MILL\_LIBDIR | path | Custom path to libmill libraries directory
 
+Name | Value | Description
+---- | ----- | -----------
+ATTR\_SYSTEM | ON/OFF | Use system-wide libattr known by pkg-config
+ATTR\_GUESS  | ON/OFF | Guess the system-wide place of libattr
+ATTR\_INCDIR | path | Custom path to libattr headers directory
+ATTR\_LIBDIR | path | Custom path to libattr libraries directory
+
+Name | Value | Description
+---- | ----- | -----------
+RAPIDJSON\_SYSTEM | ON/OFF | Use system-wide rapidjson known by pkg-config
+RAPIDJSON\_GUESS  | ON/OFF | Guess the system-wide place of rapidjson
+RAPIDJSON\_INCDIR | path | Custom path to rapidjson headers directory
+
+Name | Value | Description
+---- | ----- | -----------
+RAPIDJSON\_GUESS  | ON/OFF | Guess the system-wide place of rapidjson
+RAPIDJSON\_INCDIR | path | Custom path to rapidjson headers directory
+
+
 For GTEST, GFLAGS and GLOG, if neither SYSTEM, GUESS nor explicit paths worked, a cmake ExternalProject will be used.
 For EC, no external project is involved (liberasurecode is not managed by CMake yet)
 
@@ -137,3 +169,8 @@ Wrapper around `oio::http::blob` with few additional checks to match the expecta
 ### oio::kinetic::blob
 
 Kinetic based backend, written around libmill's coroutines.
+
+### oio::ec::blob
+
+When uploading, `oio::ec::blob::Upload` computes the Erasure Coded form of the input then
+Wrapper implementation around other blob stores.

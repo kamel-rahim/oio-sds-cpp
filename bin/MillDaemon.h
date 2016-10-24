@@ -43,8 +43,7 @@ class BlobHandler {
 
     virtual SoftError SetUrl(const std::string &u) = 0;
 
-    virtual SoftError SetHeader(
-            const std::string &k, const std::string &v) = 0;
+    virtual SoftError SetHeader(const std::string &k, const std::string &v) = 0;
 
     virtual std::unique_ptr<oio::api::blob::Upload> GetUpload() = 0;
 
@@ -70,7 +69,7 @@ struct BlobClient {
     ~BlobClient();
 
     BlobClient(std::unique_ptr<net::Socket> c,
-            std::shared_ptr<BlobRepository> r);
+               std::shared_ptr<BlobRepository> r);
 
     void Run(volatile bool *flag_running);
 

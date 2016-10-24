@@ -14,10 +14,6 @@ using oio::api::blob::Errno;
 using oio::api::blob::Status;
 using oio::api::blob::Cause;
 
-Status Download::SetRange(uint32_t offset UNUSED, uint32_t size UNUSED) {
-    return Status(Cause::Unsupported);
-}
-
 static inline const char *Status2Str(Cause s) {
     switch (s) {
         case Cause::OK:
@@ -39,6 +35,20 @@ static inline const char *Status2Str(Cause s) {
         default:
             return "***invalid status***";
     }
+}
+
+std::ostream& oio::api::blob::operator<<(std::ostream &out, const Cause c) {
+    out << Status2Str(c);
+    return out;
+}
+
+std::ostream& oio::api::blob::operator<<(std::ostream &out, const Status s) {
+    out << s.Why() << "(" << s.Message() << ")";
+    return out;
+}
+
+Status Download::SetRange(uint32_t offset UNUSED, uint32_t size UNUSED) {
+    return Status(Cause::Unsupported);
 }
 
 const char *Status::Name() const { return Status2Str(rc_); }

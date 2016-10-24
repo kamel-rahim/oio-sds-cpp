@@ -44,6 +44,11 @@ add_library(oio-data SHARED
 target_link_libraries(oio-data oio-utils)
 
 
+add_library(oio-data-mem SHARED
+        oio/mem/blob.cpp
+        oio/mem/blob.h)
+target_link_libraries(oio-data-mem oio-data)
+
 add_library(oio-data-local SHARED
         oio/local/blob.cpp
         oio/local/blob.h)

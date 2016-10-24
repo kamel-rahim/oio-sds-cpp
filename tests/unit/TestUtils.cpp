@@ -37,7 +37,7 @@ TEST(Utils, bin2hex) {
 
 Status _gen(int err) { return Errno(err); }
 
-TEST(Utils, Status) {
+TEST(Api, Status) {
     auto rc = _gen(ENOENT);
     LOG(INFO) << "Status " << rc.Name() << "/" << rc.Message();
     ASSERT_FALSE(rc.Ok());

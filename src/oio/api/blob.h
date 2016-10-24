@@ -31,6 +31,8 @@ enum class Cause {
     InternalError
 };
 
+std::ostream& operator<<(std::ostream &out, const Cause c);
+
 /**
  * Associates a high-level error classs (the Cause) and an explanation message.
  */
@@ -74,6 +76,8 @@ class Status {
      */
     const char *Name() const;
 };
+
+std::ostream& operator<<(std::ostream &out, const Status s);
 
 /**
  * Simple wrapper to initiate a Status based on the current errno value.

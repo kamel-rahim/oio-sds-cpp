@@ -1,4 +1,4 @@
-# OpenIO Kinetic backend
+# OpenIO Data backends
 
 The present repository provides several tools:
 
@@ -6,15 +6,17 @@ A set of libraries:
 * **oio-utils**: miscellaneous utility tools, e.g. checksum functions, network management, http parsing, etc.
 * **oio-http-parser**: Wraps the [http-parser](https://github.com/nodejs/http-parser)
 * **oio-data**: an API for Blob store into OpenIO
-* **oio-data-kinetic**: a Kinetic blob store implementation
+* **oio-data-kinetic**: a Kinetic blob store implementation (cf. [KOSP](https://www.openkinetic.org/))
 * **oio-data-http**: an HTTP blob store implementation
 * **oio-data-rawx**: a specialization of oio-data-http, with more constraints on the fields
+* **oio-data-ec**: a wrapper of other data backends, performing Erasure Coding
 
 A set of binary CLI tools
 * **kinetic-stress-put**: stress a kinetic drive with a massive PUT load and a configurable naming of the keys (random, ascending, decreasing)
 * **oio-kinetic-proxy**: a minimal coroutine-based HTTP server wrapping the **oio-kinetic-client**.
 * **oio-kinetic-listener**: listens to the multicast UDP announces of kinetic drives and register those in the configured conscience.
 * **oio-rawx**: an ersatz of the officiel OpenIO SDS rawx service, used to validate the design. Also coroutine-based.
+* **oio-ec-proxy**: an ersatz of the official OpenIO ecd. Also coroutine-based
 
 ## Status
 
@@ -36,17 +38,18 @@ PARTICULAR PURPOSE. See the Mozilla Public License for more details.
 
 ## Dependencies
 
-* [protobuf](https://github.com/google/protobuf): Google's Protocol Buffers, necessary for the Kinetic Protocol. 
 * libcrypto: for MD5 and SHA computations, coming from your favorite SSL vendor
+* libattr: to handle extended attributes, necesseray for the rawx backend
+* [protobuf](https://github.com/google/protobuf): Google's Protocol Buffers, necessary for the Kinetic Protocol. 
 * [ragel](https://github.com/colmnet/ragel): Used as a lexer to easily and efficiently recognize HTTP headers.
 * [http-parser](https://github.com/nodejs/http-parser) included as a Git submodule
 * [the Kinetic protocol](https://github.com/Kinetic/kinetic-protocol) included as a Git submodule, a Protocol Buffer definition maintained by the Kinetic Open Storage group.
-* [libmill](https://github.com/sustrik/libmill): for easy cooperative concurrency, thanks tyo Martin Sustrik's coroutines.
+* [libmill](https://github.com/sustrik/libmill): for easy cooperative concurrency, thanks to Martin Sustrik's coroutines.
 * [glog](https://github.com/google/glog)
 * [gtest](https://github.com/google/googletest)
 * [gflags](https://github.com/gflags/gflags)
 * [liberasurecode](https://github.com/openstack/liberasurecode)
-* attr, libattr, libattr-devel
+* [rapidjson](http://rapidjson.org/)
 
 
 ## Build & Install
@@ -108,3 +111,29 @@ For each dependency, 4 options are available: \_SYSTEM, \_GUESS, \_INCDIR and \_
 The precedence order is always the same: \_INCDIR/LIBDIR >> SYSTEM >> GUESS.
 If no explicit INCDIR/LIBDIR is set, if SYSTEM is set to OFF, and GUESS also set to OFF, then cmake will use an [ExternalProject](https://cmake.org/cmake/help/v3.0/module/ExternalProject.html) and build it on the moment.
 
+## Modules
+
+### oio::api::blob
+
+### oio::mem::blob
+
+Implemention of a blob store where all blobs are completely held in memory.
+Currently for testing purposes, there is neither thread safety at all managed around the shared map of items, nor any capacity limit on the cache.
+
+### oio::local::blob
+
+File based implementation of a blob store, "à la" RAWX.
+
+### oio::http::blob
+
+HTTP-based classes used in **oio**, all written in an imperative style. Two ways to parallelize the communicaitons are offered: either you play with a combination of `std::thread` and `net::RegularSocket`, or you play with libmill's coroutines and `net::MillSocket`.
+
+Though incompatible with reactive frameworks where all the sockets are explicitely organized around a main event loop, the imperative way of `oio::http::blob` offers the advantage of an extreme simplicity.
+
+### oio::rawx::blob
+
+Wrapper around `oio::http::blob` with few additional checks to match the expectations of a RAWX service.
+
+### oio::kinetic::blob
+
+Kinetic based backend, written around libmill's coroutines.

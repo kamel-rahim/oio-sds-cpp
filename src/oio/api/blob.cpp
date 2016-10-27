@@ -13,6 +13,7 @@ using oio::api::blob::Download;
 using oio::api::blob::Errno;
 using oio::api::blob::Status;
 using oio::api::blob::Cause;
+using oio::api::blob::TransactionStep;
 
 static inline const char *Status2Str(Cause s) {
     switch (s) {
@@ -45,6 +46,24 @@ std::ostream& oio::api::blob::operator<<(std::ostream &out, const Cause c) {
 std::ostream& oio::api::blob::operator<<(std::ostream &out, const Status s) {
     out << s.Why() << "(" << s.Message() << ")";
     return out;
+}
+
+std::ostream& oio::api::blob::operator<<(std::ostream &out,
+                                         const TransactionStep s) {
+    switch (s) {
+        case TransactionStep::Init:
+            out << "Init/" << static_cast<int>(s);
+            return out;
+        case TransactionStep::Prepared:
+            out << "Prepared/" << static_cast<int>(s);
+            return out;
+        case TransactionStep::Done:
+            out << "Done/" << static_cast<int>(s);
+            return out;
+        default:
+            out << "Invalid/" << static_cast<int>(s);
+            return out;
+    }
 }
 
 Status Download::SetRange(uint32_t offset UNUSED, uint32_t size UNUSED) {

@@ -35,7 +35,8 @@ add_library(oio-utils SHARED
         utils/Http.h utils/Http.cpp)
 target_link_libraries(oio-utils
         oio-http-parser
-        ${MILL_LIBRARIES} ${CRYPTO_LIBRARIES} ${GLOG_LIBRARIES})
+        ${MILL_LIBRARIES} ${CRYPTO_LIBRARIES}
+		${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES})
 
 
 add_library(oio-data SHARED

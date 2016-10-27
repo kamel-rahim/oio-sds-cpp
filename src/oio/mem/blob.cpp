@@ -11,6 +11,7 @@
 #include "oio/mem/blob.h"
 
 using oio::api::blob::Cause;
+using Step = oio::api::blob::TransactionStep;
 using oio::api::blob::Status;
 using oio::api::blob::Upload;
 using oio::api::blob::Download;
@@ -109,9 +110,6 @@ void Cache::Remove(const std::string &name) {
 
 class MemUpload : public Upload {
     friend class UploadBuilder;
- private:
-    enum class Step { Init, Prepared, Done };
-
  public:
     ~MemUpload() {}
 
@@ -165,9 +163,6 @@ std::unique_ptr<oio::api::blob::Upload> UploadBuilder::Build() {
 class MemDownload : public Download {
     friend class DownloadBuilder;
 
- private:
-    enum Step { Init, Prepared, Done };
-
  public:
     ~MemDownload() {}
 
@@ -213,9 +208,6 @@ std::unique_ptr<oio::api::blob::Download> DownloadBuilder::Build() {
 
 class MemRemoval : public Removal {
     friend class RemovalBuilder;
-
- private:
-    enum class Step { Init, Prepared, Done };
 
  public:
     ~MemRemoval() {}

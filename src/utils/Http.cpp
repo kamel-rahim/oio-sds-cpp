@@ -9,6 +9,7 @@
 #include <sys/uio.h>
 
 #include <libmill.h>
+#include <gflags/gflags.h>
 
 #include <iomanip>
 #include <cstring>
@@ -19,6 +20,10 @@ using http::Reply;
 using http::Call;
 using http::Code;
 
+DEFINE_bool(http_trace, false, "Log all calls to the HTTP parser");
+
+#define HTTP_LOG() DLOG_IF(INFO, FLAGS_http_trace) << __FUNCTION__ << ' '
+
 namespace http {
 
 static int _on_data_IGNORE(http_parser *p UNUSED, const char *b UNUSED,
@@ -27,25 +32,34 @@ static int _on_data_IGNORE(http_parser *p UNUSED, const char *b UNUSED,
 }
 
 static int _on_reply_begin(http_parser *p) {
-    auto ctx = reinterpret_cast<Reply::Context *>(p->data);
+    auto ctx = reinterpret_cast<Reply::Context*>(p->data);
+    HTTP_LOG();
+    assert(ctx->step == Reply::Step::Beginning);
     ctx->step = Reply::Step::Headers;
     return 0;
 }
 
 static int _on_header_field(http_parser *p, const char *b, size_t l) {
-    auto ctx = reinterpret_cast<Reply::Context *>(p->data);
+    auto ctx = reinterpret_cast<Reply::Context*>(p->data);
+    HTTP_LOG();
+    assert(ctx->step == Reply::Step::Headers);
     ctx->tmp.assign(b, l);
     return 0;
 }
 
 static int _on_header_value(http_parser *p, const char *b, size_t l) {
-    auto ctx = reinterpret_cast<Reply::Context *>(p->data);
+    auto ctx = reinterpret_cast<Reply::Context*>(p->data);
+    HTTP_LOG();
+    assert(ctx->step == Reply::Step::Headers);
     ctx->fields[ctx->tmp] = std::string(b, l);
     return 0;
 }
 
 static int _on_headers_complete(http_parser *p) {
-    auto ctx = reinterpret_cast<Reply::Context *>(p->data);
+    auto ctx = reinterpret_cast<Reply::Context*>(p->data);
+    HTTP_LOG();
+    assert(ctx->step == Reply::Step::Headers);
+
     // The goal is to reduce the number of syscalls (i.e. reading big chunks)
     // but avoiding to allocate to big buffers. These numbers are an arbitrary
     // heuristic but tend to make
@@ -53,28 +67,108 @@ static int _on_headers_complete(http_parser *p) {
         ctx->buffer.resize(128 * 1024);
     else if (ctx->content_length > 2048)
         ctx->buffer.resize(8192);
-    ctx->step = Reply::Step::Body;
+
+    if (ctx->parser.status_code == 100) {
+        ctx->step = Reply::Step::Headers;
+    } else {
+        ctx->step = Reply::Step::Body;
+    }
+
+    // The application is written in an imperative style. It pilots the calls to
+    // the parser, with calls like ReadHeaders(), ReadBody(). We need to stop
+    // once the body has been consumed.
+    http_parser_pause(&ctx->parser, true);
+
     return 0;
 }
 
 static int _on_body(http_parser *p, const char *buf, size_t len) {
-    auto ctx = reinterpret_cast<Reply::Context *>(p->data);
+    auto ctx = reinterpret_cast<Reply::Context*>(p->data);
+    HTTP_LOG();
+    assert(ctx->step == Reply::Step::Body);
+
     ctx->body_bytes.push(Reply::Slice(reinterpret_cast<const uint8_t *>(buf),
                                       static_cast<uint32_t>(len)));
     return 0;
 }
 
 static int _on_reply_complete(http_parser *p) {
-    auto ctx = reinterpret_cast<Reply::Context *>(p->data);
+    auto ctx = reinterpret_cast<Reply::Context*>(p->data);
+    HTTP_LOG();
+    assert(ctx->step == Reply::Step::Body);
+
+    // If several answers are queued, we need to pause the parser for the same
+    // reason we pause it after the headers: to let the application manage its
+    // logic between two replies.
+    http_parser_pause(&ctx->parser, true);
+
     ctx->step = Reply::Step::Done;
     return 0;
 }
 
-static int _on_chunk_header(http_parser *p UNUSED) { return 0; }
+static int _on_chunk_header(http_parser *p UNUSED) {
+    auto ctx = reinterpret_cast<Reply::Context*>(p->data);
+    HTTP_LOG();
+    assert(ctx->step == Reply::Step::Body);
+    return 0;
+}
 
-static int _on_chunk_complete(http_parser *p UNUSED) { return 0; }
+static int _on_chunk_complete(http_parser *p UNUSED) {
+    auto ctx = reinterpret_cast<Reply::Context*>(p->data);
+    HTTP_LOG();
+    assert(ctx->step == Reply::Step::Body);
+    return 0;
+}
 
 };  // namespace http
+
+std::ostream& http::operator<<(std::ostream &out, const http::Code code) {
+    switch (code) {
+        case http::Code::OK:
+            out << "OK";
+            break;
+        case http::Code::ClientError:
+            out << "ClientError";
+            break;
+        case http::Code::ServerError:
+            out << "ServerError";
+            break;
+        case http::Code::NetworkError:
+            out << "NetworkError";
+            break;
+        case http::Code::Done:
+            out << "Done";
+            break;
+        default:
+            out << "***invalid***";
+            break;
+    }
+    out << "/" << static_cast<int>(code);
+    return out;
+}
+
+std::ostream& http::operator<<(std::ostream &out,
+                               const http::Reply::Step step) {
+    switch (step) {
+        case http::Reply::Step::Beginning:
+            out << "Beginning";
+            break;
+        case http::Reply::Step::Headers:
+            out << "Headers";
+            break;
+        case http::Reply::Step::Body:
+            out << "Body";
+            break;
+        case http::Reply::Step::Done:
+            out << "Done";
+            break;
+        default:
+            out << "***invalid***";
+            break;
+    }
+    out << "/" << static_cast<int>(step);
+    return out;
+}
 
 Request::Request()
         : method("GET"), selector("/"), fields(), query(), trailers(),
@@ -243,19 +337,29 @@ Code Reply::consumeInput(int64_t dl) {
         dl = mill_now() + 8000;
 
     ssize_t rc = socket->read(ctx.buffer.data(), ctx.buffer.size(), dl);
-    if (rc <= 0)
+    if (rc < 0)
         return Code::NetworkError;
 
-    ssize_t consumed = http_parser_execute(
-            &ctx.parser, &settings,
-            reinterpret_cast<const char *>(ctx.buffer.data()), rc);
-    if (ctx.parser.http_errno != 0) {
-        LOG(INFO) << "Unexpected http error " << ctx.parser.http_errno;
-        return Code::ServerError;
+    const char *b = reinterpret_cast<const char *>(ctx.buffer.data());
+    if (rc == 0) {
+        // EOF received, we need to tell the HTTP parser.
+        ssize_t  consumed = http_parser_execute(&ctx.parser, &settings, b, 0);
+        HTTP_LOG() << "EOF received, http_parser rc=" << consumed;
+    } else {
+        HTTP_LOG() << rc << " bytes received";
+        ssize_t l = rc;
+        while (l > 0) {
+            ssize_t consumed = http_parser_execute(&ctx.parser, &settings,
+                                                   b, l);
+            HTTP_LOG() << consumed << '/' << rc << " bytes managed";
+            if (ctx.parser.http_errno != 0) {
+                LOG(INFO) << "Unexpected http error " << ctx.parser.http_errno;
+                return Code::ServerError;
+            }
+            b += consumed;
+            l -= consumed;
+        }
     }
-
-    if (consumed != rc)
-        return Code::NetworkError;
 
     return Code::OK;
 }
@@ -268,6 +372,7 @@ Code Reply::ReadHeaders() {
     }
     while (ctx.step <= Step::Headers) {
         auto rc = consumeInput(dl);
+        HTTP_LOG() << "step=" << ctx.step << " consumeInput rc=" << rc;
         if (rc != Code::OK)
             return rc;
     }

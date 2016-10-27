@@ -33,6 +33,12 @@ enum class Cause {
 
 std::ostream& operator<<(std::ostream &out, const Cause c);
 
+enum class TransactionStep {
+    Init, Prepared, Done
+};
+
+std::ostream& operator<<(std::ostream &out, const TransactionStep s);
+
 /**
  * Associates a high-level error classs (the Cause) and an explanation message.
  */

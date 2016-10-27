@@ -17,10 +17,13 @@
 
 #include "oio/api/blob.h"
 
+const char *random_hex = "0123456789ABCDEF";
+
 const char *random_chars =
         "0123456789"
                 "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                 "abcdefghijklmnopqrstuvwxyz";
+
 /**
  * Generates operations on blobs.
  * Each operation will be used only once in a test case.
@@ -38,19 +41,19 @@ class BlobOpsFactory {
 };
 
 DEFINE_uint64(test_file_size,
-              8 * 1024 * 1024,
+              1024,
               "Size of the sample file");
 
 DEFINE_uint64(test_batch_size,
-              1024 * 1024,
+              128,
               "Size of the batches to write in the sample file");
 
 #define OP_LOOP_ON(op, Step, head, tail) do { \
         auto rc = op->Step(); \
-        ASSERT_EQ(rc.Why(), oio::api::blob::Cause::head); \
+        ASSERT_EQ(oio::api::blob::Cause::head, rc.Why()); \
         for (int i=0; i < 2; ++i) { \
             rc = op->Step(); \
-            ASSERT_EQ(rc.Why(), oio::api::blob::Cause::tail); \
+            ASSERT_EQ(oio::api::blob::Cause::tail, rc.Why()); \
         } \
     } while (0)
 
@@ -158,6 +161,18 @@ class BlobTestSuite : public ::testing::Test {
     }
 
     /**
+     * Test Commit() without any Prepare()
+     * All the calls to Commit() must fail, and the internal state of the upload
+     * must not change. A subsequent Prepare() must succeed.
+     */
+    void test_upload_init_commit() {
+        auto op = Upload();
+        LOOP_ON(Commit, InternalError, InternalError);
+        LOOP_ON(Prepare, OK, InternalError);
+        LOOP_ON(Abort, OK, InternalError);
+    }
+
+    /**
      * Test Abort() after Prepare() on an upload.
      */
     void test_upload_prepare_abort() {
@@ -217,11 +232,14 @@ class BlobTestSuite : public ::testing::Test {
  * BlobTestSuite interface.
  */
 #define DECLARE_BLOBTESTSUITE(FinalClass) \
+TEST_F(FinalClass, UploadPrepareAbort) { \
+    test_upload_prepare_abort(); \
+} \
 TEST_F(FinalClass, UploadInitAbort) { \
     test_upload_init_abort(); \
 } \
-TEST_F(FinalClass, UploadPrepareAbort) { \
-    test_upload_prepare_abort(); \
+TEST_F(FinalClass, UploadInitCommit) { \
+    test_upload_init_abort(); \
 } \
 TEST_F(FinalClass, RemoveCommit) { \
     test_remove_abort(); \
@@ -232,7 +250,7 @@ TEST_F(FinalClass, RemoveAbort) { \
 TEST_F(FinalClass, RemovePrepareNotFoundCommit) { \
     test_remove_not_found_and_abort(); \
 } \
-TEST_F(FinalClass, RemovePreapreNotFoundAbort) { \
+TEST_F(FinalClass, RemovePrepareNotFoundAbort) { \
     test_remove_not_found_and_commit(); \
 } \
 TEST_F(FinalClass, DownloadNotFound) { \

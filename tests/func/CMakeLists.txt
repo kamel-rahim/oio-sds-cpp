@@ -32,11 +32,11 @@ target_link_libraries(test-http-client-proxy
         ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES} ${GTEST_LIBRARIES})
 add_test(NAME http/vanilla COMMAND test-http-client-proxy)
 
-add_executable(test-http-client-proxy-rawx TestHttpClient_OioRawx.cpp)
-target_link_libraries(test-http-client-proxy-rawx
+add_executable(test-http-client-rawx TestHttpClient_OioRawx.cpp)
+target_link_libraries(test-http-client-rawx
         oio-data-rawx
         ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES} ${GTEST_LIBRARIES})
-add_test(NAME http/rawx COMMAND test-http-client-proxy-rawx)
+add_test(NAME http/rawx COMMAND test-http-client-rawx)
 
 
 add_executable(test-kinetic-rpc TestKineticRpc.cpp)

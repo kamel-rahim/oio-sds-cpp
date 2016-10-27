@@ -69,6 +69,11 @@ class Request {
      */
     inline void Socket(std::shared_ptr<net::Socket> s) { socket = s; }
 
+    inline void Abort() {
+        socket->close();
+        socket->reset();
+    }
+
     /**
      *
      * @return
@@ -116,7 +121,13 @@ class Reply {
     };
 
     enum Step {
-        Beginning, Headers, Body, Done
+        // No data read yet
+        Beginning,
+        // Currently reading the first batch of headers.
+        // We might loop on Headers, while 100-continue are received.
+        Headers,
+        Body,
+        Done
     };
 
     /**
@@ -306,6 +317,10 @@ class Call {
 
     FORBID_MOVE_CTOR(Call);
 };
+
+std::ostream& operator<<(std::ostream &out, const Code code);
+
+std::ostream& operator<<(std::ostream &out, const Reply::Step step);
 
 }  // namespace http
 

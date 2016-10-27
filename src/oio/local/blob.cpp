@@ -27,6 +27,7 @@ using oio::local::blob::UploadBuilder;
 using oio::api::blob::Status;
 using oio::api::blob::Errno;
 using oio::api::blob::Cause;
+using Step = oio::api::blob::TransactionStep;
 
 DEFINE_uint64(mode_mkdir, 0755, "Mode for freshly create directories");
 DEFINE_uint64(mode_create, 0644, "Mode for freshly created files");
@@ -40,13 +41,10 @@ class LocalDownload : public oio::api::blob::Download {
     friend class DownloadBuilder;
 
  private:
-    enum class Step { Init, Ready, Finished };
-
     std::string path;
     std::vector<uint8_t> buffer;
     off64_t offset_, size_expected_, size_read_;
     int fd_;
-
     Step step;
 
  private:
@@ -71,7 +69,7 @@ class LocalDownload : public oio::api::blob::Download {
             return 0;
         } else {
             if (rc == 0)
-                step = Step::Finished;
+                step = Step::Done;
             else
                 size_read_ += rc;
             return rc;
@@ -80,7 +78,7 @@ class LocalDownload : public oio::api::blob::Download {
 
     bool loadBuffer() {
         assert(fd_ >= 0);
-        assert(step == Step::Ready);
+        assert(step == Step::Prepared);
 
         // Bound the buffer size to both the expected size and the general
         // batch size.
@@ -145,15 +143,15 @@ class LocalDownload : public oio::api::blob::Download {
                 return closeAndErrno(ENXIO);
         }
 
-        step = Step::Ready;
+        step = Step::Prepared;
         return Status(Cause::OK);
     }
 
-    bool IsEof() override { return step == Step::Finished; }
+    bool IsEof() override { return step == Step::Done; }
 
     int32_t Read(std::vector<uint8_t> *buf) override {
         assert(buf != nullptr);
-        if (step != Step::Ready)
+        if (step != Step::Prepared)
             return 0;
         if (buffer.size() <= 0) {
             if (!loadBuffer())
@@ -165,7 +163,7 @@ class LocalDownload : public oio::api::blob::Download {
     }
 
     Status SetRange(uint32_t offset, uint32_t size) override {
-        if (step != Step::Ready)
+        if (step != Step::Prepared)
             return Status(Cause::Forbidden);
         offset_ = offset;
         size_expected_ = size;
@@ -191,9 +189,6 @@ std::unique_ptr<oio::api::blob::Download> DownloadBuilder::Build() {
  */
 class LocalRemoval : public oio::api::blob::Removal {
     friend class RemovalBuilder;
-
- private:
-    enum class Step { Init, Prepared, Done };
 
  private:
     std::string path;
@@ -252,8 +247,6 @@ class LocalUpload : public oio::api::blob::Upload {
     friend class UploadBuilder;
 
  private:
-    enum class Step { Init, Prepared, Done };
-
     std::string path_final;
     std::string path_temp;
     std::map<std::string, std::string> attributes;

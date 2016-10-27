@@ -26,13 +26,11 @@ class DownloadBuilder {
 
     ~DownloadBuilder();
 
-    void Host(const std::string &s);
+    void RawxId(const std::string &s);
 
-    void Name(const std::string &s);
+    void ChunkId(const std::string &s);
 
-    void Field(const std::string &k, const std::string &v);
-
-    std::shared_ptr<oio::api::blob::Download> Build(
+    std::unique_ptr<oio::api::blob::Download> Build(
             std::shared_ptr<net::Socket> socket);
 
  private:
@@ -45,15 +43,29 @@ class UploadBuilder {
 
     ~UploadBuilder();
 
-    void Host(const std::string &s);
+    void RawxId(const std::string &s);
 
-    void Name(const std::string &s);
+    void ChunkId(const std::string &s);
 
-    void Field(const std::string &k, const std::string &v);
+    void ChunkPosition(int64_t meta, int64_t sub);
 
-    void Trailer(const std::string &k);
+    void ContainerId(const std::string &s);
 
-    std::shared_ptr<oio::api::blob::Upload> Build(
+    void ContentPath(const std::string &s);
+
+    void ContentId(const std::string &s);
+
+    void MimeType(const std::string &s);
+
+    void ContentVersion(int64_t v);
+
+    void StoragePolicy(const std::string &s);
+
+    void ChunkMethod(const std::string &s);
+
+    void Property(const std::string &k, const std::string &v);
+
+    std::unique_ptr<oio::api::blob::Upload> Build(
             std::shared_ptr<net::Socket> socket);
 
  private:
@@ -66,15 +78,11 @@ class RemovalBuilder {
 
     ~RemovalBuilder();
 
-    void Host(const std::string &s);
+    void RawxId(const std::string &s);
 
-    void Name(const std::string &s);
+    void ChunkId(const std::string &s);
 
-    void Field(const std::string &k, const std::string &v);
-
-    void Trailer(const std::string &k);
-
-    std::shared_ptr<oio::api::blob::Removal> Build(
+    std::unique_ptr<oio::api::blob::Removal> Build(
             std::shared_ptr<net::Socket> socket);
 
  private:

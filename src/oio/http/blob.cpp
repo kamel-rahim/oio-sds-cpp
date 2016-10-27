@@ -15,6 +15,7 @@
 #include "utils/Http.h"
 #include "oio/http/blob.h"
 
+using http::Code;
 using oio::http::imperative::RemovalBuilder;
 using oio::http::imperative::UploadBuilder;
 using oio::http::imperative::DownloadBuilder;
@@ -23,93 +24,110 @@ using oio::api::blob::Upload;
 using oio::api::blob::Download;
 using oio::api::blob::Status;
 using oio::api::blob::Cause;
+using Step = oio::api::blob::TransactionStep;
 
+
+/**
+ *
+ */
 class HttpRemoval : public Removal {
     friend class RemovalBuilder;
-
- public:
-    HttpRemoval();
-
-    virtual ~HttpRemoval();
-
-    Status Prepare() override;
-
-    Status Commit() override;
-
-    Status Abort() override;
-
- private:
-    http::Call rpc;
-};
-
-class HttpUpload : public Upload {
-    friend class UploadBuilder;
-
- public:
-    HttpUpload();
-
-    ~HttpUpload();
-
-    void SetXattr(const std::string &k, const std::string &v) override;
-
-    Status Prepare() override;
-
-    Status Commit() override;
-
-    Status Abort() override;
-
-    void Write(const uint8_t *buf, uint32_t len) override;
-
  private:
     http::Request request;
     http::Reply reply;
-};
-
-class HttpDownload : public Download {
-    friend class DownloadBuilder;
+    Step step_;
 
  public:
-    HttpDownload();
+    HttpRemoval(): step_{Step::Init} {}
 
-    ~HttpDownload();
+    ~HttpRemoval() override {}
 
-    bool IsEof() override;
+    Status Prepare() override {
+        if (step_ != Step::Init)
+            return Status(Cause::InternalError);
 
-    Status Prepare() override;
+        auto code = request.WriteHeaders();
+        DLOG(INFO) << "WriteHeaders code=" << code;
+        if (code != Code::OK) {
+            if (code == Code::NetworkError)
+                return Status(Cause::NetworkError);
+            return Status(Cause::InternalError);
+        }
 
-    int32_t Read(std::vector<uint8_t> *buf) override;
+        code = reply.ReadHeaders();
+        const auto status = reply.Get().parser.status_code;
+        DLOG(INFO) << "ReadHeaders(100) code=" << code << " status=" << status;
 
- private:
-    http::Request request;
-    http::Reply reply;
-};
+        if (code != Code::OK && code != Code::ServerError) {
+            request.Abort();
+            if (code == Code::NetworkError)
+                return Status(Cause::NetworkError);
+            if (code == Code::ClientError)
+                return Status(Cause::InternalError);
+            return Status(Cause::InternalError);
+        }
 
+        switch (status) {
+            case 100:
+                step_ = Step::Prepared;
+                return Status();
+            case 400:
+                return Status(Cause::ProtocolError);
+            case 403:
+                return Status(Cause::Forbidden);
+            case 404:
+                return Status(Cause::NotFound);
+            default:
+                return Status(Cause::InternalError);
+        }
+    }
 
-HttpRemoval::HttpRemoval() {}
+    Status Commit() override {
+        if (step_ != Step::Prepared)
+            return Status(Cause::InternalError);
 
-HttpRemoval::~HttpRemoval() {}
+        step_ = Step::Done;
 
-/* TODO(jfs) Manage prepare/commit/abort semantics.
- * For example, we could prepare the request here, just sending the headers with
- * the Transfer-Enncoding set to chunked. So we could wait for the commit to
- * finish the request */
-Status HttpRemoval::Prepare() {
-    return Status();
-}
+        auto code = request.FinishRequest();
+        DLOG(INFO) << "FinishRequest code=" << code;
+        if (code != Code::OK) {
+            request.Abort();
+            if (code == Code::NetworkError)
+                return Status(Cause::NetworkError);
+            if (code == Code::ClientError)
+                return Status(Cause::InternalError);
+            return Status(Cause::InternalError);
+        }
 
-Status HttpRemoval::Commit() {
-    std::string out;
-    auto rc = rpc.Run("", &out);
-    if (rc == http::Code::OK || rc == http::Code::Done)
+        code = reply.ReadHeaders();
+        DLOG(INFO) << "ReadHeaders code=" << code;
+        if (code != Code::OK) {
+            request.Abort();
+            if (code == Code::NetworkError)
+                return Status(Cause::NetworkError);
+            if (code == Code::ClientError)
+                return Status(Cause::InternalError);
+            return Status(Cause::InternalError);
+        }
+
+        for (;;) {
+            http::Reply::Slice out;
+            code = reply.ReadBody(&out);
+            DLOG(INFO) << "ReadBody() code=" << code;
+            if (code != Code::OK)
+                break;
+        }
         return Status();
-    // TODO(jfs) better error management
-    return Status(Cause::InternalError);
-}
+    }
 
-Status HttpRemoval::Abort() {
-    LOG(WARNING) << "Cannot abort a HTTP delete";
-    return Status(Cause::Unsupported);
-}
+    Status Abort() override {
+        if (step_ != Step::Prepared)
+            return Status(Cause::InternalError);
+        request.Abort();
+        step_ = Step::Done;
+        return Status();
+    }
+};
 
 RemovalBuilder::RemovalBuilder() {}
 
@@ -125,25 +143,65 @@ void RemovalBuilder::Field(const std::string &k, const std::string &v) {
 
 void RemovalBuilder::Trailer(const std::string &k) { trailers.insert(k); }
 
-std::shared_ptr<oio::api::blob::Removal> RemovalBuilder::Build(
+std::unique_ptr<oio::api::blob::Removal> RemovalBuilder::Build(
         std::shared_ptr<net::Socket> socket) {
     auto rm = new HttpRemoval;
-    rm->rpc.Socket(socket).Method("DELETE").Selector(name).Field("Host", host);
-    std::shared_ptr<Removal> shared(rm);
-    return shared;
+    rm->reply.Socket(socket);
+    rm->request.Socket(socket);
+    rm->request.Method("DELETE");
+    rm->request.Selector(name);
+    rm->request.Field("Host", host);
+    rm->request.ContentLength(0);
+    rm->request.Field("Expect", "100-continue");
+    for (const auto &t : trailers)
+        rm->request.Trailer(t);
+    for (const auto &e : fields)
+        rm->request.Field(e.first, e.second);
+    return std::unique_ptr<Removal>(rm);
 }
 
 
-HttpUpload::HttpUpload() : request(), reply() {}
+/**
+ *
+ */
+class HttpUpload : public Upload {
+    friend class UploadBuilder;
+ private:
+    http::Request request;
+    http::Reply reply;
+    Step step_;
 
-HttpUpload::~HttpUpload() {}
+ public:
+    HttpUpload(): request(), reply(), step_{Step::Init} {}
 
-void HttpUpload::SetXattr(const std::string &k, const std::string &v) {
-    request.Field(k, v);
-}
+    ~HttpUpload() override {}
+
+    void SetXattr(const std::string &k, const std::string &v) override {
+        if (step_ != Step::Done)
+            request.Field(k, v);
+    }
+
+    Status Prepare() override;
+
+    Status Commit() override;
+
+    Status Abort() override;
+
+    void Write(const uint8_t *buf, uint32_t len) override;
+};
 
 Status HttpUpload::Commit() {
+    LOG(INFO) << __FUNCTION__ << " (" << __FILE__ << ") " << step_;
+    if (step_ != Step::Prepared)
+        return Status(Cause::InternalError);
+    step_ = Step::Done;
+
     auto rc = request.FinishRequest();
+    if (rc != Code::OK) {
+        if (rc == Code::NetworkError)
+            return Status(Cause::NetworkError);
+        return Status(Cause::InternalError);
+    }
 
     rc = reply.ReadHeaders();
     while (rc == http::Code::OK) {
@@ -156,12 +214,27 @@ Status HttpUpload::Commit() {
     return Status(Cause::InternalError);
 }
 
-Status HttpUpload::Abort() { return Status(Cause::Unsupported); }
+Status HttpUpload::Abort() {
+    if (step_ != Step::Prepared)
+        return Status(Cause::InternalError);
+    request.Abort();
+    step_ = Step::Done;
+    return Status();
+}
 
 Status HttpUpload::Prepare() {
+    if (step_ != Step::Init)
+        return Status(Cause::InternalError);
+
     auto rc = request.WriteHeaders();
-    (void) rc;
-    return Status(Cause::InternalError);
+    if (rc != Code::OK) {
+        if (rc == Code::NetworkError)
+            return Status(Cause::NetworkError);
+        return Status(Cause::InternalError);
+    } else {
+        step_ = Step::Prepared;
+        return Status();
+    }
 }
 
 void HttpUpload::Write(const uint8_t *buf, uint32_t len) {
@@ -184,60 +257,80 @@ void UploadBuilder::Field(const std::string &k, const std::string &v) {
 
 void UploadBuilder::Trailer(const std::string &k) { trailers.emplace(k); }
 
-std::shared_ptr<oio::api::blob::Upload> UploadBuilder::Build(
+std::unique_ptr<oio::api::blob::Upload> UploadBuilder::Build(
         std::shared_ptr<net::Socket> socket) {
     auto ul = new HttpUpload;
+    ul->reply.Socket(socket);
     ul->request.Socket(socket);
     ul->request.Method("PUT");
     ul->request.Selector(name);
     ul->request.Field("Host", host);
+    ul->request.ContentLength(-1);
     for (const auto &t : trailers)
         ul->request.Trailer(t);
     for (const auto &e : fields)
         ul->request.Field(e.first, e.second);
-    ul->reply.Socket(socket);
-    return std::shared_ptr<Upload>(ul);
+    return std::unique_ptr<Upload>(ul);
 }
 
 
-HttpDownload::HttpDownload() : request(), reply() {}
+/**
+ *
+ */
+class HttpDownload : public Download {
+    friend class DownloadBuilder;
 
-HttpDownload::~HttpDownload() {}
+ private:
+    http::Request request;
+    http::Reply reply;
+    Step step_;
 
-bool HttpDownload::IsEof() {
-    return reply.Get().step == http::Reply::Step::Done;
-}
+ public:
+    HttpDownload() : request(), reply(), step_{Step::Init} {}
 
-Status HttpDownload::Prepare() {
-    auto rc = request.WriteHeaders();
-    if (rc != http::Code::OK && rc != http::Code::Done) {
-        if (rc == http::Code::NetworkError)
-            return Status(Cause::NetworkError);
-        return Status(Cause::InternalError);
+    ~HttpDownload() override {}
+
+    bool IsEof() override {
+        return reply.Get().step == http::Reply::Step::Done;
     }
 
-    rc = request.FinishRequest();
-    if (rc != http::Code::OK && rc != http::Code::Done) {
-        if (rc == http::Code::NetworkError)
-            return Status(Cause::NetworkError);
-        return Status(Cause::InternalError);
+    Status Prepare() override  {
+        if (step_ != Step::Init)
+            return Status(Cause::InternalError);
+
+        auto rc = request.WriteHeaders();
+        if (rc != http::Code::OK && rc != http::Code::Done) {
+            if (rc == http::Code::NetworkError)
+                return Status(Cause::NetworkError);
+            return Status(Cause::InternalError);
+        }
+
+        rc = request.FinishRequest();
+        if (rc != http::Code::OK && rc != http::Code::Done) {
+            if (rc == http::Code::NetworkError)
+                return Status(Cause::NetworkError);
+            return Status(Cause::InternalError);
+        }
+
+        rc = reply.ReadHeaders();
+        if (rc != http::Code::OK && rc != http::Code::Done) {
+            if (rc == http::Code::NetworkError)
+                return Status(Cause::NetworkError);
+            return Status(Cause::InternalError);
+        }
+
+        step_ = Step::Prepared;
+        return Status(Cause::OK);
     }
 
-    rc = reply.ReadHeaders();
-    if (rc != http::Code::OK && rc != http::Code::Done) {
-        if (rc == http::Code::NetworkError)
-            return Status(Cause::NetworkError);
-        return Status(Cause::InternalError);
+    int32_t Read(std::vector<uint8_t> *buf) override  {
+        if (step_ != Step::Prepared)
+            return -1;
+        buf->clear();
+        reply.AppendBody(buf);
+        return buf->size();
     }
-
-    return Status(Cause::OK);
-}
-
-int32_t HttpDownload::Read(std::vector<uint8_t> *buf) {
-    buf->clear();
-    reply.AppendBody(buf);
-    return buf->size();
-}
+};
 
 DownloadBuilder::DownloadBuilder() {}
 
@@ -251,15 +344,16 @@ void DownloadBuilder::Host(const std::string &s) { host.assign(s); }
 
 void DownloadBuilder::Name(const std::string &s) { name.assign(s); }
 
-std::shared_ptr<oio::api::blob::Download> DownloadBuilder::Build(
+std::unique_ptr<oio::api::blob::Download> DownloadBuilder::Build(
         std::shared_ptr<net::Socket> socket) {
     auto dl = new HttpDownload;
     dl->request.Socket(socket);
     dl->request.Method("GET");
     dl->request.Selector(name);
     dl->request.Field("Host", host);
+    dl->request.ContentLength(0);
     for (const auto &e : fields)
         dl->request.Field(e.first, e.second);
     dl->reply.Socket(socket);
-    return std::shared_ptr<Download>(dl);
+    return std::unique_ptr<Download>(dl);
 }

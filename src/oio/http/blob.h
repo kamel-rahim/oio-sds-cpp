@@ -33,7 +33,7 @@ class DownloadBuilder {
 
     void Field(const std::string &k, const std::string &v);
 
-    std::shared_ptr<oio::api::blob::Download> Build(
+    std::unique_ptr<oio::api::blob::Download> Build(
             std::shared_ptr<net::Socket> socket);
 
  protected:
@@ -56,7 +56,7 @@ class UploadBuilder {
 
     void Trailer(const std::string &k);
 
-    std::shared_ptr<oio::api::blob::Upload> Build(
+    std::unique_ptr<oio::api::blob::Upload> Build(
             std::shared_ptr<net::Socket> socket);
 
  private:
@@ -80,7 +80,7 @@ class RemovalBuilder {
 
     void Trailer(const std::string &k);
 
-    std::shared_ptr<oio::api::blob::Removal> Build(
+    std::unique_ptr<oio::api::blob::Removal> Build(
             std::shared_ptr<net::Socket> socket);
 
  private:

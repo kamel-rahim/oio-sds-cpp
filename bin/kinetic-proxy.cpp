@@ -9,7 +9,6 @@
 #include <signal.h>
 
 #include <libmill.h>
-
 #include <cstdlib>
 
 #include "utils/utils.h"
@@ -17,8 +16,8 @@
 #include "oio/kinetic/coro/blob.h"
 #include "oio/kinetic/coro/client/CoroutineClientFactory.h"
 
-#include "./MillDaemon.h"
-#include "./kinetic-proxy-headers.h"
+#include "bin/MillDaemon.h"
+#include "bin/kinetic-proxy-headers.h"
 
 using oio::kinetic::blob::RemovalBuilder;
 using oio::kinetic::blob::DownloadBuilder;
@@ -123,6 +122,7 @@ class KineticRepository : public BlobRepository {
 int main(int argc, char **argv) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
     google::InitGoogleLogging(argv[0]);
+    FLAGS_logtostderr = true;
 
     if (argc < 2) {
         LOG(ERROR) << "Usage: " << argv[0] << " FILE [FILE...]";

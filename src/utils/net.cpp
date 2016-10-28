@@ -53,7 +53,11 @@ static bool _port_parse(const char *start, uint16_t *res) {
 
 //-----------------------------------------------------------------------------
 
-NetAddr::NetAddr() : family_{0} {}
+Addr& Addr::operator=(const Addr &o) {
+    ::memcpy(&ss_, &o.ss_, sizeof(NetAddr));
+    len_ = o.len_;
+    return *this;
+}
 
 Addr::Addr() { reset(); }
 
@@ -460,10 +464,17 @@ unsigned int RegularSocket::PollOut(int64_t dl) {
     return _poll(fd_, static_cast<int16_t>(POLLOUT), dl);
 }
 
-std::unique_ptr<Socket> RegularSocket::accept() {
+Socket* RegularSocket::accept() {
+    Addr local, peer;
+    int fd = accept_fd(&local_, &peer_);
+    if (fd < 0)
+        return nullptr;
+
     auto cli = new RegularSocket();
-    cli->fd_ = accept_fd(&cli->local_, &cli->peer_);
-    return std::unique_ptr<Socket>(cli);
+    cli->fd_ = fd;
+    cli->local_ = local;
+    cli->peer_ = peer;
+    return cli;
 }
 
 
@@ -493,8 +504,16 @@ void MillSocket::switch_context() {
     yield();
 }
 
-std::unique_ptr<Socket> MillSocket::accept() {
+Socket* MillSocket::accept() {
+    Addr local, peer;
+    int fd = accept_fd(&local_, &peer_);
+    if (fd < 0)
+        return nullptr;
+
     auto cli = new MillSocket();
-    cli->fd_ = accept_fd(&cli->local_, &cli->peer_);
-    return std::unique_ptr<Socket>(cli);
+    cli->fd_ = fd;
+    cli->local_ = local;
+    cli->peer_ = peer;
+    return cli;
+
 }

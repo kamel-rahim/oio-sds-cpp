@@ -179,6 +179,7 @@ static void _sighandler_stop(int s UNUSED) {
 int main(int argc, char **argv) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
     google::InitGoogleLogging(argv[0]);
+    FLAGS_logtostderr = true;
 
     if (argc < 2) {
         LOG(ERROR) << "Usage: " << argv[0] << " FILE [FILE...]";

@@ -120,7 +120,7 @@ bool Addr::parse(const std::string addr) {
     return false;
 }
 
-std::string Addr::Debug() const {
+std::string Addr::Url() const {
     char tmp[128];
     std::stringstream ss;
     switch (ADDR(&ss_)->sa_family) {
@@ -141,20 +141,47 @@ std::string Addr::Debug() const {
     }
 }
 
+int Addr::family() const {
+    return address()->sa_family;
+}
+
+std::string Addr::family_name() const {
+    switch (family()) {
+        case AF_INET: return "AF_INET";
+        case AF_INET6: return "AF_INET6";
+        default: return "PF_?";
+    }
+}
+
+int Addr::port() const {
+    switch (family()) {
+        case AF_INET:
+            return reinterpret_cast<const sockaddr_in*>(address())->sin_port;
+        case AF_INET6:
+            return reinterpret_cast<const sockaddr_in6*>(address())->sin6_port;
+        default:
+            return 0;
+    }
+}
+
+const struct sockaddr* Addr::address() const {
+    return reinterpret_cast<const sockaddr*>(&ss_);
+}
+
+struct sockaddr* Addr::address() {
+    return reinterpret_cast<sockaddr *>(&ss_);
+}
+
 std::string Socket::Debug() const {
     std::stringstream ss;
     ss << "Socket{fd:" << fd_
-       << ",local:" << local_.Debug()
-       << ",remote:" << peer_.Debug()
+       << ",local:" << local_.family_name() << "/" << local_.Url()
+       << ",remote:" << peer_.family_name() << "/" << peer_.Url()
        << "}";
     return ss.str();
 }
 
-void Socket::reset() {
-    fd_ = -1;
-    peer_.reset();
-    local_.reset();
-}
+void Socket::reset() { fd_ = -1; }
 
 void Socket::close() {
     if (fd_ >= 0)
@@ -235,18 +262,22 @@ bool Socket::connect(const std::string url) {
     if (!peer_.parse(url)) {
         return false;
     }
-    this->init(reinterpret_cast<struct sockaddr *>(&peer_.ss_)->sa_family);
 
-    auto rc = ::connect(fd_,
-                        reinterpret_cast<struct sockaddr *>(&peer_.ss_),
-                        reinterpret_cast<socklen_t>(peer_.len_));
+    this->init(peer_.family());
+
+    auto rc = ::connect(fd_, peer_.address(),
+                        static_cast<socklen_t>(peer_.len_));
     if (rc < 0 && errno != EINPROGRESS)
         return false;
 
-    (void) ::getsockname(fd_,
-                         reinterpret_cast<struct sockaddr *>(&local_.ss_),
-                         reinterpret_cast<socklen_t *>(&local_.len_));
-    return true;
+    rc = ::getsockname(fd_, local_.address(),
+                       static_cast<socklen_t*>(&local_.len_));
+    return rc == 0;
+}
+
+bool Socket::Reconnect() {
+    this->close();
+    return this->connect(peer_.Url());
 }
 
 int Socket::accept_fd(Addr *peer, Addr *local) {

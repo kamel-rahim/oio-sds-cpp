@@ -32,11 +32,6 @@ struct NetAddr {
     uint16_t port;
     uint8_t addr[16];
     uint8_t padding[2];
-
-    NetAddr();
-    FORBID_COPY_CTOR(NetAddr);
-
-    FORBID_MOVE_CTOR(NetAddr);
 };
 
 /**
@@ -46,9 +41,9 @@ struct Addr {
     NetAddr ss_;
     uint32_t len_;
 
-    Addr();  // default constructor
-    Addr(const Addr &o);  // copy
-    Addr(Addr &&o);  // move
+    Addr();
+    Addr(const Addr &o);
+    Addr(Addr &&o);
 
     bool parse(const char *url);
 
@@ -57,15 +52,17 @@ struct Addr {
     void reset();
 
     std::string Debug() const;
+
+    Addr& operator=(const Addr &o);
 };
+
 
 /**
  * An interface for two-way communication channels.
  */
 class Channel {
  public:
-    virtual ~Channel() {
-    }
+    virtual ~Channel() {}
 
     virtual std::string Debug() const = 0;
 
@@ -103,13 +100,17 @@ class Socket : public Channel {
     /**
      * Destructor. DOESN'T CLOSE THE SOCKET
      */
-    virtual ~Socket() {}
+    virtual ~Socket() {
+        LOG(INFO) << __FUNCTION__ << '(' << fd_ << ')';
+    }
 
     /**
      * Default Socket constructor
      * @return
      */
-    Socket() : fd_{-1} {}
+    Socket() : fd_{-1} {
+        LOG(INFO) << __FUNCTION__;
+    }
 
     /**
      * Wait for the output to be ready
@@ -129,7 +130,7 @@ class Socket : public Channel {
      */
     virtual unsigned int PollIn(int64_t dl) = 0;
 
-    virtual std::unique_ptr<Socket> accept() = 0;
+    virtual Socket* accept() = 0;
 
     /**
      * Accepts a connection on the current server socket.
@@ -245,7 +246,7 @@ class RegularSocket : public Socket {
      * @return a managed valid pointer whatever, whose fileno() returns -1 in
      * case of error, and >= 0 in case of success.
      */
-    std::unique_ptr<Socket> accept() override;
+    Socket* accept() override;
 
  private:
     FORBID_MOVE_CTOR(RegularSocket);
@@ -274,7 +275,7 @@ class MillSocket : public Socket {
      * @return a managed valid pointer whatever, whose fileno() returns -1 in
      * case of error, and >= 0 in case of success.
      */
-    std::unique_ptr<Socket> accept() override;
+    Socket* accept() override;
 
     /**
      * Unregister the socket from the libMill pool, then forward the close() to

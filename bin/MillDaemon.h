@@ -136,11 +136,9 @@ class BlobService {
  private:
     NOINLINE void Run(volatile bool *flag_running);
 
-    void StartClient(volatile bool *flag_running,
-            std::unique_ptr<net::Socket> s0);
+    void StartClient(volatile bool *flag_running, net::Socket* s0);
 
-    NOINLINE void RunClient(volatile bool *flag_running,
-            std::unique_ptr<net::Socket> s0);
+    NOINLINE void RunClient(volatile bool *flag_running, net::Socket* s0);
 
  private:
     net::MillSocket front;

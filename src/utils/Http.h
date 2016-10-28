@@ -69,9 +69,24 @@ class Request {
      */
     inline void Socket(std::shared_ptr<net::Socket> s) { socket = s; }
 
-    inline void Abort() {
-        socket->close();
-        socket->reset();
+    /**
+     * Reset the connection and the parsing context
+     */
+    inline void Abort() { if (socket.get() != nullptr) socket->close(); }
+
+    /**
+     * Restart a new conection connected to the same target
+     */
+    inline bool Reconnect() {
+        return socket.get() != nullptr && socket->Reconnect();
+    }
+
+    /**
+     * Tells if the request is ready to work with its connection.
+     * @return false if no conection has been provided.
+     */
+    inline bool Connected() const {
+        return socket.get() != nullptr && socket->fileno() >= 0;
     }
 
     /**

@@ -23,6 +23,7 @@ using oio::api::blob::Removal;
 using oio::api::blob::Upload;
 using oio::api::blob::Download;
 using oio::api::blob::Status;
+using oio::api::blob::Errno;
 using oio::api::blob::Cause;
 using Step = oio::api::blob::TransactionStep;
 
@@ -52,7 +53,12 @@ class HttpRemoval : public Removal {
         if (step_ != Step::Init)
             return Status(Cause::InternalError);
 
-        // TODO(jfs) maybe re-establish the connection
+        // If the connection encountered a problem, then re-establish it.
+        if (!request.Connected()) {
+            if (!request.Reconnect()) {
+                return Errno();
+            }
+        }
 
         auto code = request.WriteHeaders();
         DLOG(INFO) << "WriteHeaders code=" << code;
@@ -94,6 +100,8 @@ class HttpRemoval : public Removal {
     Status Commit() override {
         if (step_ != Step::Prepared)
             return Status(Cause::InternalError);
+        if (!request.Connected())
+            return Status(Cause::NetworkError);
 
         step_ = Step::Done;
 
@@ -134,6 +142,9 @@ class HttpRemoval : public Removal {
     Status Abort() override {
         if (step_ != Step::Prepared)
             return Status(Cause::InternalError);
+        if (!request.Connected())
+            return Status(Cause::NetworkError);
+
         request.Abort();
         step_ = Step::Done;
         return Status();

@@ -16,16 +16,18 @@
 #define MILLSOCKET_EVENT 1U
 #define MILLSOCKET_ERROR 2U
 
-// Forward declaration in the main C++ namespace, to match the real definition
-// in <sys/uio.h>
+// Forward declarations in the main C++ namespace, to match the real definition
+// in system headers.
 struct iovec;
+struct sockaddr;
 
 namespace net {
 
 extern bool default_reuse_port;
 
 /**
- * Large enough for a IPv6 and IPv4 addresses
+ * Large enough for a IPv6 and IPv4 addresses.
+ * DO NOT access fields directly!
  */
 struct NetAddr {
     int32_t family_;
@@ -51,7 +53,18 @@ struct Addr {
 
     void reset();
 
-    std::string Debug() const;
+    /**
+     * Get the CIDR form of the address.
+     * @return
+     */
+    std::string Url() const;
+
+    int family () const;
+    std::string family_name () const;
+    int port () const;
+    struct sockaddr* address();
+    const struct sockaddr* address() const;
+
 
     Addr& operator=(const Addr &o);
 };
@@ -147,6 +160,12 @@ class Socket : public Channel {
     bool connect(const std::string s);
 
     bool connect(const char *u);
+
+    /**
+     * Re-establish the connection to target previously attached
+     * @return
+     */
+    bool Reconnect();
 
     bool bind(const char *u);
 

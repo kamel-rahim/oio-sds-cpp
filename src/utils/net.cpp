@@ -515,5 +515,4 @@ Socket* MillSocket::accept() {
     cli->local_ = local;
     cli->peer_ = peer;
     return cli;
-
 }

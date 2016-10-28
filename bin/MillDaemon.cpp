@@ -400,7 +400,6 @@ void BlobService::StartClient(volatile bool *flag_running, net::Socket* s0) {
 NOINLINE void BlobService::RunClient(volatile bool *running, net::Socket* s0) {
     assert(running != nullptr);
     assert(s0 != nullptr);
-    yield();
     BlobClient client(std::unique_ptr<net::Socket>(s0), repository);
     return client.Run(running);
 }
@@ -409,8 +408,7 @@ BlobDaemon::BlobDaemon(std::shared_ptr<BlobRepository> rp)
         : services(), repository_prototype{rp} {
 }
 
-BlobDaemon::~BlobDaemon() {
-}
+BlobDaemon::~BlobDaemon() {}
 
 void BlobDaemon::Start(volatile bool *flag_running) {
     assert(flag_running != nullptr);

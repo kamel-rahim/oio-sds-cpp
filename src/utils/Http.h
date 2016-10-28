@@ -146,15 +146,27 @@ class Reply {
 
         Step step;
         std::string tmp;
+
+        // Chunks of body recognized from the reply's body. They directly point
+        // to the 'buffer'. It is not allowed to consume input until the queue
+        // is not empty.
         std::queue<Slice> body_bytes;
+
+        // working buffer for the request
         std::vector<uint8_t> buffer;
+
+        // Offset of the next byte to manage from the input.
+        unsigned int buffer_offset;
+
+        // Actual number of bytes present in the buffer
+        unsigned int buffer_length;
+
         struct http_parser parser;
 
         Context() : fields(), query(), trailers(),
                     content_length{-1}, received{0},
-                    step{Beginning}, tmp(), body_bytes(), buffer(2048) {
-            Init();
-        }
+                    step{Beginning}, tmp(), body_bytes(),
+                    buffer(2048), buffer_offset{0}, buffer_length{0} { Init(); }
 
         void Init() {
             http_parser_init(&parser, HTTP_RESPONSE);
@@ -162,6 +174,7 @@ class Reply {
         }
 
         void Reset() {
+            step = Step::Beginning;
             fields.clear();
             query.clear();
             trailers.clear();
@@ -228,6 +241,8 @@ class Reply {
      * @return the reply context
      */
     const Context &Get() const { return ctx; }
+
+    void Skip();
 
  private:
     /**

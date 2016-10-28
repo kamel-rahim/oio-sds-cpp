@@ -100,17 +100,13 @@ class Socket : public Channel {
     /**
      * Destructor. DOESN'T CLOSE THE SOCKET
      */
-    virtual ~Socket() {
-        LOG(INFO) << __FUNCTION__ << '(' << fd_ << ')';
-    }
+    virtual ~Socket() {}
 
     /**
      * Default Socket constructor
      * @return
      */
-    Socket() : fd_{-1} {
-        LOG(INFO) << __FUNCTION__;
-    }
+    Socket() : fd_{-1} {}
 
     /**
      * Wait for the output to be ready

@@ -37,6 +37,12 @@ class HttpRemoval : public Removal {
     http::Reply reply;
     Step step_;
 
+    Status skipAndReturn(Status s) {
+        request.Abort();
+        reply.Skip();
+        return s;
+    }
+
  public:
     HttpRemoval(): step_{Step::Init} {}
 
@@ -46,12 +52,16 @@ class HttpRemoval : public Removal {
         if (step_ != Step::Init)
             return Status(Cause::InternalError);
 
+        // TODO(jfs) maybe re-establish the connection
+
         auto code = request.WriteHeaders();
         DLOG(INFO) << "WriteHeaders code=" << code;
         if (code != Code::OK) {
-            if (code == Code::NetworkError)
+            if (code == Code::NetworkError) {
+                // TODO(jfs) abort the connection
                 return Status(Cause::NetworkError);
-            return Status(Cause::InternalError);
+            }
+            return skipAndReturn(Status(Cause::InternalError));
         }
 
         code = reply.ReadHeaders();
@@ -59,12 +69,11 @@ class HttpRemoval : public Removal {
         DLOG(INFO) << "ReadHeaders(100) code=" << code << " status=" << status;
 
         if (code != Code::OK && code != Code::ServerError) {
-            request.Abort();
             if (code == Code::NetworkError)
-                return Status(Cause::NetworkError);
+                return skipAndReturn(Status(Cause::NetworkError));
             if (code == Code::ClientError)
-                return Status(Cause::InternalError);
-            return Status(Cause::InternalError);
+                return skipAndReturn(Status(Cause::InternalError));
+            return skipAndReturn(Status(Cause::InternalError));
         }
 
         switch (status) {
@@ -72,13 +81,13 @@ class HttpRemoval : public Removal {
                 step_ = Step::Prepared;
                 return Status();
             case 400:
-                return Status(Cause::ProtocolError);
+                return skipAndReturn(Status(Cause::ProtocolError));
             case 403:
-                return Status(Cause::Forbidden);
+                return skipAndReturn(Status(Cause::Forbidden));
             case 404:
-                return Status(Cause::NotFound);
+                return skipAndReturn(Status(Cause::NotFound));
             default:
-                return Status(Cause::InternalError);
+                return skipAndReturn(Status(Cause::InternalError));
         }
     }
 
@@ -100,9 +109,10 @@ class HttpRemoval : public Removal {
         }
 
         code = reply.ReadHeaders();
-        DLOG(INFO) << "ReadHeaders code=" << code;
+        DLOG(INFO) << "ReadHeaders(Final) code=" << code;
         if (code != Code::OK) {
             request.Abort();
+            reply.Skip();
             if (code == Code::NetworkError)
                 return Status(Cause::NetworkError);
             if (code == Code::ClientError)
@@ -113,10 +123,11 @@ class HttpRemoval : public Removal {
         for (;;) {
             http::Reply::Slice out;
             code = reply.ReadBody(&out);
-            DLOG(INFO) << "ReadBody() code=" << code;
+            DLOG(INFO) << "ReadBody code=" << code;
             if (code != Code::OK)
                 break;
         }
+
         return Status();
     }
 
@@ -181,61 +192,55 @@ class HttpUpload : public Upload {
             request.Field(k, v);
     }
 
-    Status Prepare() override;
+    Status Prepare() override {
+        if (step_ != Step::Init)
+            return Status(Cause::InternalError);
 
-    Status Commit() override;
+        auto rc = request.WriteHeaders();
+        if (rc != Code::OK) {
+            if (rc == Code::NetworkError)
+                return Status(Cause::NetworkError);
+            return Status(Cause::InternalError);
+        } else {
+            step_ = Step::Prepared;
+            return Status();
+        }
+    }
 
-    Status Abort() override;
+    Status Commit() override {
+        LOG(INFO) << __FUNCTION__ << " (" << __FILE__ << ") " << step_;
+        if (step_ != Step::Prepared)
+            return Status(Cause::InternalError);
+        step_ = Step::Done;
+
+        auto rc = request.FinishRequest();
+        if (rc != Code::OK) {
+            if (rc == Code::NetworkError)
+                return Status(Cause::NetworkError);
+            return Status(Cause::InternalError);
+        }
+
+        rc = reply.ReadHeaders();
+        while (rc == http::Code::OK) {
+            std::vector<uint8_t> out;
+            rc = reply.AppendBody(&out);
+        }
+
+        if (reply.Get().parser.status_code / 100 == 2)
+            return Status();
+        return Status(Cause::InternalError);
+    }
+
+    Status Abort() override {
+        if (step_ != Step::Prepared)
+            return Status(Cause::InternalError);
+        request.Abort();
+        step_ = Step::Done;
+        return Status();
+    }
 
     void Write(const uint8_t *buf, uint32_t len) override;
 };
-
-Status HttpUpload::Commit() {
-    LOG(INFO) << __FUNCTION__ << " (" << __FILE__ << ") " << step_;
-    if (step_ != Step::Prepared)
-        return Status(Cause::InternalError);
-    step_ = Step::Done;
-
-    auto rc = request.FinishRequest();
-    if (rc != Code::OK) {
-        if (rc == Code::NetworkError)
-            return Status(Cause::NetworkError);
-        return Status(Cause::InternalError);
-    }
-
-    rc = reply.ReadHeaders();
-    while (rc == http::Code::OK) {
-        std::vector<uint8_t> out;
-        rc = reply.AppendBody(&out);
-    }
-
-    if (reply.Get().parser.status_code / 100 == 2)
-        return Status();
-    return Status(Cause::InternalError);
-}
-
-Status HttpUpload::Abort() {
-    if (step_ != Step::Prepared)
-        return Status(Cause::InternalError);
-    request.Abort();
-    step_ = Step::Done;
-    return Status();
-}
-
-Status HttpUpload::Prepare() {
-    if (step_ != Step::Init)
-        return Status(Cause::InternalError);
-
-    auto rc = request.WriteHeaders();
-    if (rc != Code::OK) {
-        if (rc == Code::NetworkError)
-            return Status(Cause::NetworkError);
-        return Status(Cause::InternalError);
-    } else {
-        step_ = Step::Prepared;
-        return Status();
-    }
-}
 
 void HttpUpload::Write(const uint8_t *buf, uint32_t len) {
     if (buf == nullptr || len == 0)

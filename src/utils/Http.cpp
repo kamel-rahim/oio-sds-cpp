@@ -330,38 +330,47 @@ Reply::Reply(std::shared_ptr<net::Socket> s) : socket(s), ctx() { init(); }
 Reply::~Reply() {}
 
 Code Reply::consumeInput(int64_t dl) {
+    assert(dl > 0);
     assert(ctx.body_bytes.empty());
 
-    // TODO(jfs): the default read timeout must be configurable
-    if (dl < 0)
-        dl = mill_now() + 8000;
-
-    ssize_t rc = socket->read(ctx.buffer.data(), ctx.buffer.size(), dl);
-    if (rc < 0)
-        return Code::NetworkError;
-
-    const char *b = reinterpret_cast<const char *>(ctx.buffer.data());
-    if (rc == 0) {
-        // EOF received, we need to tell the HTTP parser.
-        ssize_t  consumed = http_parser_execute(&ctx.parser, &settings, b, 0);
-        HTTP_LOG() << "EOF received, http_parser rc=" << consumed;
-    } else {
+    HTTP_LOG() << "ready";
+    // If no data immediately ready, then fill the buffer from the network.
+    bool eof = false;
+    if (ctx.buffer_offset >= ctx.buffer_length) {
+        ssize_t rc = socket->read(ctx.buffer.data(), ctx.buffer.size(), dl);
+        if (rc < 0)
+            return Code::NetworkError;
+        eof = (rc == 0);
+        ctx.buffer_offset = 0;
+        ctx.buffer_length = static_cast<unsigned int>(rc);
         HTTP_LOG() << rc << " bytes received";
-        ssize_t l = rc;
-        while (l > 0) {
-            ssize_t consumed = http_parser_execute(&ctx.parser, &settings,
-                                                   b, l);
-            HTTP_LOG() << consumed << '/' << rc << " bytes managed";
-            if (ctx.parser.http_errno != 0) {
-                LOG(INFO) << "Unexpected http error " << ctx.parser.http_errno;
-                return Code::ServerError;
-            }
-            b += consumed;
-            l -= consumed;
-        }
     }
 
-    return Code::OK;
+    const char *b = reinterpret_cast<const char *>(ctx.buffer.data())
+                        + ctx.buffer_offset;
+    const ssize_t l = ctx.buffer_length - ctx.buffer_offset;
+
+    // EOF received? we need to tell the HTTP parser.
+    if (eof) {
+        auto rc = http_parser_execute(&ctx.parser, &settings, b, 0);
+        HTTP_LOG() << "EOF received, http_parser rc=" << rc;
+        return Code::OK;
+    }
+
+    // Real data available, make it pass through the parser
+    HTTP_LOG() << l << " bytes ready [" << std::string(b, l) << ']';
+    http_parser_pause(&ctx.parser, 0);
+    const ssize_t done = http_parser_execute(&ctx.parser, &settings, b, l);
+    HTTP_LOG() << done << '/' << l << " bytes managed";
+
+    if (done > 0) {
+        ctx.buffer_offset += done;
+        return Code::OK;
+    } else {
+        LOG(INFO) << "Unexpected http error " << ctx.parser.http_errno
+                  << " (" << ::strerror(ctx.parser.http_errno) << ")";
+        return Code::ServerError;
+    }
 }
 
 Code Reply::ReadHeaders() {
@@ -421,6 +430,17 @@ Code Reply::AppendBody(std::vector<uint8_t> *out) {
         memcpy(out->data() + len0, slice.buf, slice.len);
     }
     return Code::OK;
+}
+
+void Reply::Skip() {
+    HTTP_LOG();
+    while (ctx.step < Step::Done) {
+        auto rc = consumeInput(mill_now() + 4000);
+        if (rc != Code::OK)
+            break;
+    }
+    init();
+    ctx.Reset();
 }
 
 Call::Call() : request(nullptr), reply(nullptr) {}

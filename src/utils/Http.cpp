@@ -63,16 +63,12 @@ static int _on_headers_complete(http_parser *p) {
     // The goal is to reduce the number of syscalls (i.e. reading big chunks)
     // but avoiding to allocate to big buffers. These numbers are an arbitrary
     // heuristic but tend to make
-    if (ctx->content_length > 32 * 1024)
+    if (ctx->content_length > 32 * 1024 || ctx->content_length < 0)
         ctx->buffer.resize(128 * 1024);
     else if (ctx->content_length > 2048)
         ctx->buffer.resize(8192);
 
-    if (ctx->parser.status_code == 100) {
-        ctx->step = Reply::Step::Headers;
-    } else {
-        ctx->step = Reply::Step::Body;
-    }
+    ctx->step = Reply::Step::Body;
 
     // The application is written in an imperative style. It pilots the calls to
     // the parser, with calls like ReadHeaders(), ReadBody(). We need to stop
@@ -334,6 +330,7 @@ Code Reply::consumeInput(int64_t dl) {
     assert(ctx.body_bytes.empty());
 
     HTTP_LOG() << "ready";
+
     // If no data immediately ready, then fill the buffer from the network.
     bool eof = false;
     if (ctx.buffer_offset >= ctx.buffer_length) {
@@ -439,6 +436,7 @@ void Reply::Skip() {
         if (rc != Code::OK)
             break;
     }
+    HTTP_LOG() << "reply skipped!";
     init();
     ctx.Reset();
 }

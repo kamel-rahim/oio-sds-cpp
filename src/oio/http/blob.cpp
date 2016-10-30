@@ -27,6 +27,9 @@ using oio::api::blob::Errno;
 using oio::api::blob::Cause;
 using Step = oio::api::blob::TransactionStep;
 
+DEFINE_bool(blob_http_trace, false, "Log all calls to the blob HTTP client");
+
+#define HTTP_LOG() DLOG_IF(INFO, FLAGS_blob_http_trace) << __FUNCTION__ << ' '
 
 /**
  *
@@ -39,13 +42,13 @@ class HttpRemoval : public Removal {
     Step step_;
 
     Status skipAndReturn(Status s) {
-        request.Abort();
         reply.Skip();
+        request.Abort();
         return s;
     }
 
  public:
-    HttpRemoval(): step_{Step::Init} {}
+    HttpRemoval(): step_{Step::Init} { HTTP_LOG(); }
 
     ~HttpRemoval() override {}
 
@@ -61,18 +64,16 @@ class HttpRemoval : public Removal {
         }
 
         auto code = request.WriteHeaders();
-        DLOG(INFO) << "WriteHeaders code=" << code;
+        HTTP_LOG() << "WriteHeaders code=" << code;
         if (code != Code::OK) {
-            if (code == Code::NetworkError) {
-                // TODO(jfs) abort the connection
-                return Status(Cause::NetworkError);
-            }
+            if (code == Code::NetworkError)
+                return skipAndReturn(Status(Cause::NetworkError));
             return skipAndReturn(Status(Cause::InternalError));
         }
 
         code = reply.ReadHeaders();
         const auto status = reply.Get().parser.status_code;
-        DLOG(INFO) << "ReadHeaders(100) code=" << code << " status=" << status;
+        HTTP_LOG() << "ReadHeaders(100) code=" << code << " status=" << status;
 
         if (code != Code::OK && code != Code::ServerError) {
             if (code == Code::NetworkError)
@@ -85,6 +86,7 @@ class HttpRemoval : public Removal {
         switch (status) {
             case 100:
                 step_ = Step::Prepared;
+                reply.Skip();
                 return Status();
             case 400:
                 return skipAndReturn(Status(Cause::ProtocolError));
@@ -106,37 +108,39 @@ class HttpRemoval : public Removal {
         step_ = Step::Done;
 
         auto code = request.FinishRequest();
-        DLOG(INFO) << "FinishRequest code=" << code;
+        HTTP_LOG() << "FinishRequest code=" << code;
         if (code != Code::OK) {
-            request.Abort();
             if (code == Code::NetworkError)
-                return Status(Cause::NetworkError);
+                return skipAndReturn(Status(Cause::NetworkError));
             if (code == Code::ClientError)
-                return Status(Cause::InternalError);
-            return Status(Cause::InternalError);
+                return skipAndReturn(Status(Cause::InternalError));
+            return skipAndReturn(Status(Cause::InternalError));
         }
 
         code = reply.ReadHeaders();
-        DLOG(INFO) << "ReadHeaders(Final) code=" << code;
+        HTTP_LOG() << "ReadHeaders(Final) code=" << code;
         if (code != Code::OK) {
-            request.Abort();
-            reply.Skip();
             if (code == Code::NetworkError)
-                return Status(Cause::NetworkError);
+                return skipAndReturn(Status(Cause::NetworkError));
             if (code == Code::ClientError)
-                return Status(Cause::InternalError);
-            return Status(Cause::InternalError);
+                return skipAndReturn(Status(Cause::InternalError));
+            return skipAndReturn(Status(Cause::InternalError));
         }
 
-        for (;;) {
-            http::Reply::Slice out;
-            code = reply.ReadBody(&out);
-            DLOG(INFO) << "ReadBody code=" << code;
-            if (code != Code::OK)
-                break;
+        const auto status = reply.Get().parser.status_code;
+        switch (status) {
+            case 200:
+            case 201:
+            case 204:
+                reply.Skip();
+                return Status();
+            case 403:
+                return skipAndReturn(Status(Cause::Forbidden));
+            case 404:
+                return skipAndReturn(Status(Cause::NotFound));
+            default:
+                return skipAndReturn(Status(Cause::InternalError));
         }
-
-        return Status();
     }
 
     Status Abort() override {
@@ -173,7 +177,7 @@ std::unique_ptr<oio::api::blob::Removal> RemovalBuilder::Build(
     rm->request.Method("DELETE");
     rm->request.Selector(name);
     rm->request.Field("Host", host);
-    rm->request.ContentLength(0);
+    rm->request.ContentLength(-1);
     rm->request.Field("Expect", "100-continue");
     for (const auto &t : trailers)
         rm->request.Trailer(t);
@@ -194,7 +198,7 @@ class HttpUpload : public Upload {
     Step step_;
 
  public:
-    HttpUpload(): request(), reply(), step_{Step::Init} {}
+    HttpUpload(): request(), reply(), step_{Step::Init} { HTTP_LOG(); }
 
     ~HttpUpload() override {}
 
@@ -219,7 +223,7 @@ class HttpUpload : public Upload {
     }
 
     Status Commit() override {
-        LOG(INFO) << __FUNCTION__ << " (" << __FILE__ << ") " << step_;
+        HTTP_LOG() << " (" << __FILE__ << ") " << step_;
         if (step_ != Step::Prepared)
             return Status(Cause::InternalError);
         step_ = Step::Done;
@@ -301,8 +305,14 @@ class HttpDownload : public Download {
     http::Reply reply;
     Step step_;
 
+    Status skipAndReturn(Status s) {
+        request.Abort();
+        reply.Skip();
+        return s;
+    }
+
  public:
-    HttpDownload() : request(), reply(), step_{Step::Init} {}
+    HttpDownload() : request(), reply(), step_{Step::Init} { HTTP_LOG(); }
 
     ~HttpDownload() override {}
 
@@ -314,26 +324,40 @@ class HttpDownload : public Download {
         if (step_ != Step::Init)
             return Status(Cause::InternalError);
 
-        auto rc = request.WriteHeaders();
-        if (rc != http::Code::OK && rc != http::Code::Done) {
-            if (rc == http::Code::NetworkError)
-                return Status(Cause::NetworkError);
-            return Status(Cause::InternalError);
+        // If the connection encountered a problem, then re-establish it.
+        if (!request.Connected()) {
+            if (!request.Reconnect()) {
+                return Errno();
+            }
         }
 
-        rc = request.FinishRequest();
-        if (rc != http::Code::OK && rc != http::Code::Done) {
-            if (rc == http::Code::NetworkError)
-                return Status(Cause::NetworkError);
-            return Status(Cause::InternalError);
+        auto code = request.WriteHeaders();
+        HTTP_LOG() << "WriteHeaders code=" << code;
+        if (code != http::Code::OK && code != http::Code::Done) {
+            if (code == http::Code::NetworkError)
+                return skipAndReturn(Status(Cause::NetworkError));
+            return skipAndReturn(Status(Cause::InternalError));
         }
 
-        rc = reply.ReadHeaders();
-        if (rc != http::Code::OK && rc != http::Code::Done) {
-            if (rc == http::Code::NetworkError)
-                return Status(Cause::NetworkError);
-            return Status(Cause::InternalError);
+        code = request.FinishRequest();
+        HTTP_LOG() << "FinishRequest code=" << code;
+        if (code != http::Code::OK && code != http::Code::Done) {
+            if (code == http::Code::NetworkError)
+                return skipAndReturn(Status(Cause::NetworkError));
+            return skipAndReturn(Status(Cause::InternalError));
         }
+
+        code = reply.ReadHeaders();
+        HTTP_LOG() << "ReadHeaders code=" << code;
+        if (code != http::Code::OK && code != http::Code::Done) {
+            if (code == http::Code::NetworkError)
+                return skipAndReturn(Status(Cause::NetworkError));
+            return skipAndReturn(Status(Cause::InternalError));
+        }
+
+        const auto status = reply.Get().parser.status_code;
+        if (status == 404)
+            return skipAndReturn(Status(Cause::NotFound));
 
         step_ = Step::Prepared;
         return Status(Cause::OK);

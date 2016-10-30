@@ -59,9 +59,9 @@ struct Addr {
      */
     std::string Url() const;
 
-    int family () const;
-    std::string family_name () const;
-    int port () const;
+    int family() const;
+    std::string family_name() const;
+    int port() const;
     struct sockaddr* address();
     const struct sockaddr* address() const;
 

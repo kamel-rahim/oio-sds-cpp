@@ -41,11 +41,11 @@ class BlobOpsFactory {
 };
 
 DEFINE_uint64(test_file_size,
-              1024,
+              8*1024*1024,
               "Size of the sample file");
 
 DEFINE_uint64(test_batch_size,
-              128,
+              1024,
               "Size of the batches to write in the sample file");
 
 #define OP_LOOP_ON(op, Step, head, tail) do { \
@@ -123,6 +123,7 @@ class BlobTestSuite : public ::testing::Test {
 
         // A Removal's Prepare must succeed and abort must let in in place
         do {
+            LOG(INFO) << "Removal: Prepare(OK) + Abort(OK)";
             auto op = Removal();
             auto rc = op->Prepare();
             ASSERT_TRUE(rc.Ok());
@@ -132,6 +133,7 @@ class BlobTestSuite : public ::testing::Test {
 
         // A Removal must succeed
         do {
+            LOG(INFO) << "Removal: Prepare(OK) + Commit(OK)";
             auto op = Removal();
             auto rc = op->Prepare();
             ASSERT_TRUE(rc.Ok());
@@ -141,9 +143,13 @@ class BlobTestSuite : public ::testing::Test {
 
         // And a subsequent removal fail because of the blob not found
         do {
+            LOG(INFO) << "Removal: Prepare(OK/NotFound) + Commit(NotFound)";
             auto op = Removal();
             auto rc = op->Prepare();
-            ASSERT_FALSE(rc.Ok());
+            if (rc.Ok()) {
+                rc = op->Commit();
+                ASSERT_FALSE(rc.Ok());
+            }
             ASSERT_EQ(rc.Why(), oio::api::blob::Cause::NotFound);
         } while (0);
     }
@@ -187,8 +193,14 @@ class BlobTestSuite : public ::testing::Test {
      */
     void test_remove_not_found_and_commit() {
         auto op = Removal();
-        LOOP_ON(Prepare, NotFound, NotFound);
-        LOOP_ON(Commit, InternalError, InternalError);
+        auto rc = op->Prepare();
+        if (!rc.Ok()) {
+            ASSERT_EQ(rc.Why(), oio::api::blob::Cause::NotFound);
+            LOOP_ON(Prepare, NotFound, NotFound);
+            LOOP_ON(Commit, InternalError, InternalError);
+        } else {
+            LOOP_ON(Commit, NotFound, InternalError);
+        }
     }
 
     /**
@@ -197,8 +209,14 @@ class BlobTestSuite : public ::testing::Test {
      */
     void test_remove_not_found_and_abort() {
         auto op = Removal();
-        LOOP_ON(Prepare, NotFound, NotFound);
-        LOOP_ON(Abort, InternalError, InternalError);
+        auto rc = op->Prepare();
+        if (!rc.Ok()) {
+            ASSERT_EQ(rc.Why(), oio::api::blob::Cause::NotFound);
+            LOOP_ON(Prepare, NotFound, NotFound);
+            LOOP_ON(Abort, InternalError, InternalError);
+        } else {
+            LOOP_ON(Abort, OK, InternalError);
+        }
     }
 
     /**
@@ -232,14 +250,14 @@ class BlobTestSuite : public ::testing::Test {
  * BlobTestSuite interface.
  */
 #define DECLARE_BLOBTESTSUITE(FinalClass) \
-TEST_F(FinalClass, UploadPrepareAbort) { \
-    test_upload_prepare_abort(); \
-} \
 TEST_F(FinalClass, UploadInitAbort) { \
     test_upload_init_abort(); \
 } \
 TEST_F(FinalClass, UploadInitCommit) { \
     test_upload_init_abort(); \
+} \
+TEST_F(FinalClass, UploadPrepareAbort) { \
+    test_upload_prepare_abort(); \
 } \
 TEST_F(FinalClass, RemoveCommit) { \
     test_remove_abort(); \
@@ -248,10 +266,10 @@ TEST_F(FinalClass, RemoveAbort) { \
     test_remove_commit(); \
 } \
 TEST_F(FinalClass, RemovePrepareNotFoundCommit) { \
-    test_remove_not_found_and_abort(); \
+    test_remove_not_found_and_commit(); \
 } \
 TEST_F(FinalClass, RemovePrepareNotFoundAbort) { \
-    test_remove_not_found_and_commit(); \
+    test_remove_not_found_and_abort(); \
 } \
 TEST_F(FinalClass, DownloadNotFound) { \
     test_download_not_found(); \

@@ -13,7 +13,7 @@
 
 #include "./common-server-headers.h"
 
-#define OIO_HEADER_EC_PREFIX ""
+#define OIO_HEADER_EC_PREFIX "X-oio-chunk-meta-"
 
 class EcHeader {
  public:

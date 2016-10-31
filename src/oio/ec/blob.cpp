@@ -24,7 +24,7 @@
 #include "utils/utils.h"
 #include "oio/ec/blob.h"
 #include "oio/local/blob.h"
-
+#include "oio/rawx/blob.h"
 
 using oio::ec::blob::DownloadBuilder;
 using oio::ec::blob::RemovalBuilder;
@@ -119,11 +119,9 @@ out:
         encoded_data = NULL;
         encoded_parity = NULL;
         encoded_fragment_len = 0;
-        fragments_needed = NULL;
         char *out_data = NULL;
         uint64_t out_data_len = 0;
-        uint64_t mask = 0;
-        int rc = 0;
+        int rc_decode = 1;
 
         struct frag_array_set frags;
 
@@ -135,14 +133,6 @@ out:
         args.hd = 3;
 
         // Set up data and parity fragments.
-        fragments_needed =
-                reinterpret_cast<int *>(malloc(kVal * mVal * sizeof(int)));
-        if (!fragments_needed) {
-            LOG(ERROR) << "LIBERASURECODE: Memory allocation failure";
-            return Status(Cause::InternalError);
-        }
-        memset(fragments_needed, 0, kVal * mVal * sizeof(int));
-
         int desc = liberasurecode_instance_create(
                 EC_BACKEND_LIBERASURECODE_RS_VAND, &args);
         if (desc <= 0) {
@@ -165,63 +155,89 @@ out:
             return Status(Cause::InternalError);
         }
 
+        memset ( encoded_data, 0, sizeof(char *) * kVal);
+        memset ( encoded_parity, 0, sizeof(char *) * mVal);
+
+        int nbValid = 0 ;
+
         // read from rawx
         for (const auto &to : targets) {
-            char buf[1024];
-            const char *homedir;
+            std::shared_ptr<net::Socket> socket;
+            socket.reset(new net::MillSocket);
+			char *p = NULL;
+            if (socket->connect(to.host))
+            {
+				oio::rawx::blob::DownloadBuilder builder;
 
-            if ((homedir = getenv("HOME")) == NULL) {
-                struct passwd pwd, *ppwd{nullptr};
-                ::getpwuid_r(getuid(), &pwd, buf, sizeof(buf), &ppwd);
-                homedir = pwd.pw_dir;
+				builder.ChunkId(to.filename);
+				builder.RawxId(to.host);
+				auto dl = builder.Build(socket);
+				auto rc = dl->Prepare();
+
+				if (rc.Ok()) {
+					std::vector<uint8_t> buf;
+					while (!dl->IsEof()) {
+						dl->Read(&buf);
+					}
+					int size = buf.size();
+					encoded_fragment_len = size;
+					p = reinterpret_cast<char*>(malloc(sizeof(char) * size));
+					memcpy(p, &buf[0], buf.size());
+				}
+				socket->close() ;
+            }
+            else
+                LOG(ERROR) << "LIBERASURECODE: failed to connect to rawx-" << to.chunk_number;
+
+            // sanity check
+            if (p && is_invalid_fragment( desc, p ) ) {
+            	free (p) ;
+            	p = NULL ;
             }
 
-            std::string path = std::string(homedir) + "/oio/rawx-" +
-                               std::to_string(to.chunk_number + 1) + "/" +
-                               to.target;
-            oio::local::blob::DownloadBuilder builder;
-
-            builder.Path(path);
-
-            auto dl = builder.Build();
-            auto rc = dl->Prepare();
-            char *p = NULL;
-            if (rc.Ok()) {
-                std::vector<uint8_t> buf;
-                while (!dl->IsEof()) {
-                    dl->Read(&buf);
-                }
-                int size = buf.size();
-                encoded_fragment_len = size;
-                p = reinterpret_cast<char*>(malloc(sizeof(char) * size));
-                memcpy(p, &buf[0], buf.size());
-            }
+            if (p)
+            	nbValid++ ;
 
             if (to.chunk_number < kVal)
                 encoded_data[to.chunk_number] = p;
             else
                 encoded_parity[to.chunk_number - kVal] = p;
 
-            if (p == NULL) {  // oups!!!  missing chunk!
-                mask = add_item_to_missing_mask(
-                        mask, kVal + mVal - 1 - to.chunk_number);
-            }
-        }
+            if (nbValid >= kVal) // give it a try, we have enough data
+            {
+            	// setup mask ;
+                uint64_t mask = 0;
 
-        // Run Decode
-        create_frags_array_set(&frags, encoded_data, args.k, encoded_parity,
-                               args.m, mask);
-        rc = liberasurecode_decode(desc, frags.array, frags.num_fragments,
-                                   encoded_fragment_len, 1,
-                                   &out_data, &out_data_len);
+            	for (int i = 0; i < (kVal + mVal); i++) {
+                    if (i < kVal ) {
+                        if (!encoded_data[i])
+                            mask = add_item_to_missing_mask(
+                                    mask, kVal + mVal - 1 - i);
+                    }
+                    else {
+                    	if (!encoded_parity[i])
+                            mask = add_item_to_missing_mask(
+                                    mask, kVal + mVal - 1 - i);
+                    }
+            	}
 
-        if (rc == 0) {  // decode ok we are done!
-            if (out_data_len < size_expected) {
-                buffer.resize(out_data_len);
-                memcpy(&buffer[0], out_data, out_data_len);
-            } else {
-                buffer.resize(size_expected);
-                memcpy(&buffer[0], &out_data[offset], size_expected);
+                // Run Decode
+                create_frags_array_set(&frags, encoded_data, args.k, encoded_parity,
+                                       args.m, mask);
+                rc_decode = liberasurecode_decode(desc, frags.array, frags.num_fragments,
+                                           encoded_fragment_len, 1,
+                                           &out_data, &out_data_len);
+
+                if (rc_decode == 0) {  // decode ok we are done!
+                    if (out_data_len < size_expected) {
+                        buffer.resize(out_data_len);
+                        memcpy(&buffer[0], out_data, out_data_len);
+                    } else {
+                        buffer.resize(size_expected);
+                        memcpy(&buffer[0], &out_data[offset], size_expected);
+                    }
+                    break ;
+                }
             }
         }
 
@@ -231,7 +247,7 @@ out:
         CleanUp();
         liberasurecode_instance_destroy(desc);
 
-        if (rc == 0)  // decode ok we are done!
+        if (rc_decode == 0)  // decode ok we are done!
             return Status(Cause::OK);
         else
             return Status(Cause::InternalError);
@@ -269,8 +285,6 @@ out:
             free(encoded_parity);
             encoded_parity = NULL;
         }
-        free(fragments_needed);
-        fragments_needed = NULL;
     }
 
  private:
@@ -286,11 +300,11 @@ out:
 
     int kVal, mVal, nbChunks;
     int64_t chunkSize;
-    int *fragments_needed;
     char **encoded_data;
     char **encoded_parity;
     uint64_t encoded_fragment_len;
     bool done;
+    std::string req_id ;
     uint64_t offset, size_expected;
 };
 
@@ -305,6 +319,7 @@ std::unique_ptr<blob::Download> DownloadBuilder::Build() {
     ul->nbChunks = nbChunks;
     ul->chunkSize = chunkSize;
     ul->offset = offset;
+    ul->req_id = req_id ;
     ul->size_expected = size_expected;
     for (const auto &to : targets)
         ul->Target(to);
@@ -391,38 +406,42 @@ class EcUpload : public oio::api::blob::Upload {
             return Status(Cause::InternalError);
         }
 
+        // write to Rawx
         for (const auto &to : targets) {
-            char buf[1024];
-            const char *homedir;
+			std::shared_ptr<net::Socket> socket;
 
-            if ((homedir = ::getenv("HOME")) == NULL) {
-                struct passwd pwd, *ppwd{nullptr};
-                ::getpwuid_r(getuid(), &pwd, buf, sizeof(buf), &ppwd);
-                homedir = pwd.pw_dir;
-            }
+			socket.reset(new net::MillSocket);
+			if (socket->connect(to.host)) {
+				oio::rawx::blob::UploadBuilder builder;
+				builder.ChunkId(to.filename);
+				builder.ChunkPosition(offset_pos, 0);
+				builder.RawxId(to.host);
+				builder.ContainerId(xattr.find("container-id")->second);
+				builder.ContentPath(xattr.find("content-path")->second);
+				builder.ContentId(xattr.find("content-id")->second);
+				int64_t v ;
+				std::istringstream ( xattr.find("content-version")->second ) >> v ;
+				builder.ContentVersion(v);
+				builder.StoragePolicy("SINGLE");
+				builder.MimeType(xattr.find("content-mime-type")->second);
+				builder.ChunkMethod("plain/nb_copy=1");
+				auto ul = builder.Build(socket);
+				auto rc = ul->Prepare();
+				if (rc.Ok()) {
+					const char *tmp = to.chunk_number < kVal
+								  ? encoded_data[to.chunk_number]
+								  : encoded_parity[to.chunk_number - kVal];
 
-            std::string path = std::string(homedir) + "/oio/rawx-" +
-                               std::to_string(to.chunk_number + 1) + "/" +
-                               to.target;
-            oio::local::blob::UploadBuilder builder;
-
-            builder.Path(path);
-            builder.FileMode(0644);
-            builder.DirMode(0755);
-
-            auto ul = builder.Build();
-            auto rc = ul->Prepare();
-
-            if (rc.Ok()) {
-                const char *tmp = to.chunk_number < kVal
-                                  ? encoded_data[to.chunk_number]
-                                  : encoded_parity[to.chunk_number - kVal];
-                std::string s(tmp, encoded_fragment_len);
-                ul->Write(s);
-                ul->Commit();
-            } else {
-                ul->Abort();
-            }
+					std::string s(tmp, encoded_fragment_len);
+					ul->Write(s);
+					ul->Commit();
+				} else {
+					ul->Abort();
+				}
+				socket->close() ;
+			}
+            else
+               LOG(ERROR) << "LIBERASURECODE: failed to connect to rawx-" << to.chunk_number;
         }
 
         CleanUp();
@@ -487,11 +506,11 @@ class EcUpload : public oio::api::blob::Upload {
  private:
     std::vector<uint8_t> buffer;
     uint32_t buffer_limit;
-    std::string chunkid;
     std::set<oio::ec::blob::rawxSet> targets;
     std::map<std::string, std::string> xattr;
 
     int kVal, mVal, nbChunks;
+    std::string req_id ;
     int64_t offset_pos;
     char **encoded_data = NULL;
     char **encoded_parity = NULL;
@@ -508,6 +527,7 @@ std::unique_ptr<blob::Upload> UploadBuilder::Build() {
     ul->buffer_limit = block_size;
     ul->kVal = kVal;
     ul->mVal = mVal;
+    ul->req_id = req_id ;
     ul->nbChunks = nbChunks;
     ul->offset_pos = offset_pos;
     for (const auto &to : targets)

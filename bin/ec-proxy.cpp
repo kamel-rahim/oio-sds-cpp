@@ -53,6 +53,7 @@ class EcHandler : public BlobHandler {
     int kVal, mVal, nbChunks;
     int64_t offset_pos;
     int64_t chunkSize;
+    std::string req_id ;
     uint64_t offset, size_expected;
 
  public:
@@ -67,6 +68,7 @@ class EcHandler : public BlobHandler {
         builder.OffsetPos(offset_pos);
         builder.M_Val(mVal);
         builder.K_Val(kVal);
+        builder.Req_id (req_id);
         builder.NbChunks(nbChunks);
 
         for (const auto &to : targets)
@@ -85,6 +87,7 @@ class EcHandler : public BlobHandler {
         builder.K_Val(kVal);
         builder.NbChunks(nbChunks);
         builder.Offset(offset);
+        builder.Req_id (req_id);
         builder.SizeExpected(size_expected);
 
         for (const auto to : targets)
@@ -136,15 +139,19 @@ class EcHandler : public BlobHandler {
                     std::stringstream ss(str);
                     ss >> rawx.chunk_number;
 
-                    std::size_t pos = v.find(":");
-                    pos = v.find(":", pos + 1);  // we need second one
+                    std::size_t pos  = v.find(":");
+                    std::size_t pos2 = v.find(":", pos + 1);  // we need second one
 
-                    str = v.substr(pos + 1, 4);
+                    str = v.substr(pos + 3, pos2-pos+2) ;
+                    rawx.host = str;
+
+                    str = v.substr(pos2 + 1, 4);
                     std::stringstream ss2(str);
                     ss2 >> rawx.chunk_port;
 
-                    str = str = v.substr(pos + 6);
-                    rawx.target = str;
+                    str = str = v.substr(pos2 + 6);
+                    rawx.filename = str;
+                    rawx.chunk_str = v ;
 
                     targets.insert(rawx);
                 }
@@ -178,6 +185,12 @@ class EcHandler : public BlobHandler {
                     ss >> chunkSize;
                 }
                     break;
+                case EcHeader::Value::ReqId: {
+                    std::string all_numbers(v);
+                    std::stringstream ss(all_numbers);
+                    ss >> chunkSize;
+                }
+                    break ;
                 case EcHeader::Value::Range: {
                     std::string all_numbers(v);
                     for (std::string::iterator it = all_numbers.begin();
@@ -191,7 +204,19 @@ class EcHandler : public BlobHandler {
                 }
                     break;
                 default:
-                    xattrs[k] = v;
+                {
+                	// remove leading string OIO_HEADER_EC_PREFIX
+                	std::string str_cpy = k;
+                	std::string str_leading (OIO_HEADER_EC_PREFIX);
+                	int Length = str_cpy.length();
+                	std::size_t pos = str_cpy.find(OIO_HEADER_EC_PREFIX);
+                	if (pos == 0)
+                	{
+                		Length = Length-str_leading.length();
+                		str_cpy.erase (str_cpy.begin(), str_cpy.end()-Length);
+                	}
+                    xattrs[str_cpy] = v;
+                }
             }
         }
         return {200, 200, "OK"};

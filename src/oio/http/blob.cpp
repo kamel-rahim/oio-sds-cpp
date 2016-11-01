@@ -366,7 +366,6 @@ class HttpDownload : public Download {
     int32_t Read(std::vector<uint8_t> *buf) override  {
         if (step_ != Step::Prepared)
             return -1;
-        buf->clear();
         reply.AppendBody(buf);
         return buf->size();
     }

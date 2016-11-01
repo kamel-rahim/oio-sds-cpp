@@ -24,7 +24,9 @@ namespace ec {
 namespace blob {
 
 struct rawxSet {
-    std::string target;
+    std::string filename;
+    std::string host;
+    std::string chunk_str;
     int chunk_number;
     int chunk_port;
 
@@ -58,6 +60,8 @@ class UploadBuilder {
 
     void M_Val(int s) { mVal = s; }
 
+    void Req_id(const std::string &s) { req_id = s; }
+
     void K_Val(int s) { kVal = s; }
 
     void NbChunks(int s) { nbChunks = s; }
@@ -68,6 +72,7 @@ class UploadBuilder {
     std::set<rawxSet> targets;
     std::map<std::string, std::string> xattrs;
     uint32_t block_size;
+    std::string req_id;
 
     int kVal, mVal, nbChunks;
     int64_t offset_pos;
@@ -96,6 +101,8 @@ class DownloadBuilder {
 
     void NbChunks(int s) { nbChunks = s; }
 
+    void Req_id(const std::string &s) { req_id = s; }
+
     void Offset(uint64_t s) { offset = s; }
 
     void SizeExpected(uint64_t s) { size_expected = s; }
@@ -106,6 +113,7 @@ class DownloadBuilder {
     std::set<rawxSet> targets;
     std::map<std::string, std::string> xattrs;
     int kVal, mVal, nbChunks;
+    std::string req_id;
     int64_t chunkSize;
     uint64_t offset, size_expected;
 };

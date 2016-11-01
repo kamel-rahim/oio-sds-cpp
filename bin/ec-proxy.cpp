@@ -31,6 +31,13 @@ static void _sighandler_stop(int s UNUSED) {
     flag_running = 0;
 }
 
+static void transform_nondigit_to_space(std::string &str) {  // NOLINT
+    for (auto &c : str) {
+        if (!isdigit(c))
+            c = ' ';
+    }
+}
+
 struct numeric_only : std::ctype<char> {
     numeric_only() : std::ctype<char>(get_table()) {}
 
@@ -53,7 +60,7 @@ class EcHandler : public BlobHandler {
     int kVal, mVal, nbChunks;
     int64_t offset_pos;
     int64_t chunkSize;
-    std::string req_id ;
+    std::string req_id;
     uint64_t offset, size_expected;
 
  public:
@@ -68,7 +75,7 @@ class EcHandler : public BlobHandler {
         builder.OffsetPos(offset_pos);
         builder.M_Val(mVal);
         builder.K_Val(kVal);
-        builder.Req_id (req_id);
+        builder.Req_id(req_id);
         builder.NbChunks(nbChunks);
 
         for (const auto &to : targets)
@@ -87,7 +94,7 @@ class EcHandler : public BlobHandler {
         builder.K_Val(kVal);
         builder.NbChunks(nbChunks);
         builder.Offset(offset);
-        builder.Req_id (req_id);
+        builder.Req_id(req_id);
         builder.SizeExpected(size_expected);
 
         for (const auto to : targets)
@@ -132,17 +139,16 @@ class EcHandler : public BlobHandler {
                     oio::ec::blob::rawxSet rawx;
 
                     std::string str(k);
-                    for (std::string::iterator it = str.begin();
-                            it != str.end(); ++it)
-                        if (!isdigit(*it))
-                            *it = ' ';
+                    transform_nondigit_to_space(str);
+
                     std::stringstream ss(str);
                     ss >> rawx.chunk_number;
 
-                    std::size_t pos  = v.find(":");
-                    std::size_t pos2 = v.find(":", pos + 1);  // we need second one
+                    std::size_t pos = v.find(":");
+                    std::size_t pos2 = v.find(":",
+                                              pos + 1);  // we need second one
 
-                    str = v.substr(pos + 3, pos2-pos+2) ;
+                    str = v.substr(pos + 3, pos2 - pos + 2);
                     rawx.host = str;
 
                     str = v.substr(pos2 + 1, 4);
@@ -151,17 +157,14 @@ class EcHandler : public BlobHandler {
 
                     str = str = v.substr(pos2 + 6);
                     rawx.filename = str;
-                    rawx.chunk_str = v ;
+                    rawx.chunk_str = v;
 
                     targets.insert(rawx);
                 }
                     break;
                 case EcHeader::Value::ChunkMethod: {
                     std::string all_numbers(v);
-                    for (std::string::iterator it = all_numbers.begin();
-                            it != all_numbers.end(); ++it)
-                        if (!isdigit(*it))
-                            *it = ' ';
+                    transform_nondigit_to_space(all_numbers);
                     std::stringstream ss(all_numbers);
                     ss >> kVal;
                     ss >> mVal;
@@ -190,31 +193,26 @@ class EcHandler : public BlobHandler {
                     std::stringstream ss(all_numbers);
                     ss >> chunkSize;
                 }
-                    break ;
+                    break;
                 case EcHeader::Value::Range: {
                     std::string all_numbers(v);
-                    for (std::string::iterator it = all_numbers.begin();
-                            it != all_numbers.end(); ++it)
-                        if (!isdigit(*it))
-                            *it = ' ';
+                    transform_nondigit_to_space(all_numbers);
                     std::stringstream ss(all_numbers);
                     ss >> offset;
                     ss >> size_expected;
                     size_expected = size_expected + 1 - offset;
                 }
                     break;
-                default:
-                {
-                	// remove leading string OIO_HEADER_EC_PREFIX
-                	std::string str_cpy = k;
-                	std::string str_leading (OIO_HEADER_EC_PREFIX);
-                	int Length = str_cpy.length();
-                	std::size_t pos = str_cpy.find(OIO_HEADER_EC_PREFIX);
-                	if (pos == 0)
-                	{
-                		Length = Length-str_leading.length();
-                		str_cpy.erase (str_cpy.begin(), str_cpy.end()-Length);
-                	}
+                default: {
+                    // remove leading string OIO_HEADER_EC_PREFIX
+                    std::string str_cpy = k;
+                    std::string str_leading(OIO_HEADER_EC_PREFIX);
+                    int Length = str_cpy.length();
+                    std::size_t pos = str_cpy.find(OIO_HEADER_EC_PREFIX);
+                    if (pos == 0) {
+                        Length = Length - str_leading.length();
+                        str_cpy.erase(str_cpy.begin(), str_cpy.end() - Length);
+                    }
                     xattrs[str_cpy] = v;
                 }
             }

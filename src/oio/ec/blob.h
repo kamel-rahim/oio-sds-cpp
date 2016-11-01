@@ -60,7 +60,7 @@ class UploadBuilder {
 
     void M_Val(int s) { mVal = s; }
 
-    void Req_id (std::string &s) { req_id = s; }
+    void Req_id(const std::string &s) { req_id = s; }
 
     void K_Val(int s) { kVal = s; }
 
@@ -72,7 +72,7 @@ class UploadBuilder {
     std::set<rawxSet> targets;
     std::map<std::string, std::string> xattrs;
     uint32_t block_size;
-    std::string req_id ;
+    std::string req_id;
 
     int kVal, mVal, nbChunks;
     int64_t offset_pos;
@@ -101,7 +101,7 @@ class DownloadBuilder {
 
     void NbChunks(int s) { nbChunks = s; }
 
-    void Req_id (std::string &s) { req_id = s; }
+    void Req_id(const std::string &s) { req_id = s; }
 
     void Offset(uint64_t s) { offset = s; }
 

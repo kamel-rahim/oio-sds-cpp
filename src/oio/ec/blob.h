@@ -17,11 +17,79 @@
 #include <iostream>
 #include <set>
 #include <sstream>
+#include "utils/net.h"
 
+#define MAX_DELAY 5000
 
 namespace oio {
 namespace ec {
 namespace blob {
+
+
+struct frag_array_set {
+    unsigned int num_fragments;
+    char **array;
+
+    frag_array_set() : num_fragments{0}, array{nullptr} {}
+};
+
+
+class SocketElement {
+ public:
+    void Close() {
+        if (_bopen) {
+            _socket->close();
+            _bopen = false;
+        }
+    }
+
+    void ReconnectSocket() {
+        if (is_open())
+            _bopen = _socket->Reconnect();
+    }
+
+    std::shared_ptr<net::Socket> *GetSocket(std::string host) {
+        if (!is_open()) {
+            _socket.reset(new net::MillSocket);
+            _bopen = _socket->connect(host);
+        } else {
+            if (mill_now() > timer)
+                _bopen = _socket->Reconnect();
+        }
+
+        timer = mill_now() + MAX_DELAY;
+        if (is_open())
+            return &_socket;
+        else
+            return NULL;
+    }
+
+    bool is_open() { return _bopen; }
+
+ private:
+    std::shared_ptr<net::Socket> _socket;
+    bool _bopen;
+    int64_t timer;
+};
+
+
+class SocketMap {
+ public:
+    ~SocketMap() {
+        for (const auto &e : _SocketMap) {
+            SocketElement elm = e.second;
+            elm.Close();
+        }
+    }
+
+    std::shared_ptr<net::Socket> *GetSocket(std::string host) {
+        return _SocketMap[host].GetSocket(host);
+    }
+
+ private:
+    std::map<std::string, SocketElement> _SocketMap;
+};
+
 
 struct rawxSet {
     std::string filename;
@@ -66,6 +134,8 @@ class UploadBuilder {
 
     void NbChunks(int s) { nbChunks = s; }
 
+    void Encoding_Method(int s) { EncodingMethod = s; }
+
     std::unique_ptr<oio::api::blob::Upload> Build();
 
  private:
@@ -74,7 +144,7 @@ class UploadBuilder {
     uint32_t block_size;
     std::string req_id;
 
-    int kVal, mVal, nbChunks;
+    int kVal, mVal, nbChunks, EncodingMethod;
     int64_t offset_pos;
 };
 
@@ -101,6 +171,8 @@ class DownloadBuilder {
 
     void NbChunks(int s) { nbChunks = s; }
 
+    void Encoding_Method(int s) { EncodingMethod = s; }
+
     void Req_id(const std::string &s) { req_id = s; }
 
     void Offset(uint64_t s) { offset = s; }
@@ -112,7 +184,7 @@ class DownloadBuilder {
  private:
     std::set<rawxSet> targets;
     std::map<std::string, std::string> xattrs;
-    int kVal, mVal, nbChunks;
+    int kVal, mVal, nbChunks, EncodingMethod;
     std::string req_id;
     int64_t chunkSize;
     uint64_t offset, size_expected;

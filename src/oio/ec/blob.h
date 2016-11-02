@@ -19,12 +19,12 @@
 #include <sstream>
 #include "utils/net.h"
 
+#define MAX_DELAY 5000
 
 namespace oio {
 namespace ec {
 namespace blob {
 
-#define MAX_DELAY 5000
 
 struct frag_array_set {
     unsigned int num_fragments;
@@ -33,62 +33,61 @@ struct frag_array_set {
     frag_array_set() : num_fragments{0}, array{nullptr} {}
 };
 
+
 class SocketElement {
+ public:
+    void Close() {
+        if (_bopen) {
+            _socket->close();
+            _bopen = false;
+        }
+    }
 
-public:
-	void Close () {
-		if (_bopen) {
-			_socket->close () ;
-			_bopen = false ;
-		}
-	}
+    void ReconnectSocket() {
+        if (is_open())
+            _bopen = _socket->Reconnect();
+    }
 
-	void ReconnectSocket () {
-		if (is_open())
-			_bopen = _socket->Reconnect() ;
-	}
+    std::shared_ptr<net::Socket> *GetSocket(std::string host) {
+        if (!is_open()) {
+            _socket.reset(new net::MillSocket);
+            _bopen = _socket->connect(host);
+        } else {
+            if (mill_now() > timer)
+                _bopen = _socket->Reconnect();
+        }
 
-	std::shared_ptr<net::Socket> *GetSocket (std::string host) {
-		if (!is_open()) {
-			_socket.reset(new net::MillSocket);
-           _bopen = _socket->connect(host) ;
-		}
-		else
-		{
-			if (mill_now() > timer )
-				_bopen = _socket->Reconnect() ;
-		}
+        timer = mill_now() + MAX_DELAY;
+        if (is_open())
+            return &_socket;
+        else
+            return NULL;
+    }
 
-		timer = mill_now() + MAX_DELAY ;
-		if (is_open())
-			return &_socket ;
-		else return NULL ;
-	}
+    bool is_open() { return _bopen; }
 
-	bool is_open() { return _bopen; }
-
-private:
-	std::shared_ptr<net::Socket> _socket;
-	bool _bopen ;
-	int64_t timer ;
+ private:
+    std::shared_ptr<net::Socket> _socket;
+    bool _bopen;
+    int64_t timer;
 };
 
+
 class SocketMap {
+ public:
+    ~SocketMap() {
+        for (const auto &e : _SocketMap) {
+            SocketElement elm = e.second;
+            elm.Close();
+        }
+    }
 
-public:
-	~SocketMap () {
-		for (const auto &e : _SocketMap) {
-			SocketElement elm = e.second ;
-			elm.Close() ;
-		}
-	}
+    std::shared_ptr<net::Socket> *GetSocket(std::string host) {
+        return _SocketMap[host].GetSocket(host);
+    }
 
-	std::shared_ptr<net::Socket> *GetSocket (std::string host) {
-		return _SocketMap [host].GetSocket (host);
-	}
-
-private:
-	std::map<std::string, SocketElement> _SocketMap;
+ private:
+    std::map<std::string, SocketElement> _SocketMap;
 };
 
 

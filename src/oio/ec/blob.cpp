@@ -7,8 +7,6 @@
  */
 
 #include <fcntl.h>
-#include <unistd.h>
-#include <pwd.h>
 
 #include <libmill.h>
 #include <liberasurecode/erasurecode.h>
@@ -40,7 +38,7 @@ using oio::api::blob::Cause;
 
 namespace blob = ::oio::api::blob;
 
-oio::ec::blob::SocketMap TheScoketMap ;
+oio::ec::blob::SocketMap TheScoketMap;
 
 class EcDownload : public oio::api::blob::Download {
     friend class DownloadBuilder;
@@ -160,11 +158,11 @@ out:
 
         // read from rawx
         for (const auto &to : targets) {
-        	std::shared_ptr<net::Socket> *socket = TheScoketMap.GetSocket (to.host);
-			char *p = NULL;
-            if (socket)
-            {
-				oio::rawx::blob::DownloadBuilder builder;
+            std::shared_ptr<net::Socket> *socket = TheScoketMap.GetSocket(
+                    to.host);
+            char *p = NULL;
+            if (socket) {
+                oio::rawx::blob::DownloadBuilder builder;
 
                 builder.ChunkId(to.filename);
                 builder.RawxId(to.host);
@@ -314,7 +312,7 @@ std::unique_ptr<blob::Download> DownloadBuilder::Build() {
     auto ul = new EcDownload();
     ul->kVal = kVal;
     ul->mVal = mVal;
-    ul->EncodingMethod = EncodingMethod ;
+    ul->EncodingMethod = EncodingMethod;
     ul->nbChunks = nbChunks;
     ul->chunkSize = chunkSize;
     ul->offset = offset;
@@ -407,7 +405,8 @@ class EcUpload : public oio::api::blob::Upload {
 
         // write to Rawx
         for (const auto &to : targets) {
-        	std::shared_ptr<net::Socket> *socket = TheScoketMap.GetSocket (to.host);
+            std::shared_ptr<net::Socket> *socket = TheScoketMap.GetSocket(
+                    to.host);
             if (socket) {
                 oio::rawx::blob::UploadBuilder builder;
                 builder.ChunkId(to.filename);
@@ -476,22 +475,23 @@ class EcUpload : public oio::api::blob::Upload {
 
         // delete all saved files.
         for (const auto &to : targets) {
-        	std::shared_ptr<net::Socket> *socket = TheScoketMap.GetSocket (to.host);
-            if (socket)
-            {
-				oio::rawx::blob::RemovalBuilder builder;
+            std::shared_ptr<net::Socket> *socket = TheScoketMap.GetSocket(
+                    to.host);
+            if (socket) {
+                oio::rawx::blob::RemovalBuilder builder;
 
-				builder.ChunkId(to.filename);
-				builder.RawxId(to.host);
-				auto rm = builder.Build(*socket);
-				auto rc = rm->Prepare();
+                builder.ChunkId(to.filename);
+                builder.RawxId(to.host);
+                auto rm = builder.Build(*socket);
+                auto rc = rm->Prepare();
 
-				if (rc.Ok()) {
-					rm->Commit() ;
-				}
+                if (rc.Ok()) {
+                    rm->Commit();
+                }
+            } else {
+                LOG(ERROR) << "LIBERASURECODE: failed to connect to rawx-"
+                           << to.chunk_number;
             }
-            else
-                LOG(ERROR) << "LIBERASURECODE: failed to connect to rawx-" << to.chunk_number;
         }
         return Status(Cause::OK);
     }
@@ -544,7 +544,7 @@ std::unique_ptr<blob::Upload> UploadBuilder::Build() {
     ul->buffer_limit = block_size;
     ul->kVal = kVal;
     ul->mVal = mVal;
-    ul->EncodingMethod = EncodingMethod ;
+    ul->EncodingMethod = EncodingMethod;
     ul->req_id = req_id;
     ul->nbChunks = nbChunks;
     ul->offset_pos = offset_pos;

@@ -19,8 +19,8 @@
 #include "oio/api/blob.h"
 #include "oio/ec/blob.h"
 
-#include "./MillDaemon.h"
-#include "./ec-proxy-headers.h"
+#include "bin/MillDaemon.h"
+#include "bin/ec-proxy-headers.h"
 
 using oio::ec::blob::RemovalBuilder;
 using oio::ec::blob::DownloadBuilder;
@@ -32,12 +32,14 @@ static volatile bool flag_running{true};
  * List of possible values for the "algo" parameter of "ec" data security:
  */
 
-static std::map<std::string, int> TheEncodingMethods = { {"jerasure_rs_vand", 		EC_BACKEND_JERASURE_RS_VAND},
-		                                         	 	 {"jerasure_rs_cauchy", 	EC_BACKEND_JERASURE_RS_CAUCHY},
-														 {"flat_xor_hd", 			EC_BACKEND_FLAT_XOR_HD},
-														 {"isa_l_rs_vand", 			EC_BACKEND_ISA_L_RS_VAND},
-														 {"shss", 					EC_BACKEND_SHSS},
-														 {"liberasurecode_rs_vand", EC_BACKEND_LIBERASURECODE_RS_VAND} };
+static std::map<std::string, int> TheEncodingMethods = {
+        {"jerasure_rs_vand",       EC_BACKEND_JERASURE_RS_VAND},
+        {"jerasure_rs_cauchy",     EC_BACKEND_JERASURE_RS_CAUCHY},
+        {"flat_xor_hd",            EC_BACKEND_FLAT_XOR_HD},
+        {"isa_l_rs_vand",          EC_BACKEND_ISA_L_RS_VAND},
+        {"shss",                   EC_BACKEND_SHSS},
+        {"liberasurecode_rs_vand", EC_BACKEND_LIBERASURECODE_RS_VAND}
+};
 
 static void _sighandler_stop(int s UNUSED) {
     flag_running = 0;
@@ -85,7 +87,7 @@ class EcHandler : public BlobHandler {
         builder.BlockSize(1024 * 1024);
 
         builder.OffsetPos(offset_pos);
-        builder.Encoding_Method (EncodingMethod);
+        builder.Encoding_Method(EncodingMethod);
         builder.M_Val(mVal);
         builder.K_Val(kVal);
         builder.Req_id(req_id);
@@ -175,17 +177,19 @@ class EcHandler : public BlobHandler {
                     targets.insert(rawx);
                 }
                     break;
-                 case EcHeader::Value::ChunkMethod: {
-                	EncodingMethod = EC_BACKEND_NULL ;
+                case EcHeader::Value::ChunkMethod: {
+                    EncodingMethod = EC_BACKEND_NULL;
                     for (const auto &e : TheEncodingMethods) {
                         std::size_t pos = v.find(e.first);
-                        if (pos!=std::string::npos) {
-                        	EncodingMethod = e.second ;
-                        	break ;
+                        if (pos != std::string::npos) {
+                            EncodingMethod = e.second;
+                            break;
                         }
                     }
-                    if (EncodingMethod == EC_BACKEND_NULL)
-                        LOG(ERROR) << "LIBERASURECODE: Could not detect encoding method";
+                    if (EncodingMethod == EC_BACKEND_NULL) {
+                        LOG(ERROR) << "LIBERASURECODE: "
+                                   << "Could not detect encoding method";
+                    }
 
                     std::string all_numbers(v);
                     transform_nondigit_to_space(all_numbers);

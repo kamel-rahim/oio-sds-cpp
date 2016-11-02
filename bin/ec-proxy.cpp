@@ -10,6 +10,7 @@
 
 #include <glog/logging.h>
 #include <libmill.h>
+#include <liberasurecode/erasurecode.h>
 
 #include <iostream>
 #include <algorithm>
@@ -26,6 +27,17 @@ using oio::ec::blob::DownloadBuilder;
 using oio::ec::blob::UploadBuilder;
 
 static volatile bool flag_running{true};
+
+/*
+ * List of possible values for the "algo" parameter of "ec" data security:
+ */
+
+static std::map<std::string, int> TheEncodingMethods = { {"jerasure_rs_vand", 		EC_BACKEND_JERASURE_RS_VAND},
+		                                         	 	 {"jerasure_rs_cauchy", 	EC_BACKEND_JERASURE_RS_CAUCHY},
+														 {"flat_xor_hd", 			EC_BACKEND_FLAT_XOR_HD},
+														 {"isa_l_rs_vand", 			EC_BACKEND_ISA_L_RS_VAND},
+														 {"shss", 					EC_BACKEND_SHSS},
+														 {"liberasurecode_rs_vand", EC_BACKEND_LIBERASURECODE_RS_VAND} };
 
 static void _sighandler_stop(int s UNUSED) {
     flag_running = 0;
@@ -57,7 +69,7 @@ class EcHandler : public BlobHandler {
     std::set<oio::ec::blob::rawxSet> targets;
 
     std::map<std::string, std::string> xattrs;
-    int kVal, mVal, nbChunks;
+    int kVal, mVal, nbChunks, EncodingMethod;
     int64_t offset_pos;
     int64_t chunkSize;
     std::string req_id;
@@ -73,6 +85,7 @@ class EcHandler : public BlobHandler {
         builder.BlockSize(1024 * 1024);
 
         builder.OffsetPos(offset_pos);
+        builder.Encoding_Method (EncodingMethod);
         builder.M_Val(mVal);
         builder.K_Val(kVal);
         builder.Req_id(req_id);
@@ -162,7 +175,18 @@ class EcHandler : public BlobHandler {
                     targets.insert(rawx);
                 }
                     break;
-                case EcHeader::Value::ChunkMethod: {
+                 case EcHeader::Value::ChunkMethod: {
+                	EncodingMethod = EC_BACKEND_NULL ;
+                    for (const auto &e : TheEncodingMethods) {
+                        std::size_t pos = v.find(e.first);
+                        if (pos!=std::string::npos) {
+                        	EncodingMethod = e.second ;
+                        	break ;
+                        }
+                    }
+                    if (EncodingMethod == EC_BACKEND_NULL)
+                        LOG(ERROR) << "LIBERASURECODE: Could not detect encoding method";
+
                     std::string all_numbers(v);
                     transform_nondigit_to_space(all_numbers);
                     std::stringstream ss(all_numbers);

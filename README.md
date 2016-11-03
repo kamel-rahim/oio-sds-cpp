@@ -46,6 +46,7 @@ You should have received a copy of the GNU Affero General Public License along w
 * [ragel](https://github.com/colmnet/ragel): Used as a lexer to easily and efficiently recognize HTTP headers.
 * [http-parser](https://github.com/nodejs/http-parser) included as a Git submodule
 * [the Kinetic protocol](https://github.com/Kinetic/kinetic-protocol) included as a Git submodule, a Protocol Buffer definition maintained by the Kinetic Open Storage group.
+* [the Kinetic Java code](https://github.com/Kinetic/kinetic-java) included as a Git submodule, used when testing has been enabled, for the simulator it embeds.
 * [libmill](https://github.com/sustrik/libmill): for easy cooperative concurrency, thanks to Martin Sustrik's coroutines.
 * [glog](https://github.com/google/glog)
 * [gtest](https://github.com/google/googletest)
@@ -79,8 +80,9 @@ Possible CMake options:
 
 Name | Value | Description
 ---- | ----- | -----------
-SYS   | ON/OFF | ON by default, allows locating dependencies with pkg-config
+SYS | ON/OFF | ON by default, allows locating dependencies with pkg-config
 GUESS | ON/OFF | ON by default, allows locating dependencies at standard places
+TESTING | ON/OFF | ON by default, enables testing targets, implying new dependencies
 RAGEL_EXE | PATH | Specify the absolute path to the `ragel` CLI tool. If not set, `ragel` will be located in the `PATH` environment variable.
 PROTOBUF\_EXE | PATH | Specify the absolute path to the `protoc` CLI tool. If not set, `protoc` will be located in the `PATH`  environment variable.
 

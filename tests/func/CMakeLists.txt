@@ -1,3 +1,20 @@
+
+if (NOT DEFINED MAVEN_EXE)
+	find_program(MAVEN_EXE mvn)
+endif()
+
+ExternalProject_Add(kinetic-java
+		DOWNLOAD_COMMAND ""
+		SOURCE_DIR ${CMAKE_SOURCE_DIR}/3rd/kinetic-java
+		BINARY_DIR ${CMAKE_BINARY_DIR}/3rd/kinetic-java
+		TMP_DIR    ${CMAKE_BINARY_DIR}/3rd/kinetic-java-tmp
+		STAMP_DIR  ${CMAKE_BINARY_DIR}/3rd/kinetic-java-stamp
+		CONFIGURE_COMMAND ""
+		CMAKE_COMMAND ""
+		PREFIX "${CMAKE_CURRENT_BINARY_DIR}"
+		BUILD_COMMAND ${MAVEN_EXE} -B -f ${CMAKE_SOURCE_DIR}/3rd/kinetic-java/pom.xml clean package
+		INSTALL_COMMAND "")
+
 include_directories(BEFORE
 		${CMAKE_SOURCE_DIR}/
 		${CMAKE_SOURCE_DIR}/src

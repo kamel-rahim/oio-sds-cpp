@@ -22,6 +22,7 @@ endif()
 
 option(SYS "General trigger superseding all *_SYSTEM options" ON)
 option(GUESS "General trigger superseding all *_GUESS options" ON)
+option(TESTING "Enables the tests and their dependencies" ON)
 
 ################################################################################
 ### liberasurecode
@@ -131,8 +132,6 @@ else ()
             -DBUILD_SHARED_LIBS=ON
             -DBUILD_GTEST=ON
             -DBUILD_GMOCK=OFF
-            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG:PATH=DebugLibs
-            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE:PATH=ReleaseLibs
             -DCMAKE_CXX_FLAGS=${MSVC_COMPILER_DEFS}
             PREFIX "${CMAKE_CURRENT_BINARY_DIR}"
             INSTALL_COMMAND "")
@@ -176,8 +175,6 @@ else ()
             -DBUILD_SHARED_LIBS=ON
             -DWITH_THREADS=ON
             -DWITH_GFLAGS=OFF
-            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG:PATH=DebugLibs
-            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE:PATH=ReleaseLibs
             -DCMAKE_CXX_FLAGS=${MSVC_COMPILER_DEFS}
             PREFIX "${CMAKE_CURRENT_BINARY_DIR}"
             INSTALL_COMMAND "")
@@ -219,8 +216,6 @@ else ()
             TMP_DIR    ${CMAKE_BINARY_DIR}/3rd/libmill-tmp
             STAMP_DIR  ${CMAKE_BINARY_DIR}/3rd/libmill-stamp
             CMAKE_ARGS
-            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG:PATH=DebugLibs
-            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE:PATH=ReleaseLibs
 			-DCMAKE_C_FLAGS=-I${CMAKE_SOURCE_DIR}/3rd/libmill
             PREFIX "${CMAKE_CURRENT_BINARY_DIR}"
             INSTALL_COMMAND "")
@@ -335,7 +330,8 @@ add_definitions(-DMILL_USE_PREFIX=1)
 add_subdirectory(src)
 add_subdirectory(bin)
 
-ENABLE_TESTING()
-
-add_subdirectory(tests/unit)
-add_subdirectory(tests/func)
+if (TESTING)
+    ENABLE_TESTING()
+    add_subdirectory(tests/unit)
+    add_subdirectory(tests/func)
+endif()

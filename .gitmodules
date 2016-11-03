@@ -20,3 +20,6 @@
 [submodule "3rd/rapidjson"]
 	path = 3rd/rapidjson
 	url = https://github.com/miloyip/rapidjson
+[submodule "3rd/kinetic-java"]
+	path = 3rd/kinetic-java
+	url = https://github.com/Kinetic/kinetic-java.git

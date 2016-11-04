@@ -13,5 +13,6 @@ script:
   - set -e
   - cmake -DCMAKE_INSTALL_PREFIX=/tmp/oio -DCMAKE_BUILD_TYPE=Release -DSYS=OFF .
   - make all
+  - nohup java -jar 3rd/kinetic-java/kinetic-simulator/target/kinetic-simulator-3.0.7-SNAPSHOT-jar-with-dependencies.jar 2>/dev/null >/dev/null &
   - make -C tests/unit test
-  - echo make -C tests/func test
+  - make -C tests/func test

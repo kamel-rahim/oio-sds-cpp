@@ -264,16 +264,16 @@ TEST_F(FinalClass, UploadInitAbort) { \
     test_upload_init_abort(); \
 } \
 TEST_F(FinalClass, UploadInitCommit) { \
-    test_upload_init_abort(); \
+    test_upload_init_commit(); \
 } \
 TEST_F(FinalClass, UploadPrepareAbort) { \
     test_upload_prepare_abort(); \
 } \
 TEST_F(FinalClass, RemoveCommit) { \
-    test_remove_abort(); \
+    test_remove_commit(); \
 } \
 TEST_F(FinalClass, RemoveAbort) { \
-    test_remove_commit(); \
+    test_remove_abort(); \
 } \
 TEST_F(FinalClass, RemovePrepareNotFoundCommit) { \
     test_remove_not_found_and_commit(); \

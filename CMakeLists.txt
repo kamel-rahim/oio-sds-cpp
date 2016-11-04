@@ -85,8 +85,6 @@ else ()
             STAMP_DIR  ${CMAKE_BINARY_DIR}/3rd/gflags-stamp
             CMAKE_ARGS
             -DBUILD_SHARED_LIBS=ON
-            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG:PATH=DebugLibs
-            -DCMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE:PATH=ReleaseLibs
             -DCMAKE_CXX_FLAGS=${MSVC_COMPILER_DEFS}
             PREFIX "${CMAKE_CURRENT_BINARY_DIR}"
             INSTALL_COMMAND "")

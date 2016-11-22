@@ -64,9 +64,13 @@ class RawxBlobOpsFactory : public BlobOpsFactory {
     }
     std::unique_ptr<oio::api::blob::Upload> Upload() override {
         UploadBuilder op;
-        op.ChunkId(chunkid);
-        op.ChunkPosition(0, 0);
-        op.RawxId(srvid);
+
+        rawx_cmd rawx_param ;
+        rawx_param.rawx.host = srvid ;
+        rawx_param.rawx.chunk_id = chunkid ;
+        rawx_param.range.range_size = 0 ;
+        op.set_param (rawx_param);
+
         op.ContainerId(cid);
         op.ContentPath(content_path);
         op.ContentId(content_id);
@@ -79,15 +83,23 @@ class RawxBlobOpsFactory : public BlobOpsFactory {
 
     std::unique_ptr<oio::api::blob::Download> Download() override {
         DownloadBuilder op;
-        op.ChunkId(chunkid);
-        op.RawxId(srvid);
+
+        rawx_cmd rawx_param ;
+        rawx_param.rawx.host = srvid ;
+        rawx_param.rawx.chunk_id = chunkid ;
+        op.set_param (rawx_param);
+
         return op.Build(socket);
     }
 
     std::unique_ptr<oio::api::blob::Removal> Removal() override {
         RemovalBuilder op;
-        op.ChunkId(chunkid);
-        op.RawxId(srvid);
+
+        rawx_cmd rawx_param ;
+        rawx_param.rawx.host = srvid ;
+        rawx_param.rawx.chunk_id = chunkid ;
+        op.set_param (rawx_param);
+
         return op.Build(socket);
     }
 };

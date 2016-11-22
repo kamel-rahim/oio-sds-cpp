@@ -62,6 +62,14 @@ target_link_libraries(oio-data-ec
         oio-data oio-data-local
         ${EC_LIBRARIES})
 
+add_library(oio-data-router SHARED
+        oio/router/blob.cpp
+        oio/router/blob.h)
+target_link_libraries(oio-data-router
+        oio-data oio-data-local oio-data-ec oio-data-rawx
+        ${EC_LIBRARIES})
+
+
 add_library(oio-data-http SHARED
         oio/http/blob.cpp
         oio/http/blob.h)

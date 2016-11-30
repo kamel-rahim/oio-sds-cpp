@@ -296,16 +296,18 @@ int Socket::accept_fd(Addr *peer, Addr *local) {
     assert(peer != nullptr);
     assert(local != nullptr);
     assert(fd_ >= 0);
+
+    socklen_t clilen = sizeof(struct sockaddr_in);
     int fd = ::accept4(fd_,
                        reinterpret_cast<struct sockaddr *>(peer),
-                       reinterpret_cast<socklen_t *>(peer),
+                       &clilen,
                        SOCK_NONBLOCK | SOCK_CLOEXEC);
     if (fd < 0)
         return -1;
 
     (void) ::getsockname(fd_,
                          reinterpret_cast<struct sockaddr *>(local),
-                         reinterpret_cast<socklen_t *>(local));
+						 &clilen);
     return fd;
 }
 

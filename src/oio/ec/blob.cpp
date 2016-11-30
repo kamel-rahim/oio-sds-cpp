@@ -38,7 +38,7 @@
 #include "utils/utils.h"
 #include "oio/ec/blob.h"
 #include "oio/rawx/blob.h"
-#include "oio/rawx/socket_map.h"
+#include "oio/http/socket_map.h"
 
 using oio::ec::blob::DownloadBuilder;
 using oio::ec::blob::RemovalBuilder;
@@ -348,7 +348,7 @@ class EcUpload : public oio::api::blob::Upload {
     friend class UploadBuilder;
 
  public:
-    bool set_param (ec_cmd &_param) {
+    void set_param (ec_cmd &_param) {
     	param = _param ;
     }
 

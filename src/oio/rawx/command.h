@@ -77,7 +77,7 @@ public:
     	std::stringstream ss;
 
         // write safety string
-    	write_safty_str (ss)
+    	write_safty_str (ss);
 
         // write data
     	write_str (ss, rawx.chunk_id     );
@@ -88,7 +88,7 @@ public:
    		write_num (ss, range.range_size  );
 
         // write safety string
-        write_safty_str (ss)
+        write_safty_str (ss);
 
         std::string s = ss.str();
         buf.resize(s.size()) ;
@@ -103,7 +103,7 @@ public:
 
     	// sanity check
 		std::string OpenIoStr ;
-      	read_safty_str (ss, OpenIoStr)
+      	read_safty_str (ss, OpenIoStr);
 
 		// read data
 		read_str (ss, rawx.chunk_id      );
@@ -114,7 +114,7 @@ public:
       	read_num (ss, range.range_size   );
 
 	   	// sanity check
-      	read_safty_str (ss, OpenIoStr)
+      	read_safty_str (ss, OpenIoStr);
     	return true ;
     }
 } ;

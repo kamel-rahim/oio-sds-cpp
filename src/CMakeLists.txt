@@ -114,3 +114,8 @@ target_link_libraries(oio-data-kinetic
         ${MILL_LIBRARIES} ${PROTOBUF_LIBRARIES} ${CRYPTO_LIBRARIES}
         ${GLOG_LIBRARIES} ${ATTR_LIBRARIES})
 
+add_library(oio-directory SHARED
+        oio/directory/dir.cpp
+        oio/directory/dir.h
+        oio/directory/command.h)
+target_link_libraries(oio-directory)

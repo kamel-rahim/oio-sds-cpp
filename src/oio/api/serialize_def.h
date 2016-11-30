@@ -23,37 +23,55 @@
 
 #define OPENIO_STR  "OpenIO_chk"
 
-// write string + ";" delimiter mark
-#define write_safty_str(ss) {\
-        ss << OPENIO_STR;\
-        ss << ';';\
-}
-
-// write string + ";" delimiter mark
-#define write_str(ss, str) {\
+// write data + delimiter mark
+#define write_any(ss, str, del)\
         ss << str;\
-        ss << ';';\
+        ss << del;
+
+// read data + delimiter mark
+#define read_any(ss, str, del)\
+     getline(ss, str, del)
+
+// write delimiter string + delimiter mark
+#define write_safty_str(ss) {\
+     write_any(ss, OPENIO_STR,';') \
 }
 
-#define read_str(ss, str) {\
-        getline(ss, str, ';') ;\
+// read OPENIO_STR string + delimiter mark >>>>> And validate! <<<<< 
+#define read_safty_str(ss, str)\
+     read_and_validate(ss, str, OPENIO_STR, ';')
+
+// read string + delimiter mark >>>>> And validate! <<<<< 
+#define read_and_validate(ss, str, validation, del) {\
+     getline(ss, str, del);\
+     if (strcmp (str.data(), validation))\
+         return false ;\
+     str.clear(); \
 }
 
-// write number + " " delimiter mark
-#define write_num(ss, num) {\
-        ss << num;\
-        ss << ' ';\
-}
+// remove character from string
+#define remove_p(str, p)\
+   str.erase(remove(str.begin(), str.end(), p), str.end()) \
 
-#define read_num(ss, num) {\
-        ss >> num;\
-}
+// write string + delimiter mark
+#define write_str(ss, str)\
+     write_any(ss, str,';')
 
-#define read_safty_str(ss, OpenIoStr) {\
-        getline(ss, OpenIoStr, ';');\
-	    if (strcmp (OpenIoStr.data(), OPENIO_STR))\
-           return false ;\
-        OpenIoStr.clear();\
-} ;
+// read string + delimiter mark
+#define read_str(ss, str)\
+     read_any(ss, str, ';')
+
+// write number + delimiter mark
+#define write_num(ss, num)\
+     write_any(ss, num,' ')
+
+// read number + delimiter mark
+#define read_num_with_del(ss, str, num, del)\
+     read_any(ss, str, del);\
+     num = atoi (str.data())
+
+// write data + delimiter mark
+#define read_num(ss, num)\
+        ss >> num;
 
 #endif  // SRC_OIO_SERIALIZE_BLOB_H_

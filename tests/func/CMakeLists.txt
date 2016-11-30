@@ -32,6 +32,12 @@ target_link_libraries(test-http-client-proxy
         ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES} ${GTEST_LIBRARIES})
 add_test(NAME http/vanilla COMMAND test-http-client-proxy)
 
+
+add_executable(test-client TestClient.cpp)
+target_link_libraries(test-client
+        oio-directory oio-http-parser oio-utils
+        ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES} ${GTEST_LIBRARIES})
+
 add_executable(test-http-client-rawx TestHttpClient_OioRawx.cpp)
 target_link_libraries(test-http-client-rawx
         oio-data-rawx

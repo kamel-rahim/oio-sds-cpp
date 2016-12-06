@@ -35,7 +35,7 @@
 
 #define REF_DEF   std::string ("?acct=") + DirParam.account +\
 				  std::string ("&ref=") +  DirParam.container +\
-				  std::string ("&type=") + DirParam.type\
+				  (DirParam.type.size() ? std::string ("&type=meta2.") + DirParam.type : "&type=meta2")
 
 static http::Code HTTP_exec(std::shared_ptr<net::Socket> socket, std::string method, std::string op, std::string &in, std::string &out) {
     http::Call call;
@@ -82,7 +82,7 @@ oio_err directory::HttpCall (string method, string TypeOfCall, calltype type ) {
 		bool ret ;
 		switch (type) {
 		case calltype::META:
-			ret = DirParam.put_meta (out, metatype::META2) ;
+		ret = DirParam.put_meta (out, metatype::META2) ;
 			break ;
 		case calltype::METAS:
 			ret = DirParam.put_metas (out) ;

@@ -16,8 +16,8 @@
  * License along with this library.
  */
 
-#ifndef SRC_OIO_DIRECTORY_BLOB_H_
-#define SRC_OIO_DIRECTORY_BLOB_H_
+#ifndef SRC_CONTAINER_H_
+#define SRC_CONTAINER_H_
 
 #include <string>
 #include <memory>
@@ -27,50 +27,56 @@
 #include "oio/http/blob.h"
 #include "oio/api/serialize_def.h"
 #include "oio/directory/command.h"
+#include "oio/container/command.h"
+
+namespace user_container {
 
 enum calltype { META, METAS, PROPERTIES } ;
 
-class directory {
+class container {
 private :
-	_dir_param DirParam ;
+	_container_param ContainerParam ;
 	std::shared_ptr<net::Socket> _socket ;
 
 	oio_err HttpCall (string TypeOfCall) ;
-	oio_err HttpCall (string TypeOfCall, string data ) ;
+	oio_err HttpCall (string TypeOfCall, string data, bool autocreate ) ;
 	oio_err HttpCall (string method, string TypeOfCall, calltype type );
 
 public:
-	directory ( std::string account, std::string container, std::string type ) {
-		DirParam.account = account;
-		DirParam.container = container;
-		DirParam.type = type;
+	container ( std::string account, std::string container, std::string type ) {
+		ContainerParam.account = account;
+		ContainerParam.container = container;
+		ContainerParam.type = type;
 	}
 
 	void SetSocket (std::shared_ptr<net::Socket> socket ) {
 		_socket = socket ;
 	}
 
-	void SetData (_dir_param &Param ) {
-		DirParam = Param ;
+	void SetData (_container_param &Param ) {
+		ContainerParam = Param ;
 	}
 
 	void AddProperties (string key, string value) {
-		DirParam.Properties [key] = value;
+		ContainerParam.properties [key] = value;
 	}
 
-	_dir_param &GetData () {
-		return DirParam;
+	_container_param &GetData () {
+		return ContainerParam;
 	}
 
 	oio_err Create ();
-	oio_err Link ();
-	oio_err Unlink ();
+	oio_err Show ();
+	oio_err List ();
 	oio_err Destroy ();
-	oio_err SetProperties ();
+	oio_err Touch ();
+	oio_err Dedup ();
 	oio_err GetProperties ();
+	oio_err SetProperties ();
 	oio_err DelProperties ();
-	oio_err Renew ();
-	oio_err Show();
+
 };
 
-#endif  // SRC_OIO_DIRECTORY_BLOB_H_
+}  // namespace container
+
+#endif  // SRC_CONTAINER_H_

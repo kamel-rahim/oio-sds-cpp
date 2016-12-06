@@ -22,10 +22,16 @@
 #include "oio/api/serialize_def.h"
 #include <string.h>
 #include <algorithm>
+#include "rapidjson/document.h"
+#include <rapidjson/writer.h>
+
+using namespace rapidjson;
 
 using namespace std;
 
 enum metatype { META0, META1, META2 } ;
+
+#define USE_JSON
 
 class meta_host {
 public:
@@ -87,6 +93,113 @@ public:
 	set<_meta_data> metas;
 	std::map<string, string> Properties;
 
+#ifdef USE_JSON
+
+public:
+    bool put_meta (string p, metatype unusedType) {
+
+    	metatype MetaType;
+        string v = p;
+        string u = "[]";
+        for (const auto &c : u)  // strip  {}"
+        remove_p (v, c);
+
+    	_meta_data MetaData;
+     	string tmpStr ;
+    	Document document;
+    	if (document.Parse(v.c_str()).HasParseError()) {
+    		LOG(ERROR) << "Invalid JSON";
+    		return false;
+    	}
+
+    	if (!document.HasMember("seq")) {
+    		LOG(ERROR) << "Missing 'seq' field";
+    		return false;
+    	}
+    	else
+    		MetaData.MetaHost.seq = document["seq"].GetInt();
+
+      	if (!document.HasMember("type")) {
+      		LOG(ERROR) << "Missing 'type' field";
+      		return false;
+      	}
+      	else
+      		tmpStr = document["type"].GetString();
+
+      	size_t pos = tmpStr.find("meta2");
+ 		if (pos!=std::string::npos)
+ 			MetaType = META2;
+ 		else {
+ 			if (!tmpStr.compare("meta1"))
+ 				MetaType = META1;
+ 			else
+ 				MetaType = META0 ;
+ 		}
+
+      	if (!document.HasMember("host")) {
+      		LOG(ERROR) << "Missing 'host' field";
+      		return false;
+      	}
+      	else {
+      		tmpStr = document["host"].GetString();
+    	 	stringstream ss (tmpStr) ;
+            read_any(ss, MetaData.MetaHost.host, ':') ;
+            read_num_with_del(ss, tmpStr, MetaData.MetaHost.port, ',') ;
+      	}
+
+      	if (!document.HasMember("args")) {
+      		LOG(ERROR) << "Missing 'args' field";
+      		return false;
+      	}
+      	else
+      		 MetaData.args = document["args"].GetString();
+
+      	MetaData.MetaType = MetaType;
+        metas.insert(MetaData);
+
+        return true ;
+    }
+
+    bool put_metas (string p) {
+    	Document document;
+        if (document.Parse(p.c_str()).HasParseError()) {
+        	LOG(ERROR) << "Invalid JSON";
+        	return false;
+        }
+
+        if (!document.HasMember("dir")) {
+            LOG(ERROR) << "Missing 'properties' field";
+            return false;
+        }
+        else {
+			const Value& obj = document["dir"];
+			if (obj.IsArray()) {
+				for (auto& a : obj.GetArray()) {
+					if (a.IsObject()) {
+						rapidjson::StringBuffer buffer;
+						rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
+					    a.Accept(writer);
+    				    put_meta (buffer.GetString(), META2) ;
+					}
+				}
+			}
+        }
+        if (!document.HasMember("srv")) {
+            LOG(ERROR) << "Missing 'system' field";
+            return false;
+        }
+        else {
+			const Value& obj = document["srv"];
+			if (obj.IsObject()) {
+				for (auto& v : obj.GetObject())
+					 put_meta (v.value.GetString(), META2 ) ;
+			}
+        }
+       	return true ;
+    }
+
+#else
+
 private:
     bool put_meta (stringstream &ss, metatype MetaType) {
     	_meta_data MetaData;
@@ -96,7 +209,7 @@ private:
         read_num_with_del(ss, tmpStr, MetaData.MetaHost.seq, ',') ;
 
         read_and_validate(ss, tmpStr, "type", ':'); // read type keyword
-        read_any(ss, type, ',') ;
+        read_any(ss, tmpStr, ',') ;                 // read and discard type;
 
         read_and_validate(ss, tmpStr, "host", ':'); // read host keyword
         read_any(ss, MetaData.MetaHost.host, ':') ;
@@ -115,13 +228,15 @@ private:
     }
 
 public:
-    _dir_param& operator=(const _dir_param& arg) {
-       account      = arg.account;
-       container    = arg.container;
-       type         = arg.type;
-       for (const auto &to : arg.metas)
-    	   metas.insert(to);
-       return *this;
+    bool put_meta (string s, metatype MetaType) {
+        string v = s;
+        string u = "{}[]\" " ;
+        for (const auto &p : u)  // strip  {}[]"
+        remove_p (v, p);
+
+ 	 	stringstream ss (v) ;
+      	put_meta (ss,MetaType);
+      	return true ;
     }
 
     bool put_metas (string s) {
@@ -134,23 +249,28 @@ public:
      	for ( ; i < 3; i++ )
      	{
      		pos= v.find("seq", pos);
-            v = v.substr(pos, v.size() - pos);
-     	 	stringstream ss (v) ;
-     	 	put_meta (v, (metatype) i);
-     	 	pos += 5 ;
+    		if (pos!=std::string::npos)
+     		{
+                v = v.substr(pos, v.size() - pos);
+     	 	    stringstream ss (v) ;
+     	 	    put_meta (v, (metatype) i);
+        		pos += 5 ;
+     		}
+    		else break ;
      	}
        	return true ;
     }
 
-    bool put_meta (string s, metatype MetaType) {
-        string v = s;
-        string u = "{}[]\" " ;
-        for (const auto &p : u)  // strip  {}[]"
-        remove_p (v, p);
+#endif
 
- 	 	stringstream ss (v) ;
-      	put_meta (ss,MetaType);
-      	return true ;
+public:
+    _dir_param& operator=(const _dir_param& arg) {
+       account      = arg.account;
+       container    = arg.container;
+       type         = arg.type;
+       for (const auto &to : arg.metas)
+    	   metas.insert(to);
+       return *this;
     }
 
     bool put_properties (string s) {

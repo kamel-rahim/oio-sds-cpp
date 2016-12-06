@@ -119,3 +119,9 @@ add_library(oio-directory SHARED
         oio/directory/dir.h
         oio/directory/command.h)
 target_link_libraries(oio-directory)
+
+add_library(oio-container SHARED
+        oio/container/container.cpp
+        oio/container/container.h
+        oio/container/command.h)
+target_link_libraries(oio-container)

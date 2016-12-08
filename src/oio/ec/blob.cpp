@@ -18,9 +18,11 @@
 
 #include <fcntl.h>
 
+#include <glog/logging.h>
 #include <libmill.h>
 #include <liberasurecode/erasurecode.h>
-#include <glog/logging.h>
+#include <liberasurecode/erasurecode_helpers.h>
+#undef str
 
 #include <algorithm>
 #include <cassert>
@@ -28,16 +30,11 @@
 #include <map>
 #include <vector>
 
-// JFS: Under certain circumstances, the subsequent header declare an str()
-// macro colliding with a glog usage as with a iostream method declaration. One
-// way to cope with this is to include glog/logging.h BEFORE, but it would place
-// a C++ header before the C header (thus breaking a cpplint rule). I prefer the
-// case where the exception is the problematic header.
-#include <liberasurecode/erasurecode_helpers.h>  // NOLINT
 
 #include "utils/utils.h"
 #include "oio/ec/blob.h"
 #include "oio/rawx/blob.h"
+#include "oio/http/socket_map.h"
 
 using oio::ec::blob::DownloadBuilder;
 using oio::ec::blob::RemovalBuilder;
@@ -48,15 +45,14 @@ using oio::api::blob::Cause;
 
 namespace blob = ::oio::api::blob;
 
-oio::ec::blob::SocketMap TheScoketMap;
+SocketMap TheScoketMap;
 
 class EcDownload : public oio::api::blob::Download {
     friend class DownloadBuilder;
 
  public:
-    bool Target(const oio::ec::blob::rawxSet &to) {
-        targets.insert(to);
-        return true;
+    void set_param (ec_cmd &_param) {
+        param = _param ;
     }
 
     void SetXattr(const std::string &k, const std::string &v) {
@@ -134,8 +130,8 @@ out:
         done = false;
 
         struct ec_args args;
-        args.k = kVal;
-        args.m = mVal;
+        args.k = param.kVal;
+        args.m = param.mVal;
         args.hd = 3;
 
         // Set up data and parity fragments.
@@ -148,34 +144,36 @@ out:
 
         // read data and parity
         encoded_data =
-                reinterpret_cast<char **>(malloc(sizeof(char *) * kVal));
+                reinterpret_cast<char **>(malloc(sizeof(char *) * param.kVal));
         if (NULL == *encoded_data) {
             LOG(ERROR) << "LIBERASURECODE: Could not allocate data buffer";
             return Status(Cause::InternalError);
         }
 
         encoded_parity =
-                reinterpret_cast<char **>(malloc(sizeof(char *) * mVal));
+                reinterpret_cast<char **>(malloc(sizeof(char *) * param.mVal));
         if (NULL == *encoded_parity) {
             LOG(ERROR) << "LIBERASURECODE: Could not allocate parity buffer";
             return Status(Cause::InternalError);
         }
 
-        memset(encoded_data, 0, sizeof(char *) * kVal);
-        memset(encoded_parity, 0, sizeof(char *) * mVal);
+        memset(encoded_data, 0, sizeof(char *) * param.kVal);
+        memset(encoded_parity, 0, sizeof(char *) * param.mVal);
 
         int nbValid = 0;
 
         // read from rawx
-        for (const auto &to : targets) {
+        for (const auto &to : param.targets) {
             std::shared_ptr<net::Socket> *socket = TheScoketMap.GetSocket(
-                    to.host);
+                    to.rawx.host);
             char *p = NULL;
             if (socket) {
                 oio::rawx::blob::DownloadBuilder builder;
 
-                builder.ChunkId(to.filename);
-                builder.RawxId(to.host);
+                rawx_cmd rawx_param ;
+                rawx_param.rawx = to.rawx ;
+                builder.set_param (rawx_param) ;
+
                 auto dl = builder.Build(*socket);
                 auto rc = dl->Prepare();
 
@@ -204,24 +202,24 @@ out:
                 nbValid++;
             }
 
-            if (to.chunk_number < kVal)
+            if (to.chunk_number < param.kVal)
                 encoded_data[to.chunk_number] = p;
             else
-                encoded_parity[to.chunk_number - kVal] = p;
+                encoded_parity[to.chunk_number - param.kVal] = p;
 
-            if (nbValid >= kVal) {  // give it a try, we have enough data
+            if (nbValid >= param.kVal) {  // give it a try, we have enough data
                 // setup mask ;
                 uint64_t mask = 0;
 
-                for (int i = 0; i < (kVal + mVal); i++) {
-                    if (i < kVal) {
+                for (int i = 0; i < (param.kVal + param.mVal); i++) {
+                    if (i < param.kVal) {
                         if (!encoded_data[i])
                             mask = add_item_to_missing_mask(
-                                    mask, kVal + mVal - 1 - i);
+                                    mask, param.kVal + param.mVal - 1 - i);
                     } else {
                         if (!encoded_parity[i])
                             mask = add_item_to_missing_mask(
-                                    mask, kVal + mVal - 1 - i);
+                                    mask, param.kVal + param.mVal - 1 - i);
                     }
                 }
 
@@ -235,12 +233,12 @@ out:
                                                   &out_data, &out_data_len);
 
                 if (rc_decode == 0) {  // decode ok we are done!
-                    if (out_data_len < size_expected) {
+                    if (out_data_len < param.range.range_size) {
                         buffer.resize(out_data_len);
                         memcpy(&buffer[0], out_data, out_data_len);
                     } else {
-                        buffer.resize(size_expected);
-                        memcpy(&buffer[0], &out_data[offset], size_expected);
+                        buffer.resize(param.range.range_size);
+                        memcpy(&buffer[0], &out_data[param.range.range_start], param.range.range_size);
                     }
                     break;
                 }
@@ -275,7 +273,7 @@ out:
 
     void CleanUp() {
         if (encoded_data) {
-            for (int j = 0; j < kVal; j++) {
+            for (int j = 0; j < param.kVal; j++) {
                 if (encoded_data[j])
                     free(encoded_data[j]);
             }
@@ -284,7 +282,7 @@ out:
         }
 
         if (encoded_parity) {
-            for (int j = 0; j < mVal; j++) {
+            for (int j = 0; j < param.mVal; j++) {
                 if (encoded_parity[j])
                     free(encoded_parity[j]);
             }
@@ -301,17 +299,12 @@ out:
 
  private:
     std::vector<uint8_t> buffer;
-    std::set<oio::ec::blob::rawxSet> targets;
     std::map<std::string, std::string> xattr;
-
-    int kVal, mVal, nbChunks, EncodingMethod;
-    int64_t chunkSize;
+    ec_cmd param ;
     char **encoded_data;
     char **encoded_parity;
     uint64_t encoded_fragment_len;
     bool done;
-    std::string req_id;
-    uint64_t offset, size_expected;
 };
 
 DownloadBuilder::DownloadBuilder() {}
@@ -320,16 +313,7 @@ DownloadBuilder::~DownloadBuilder() {}
 
 std::unique_ptr<blob::Download> DownloadBuilder::Build() {
     auto ul = new EcDownload();
-    ul->kVal = kVal;
-    ul->mVal = mVal;
-    ul->EncodingMethod = EncodingMethod;
-    ul->nbChunks = nbChunks;
-    ul->chunkSize = chunkSize;
-    ul->offset = offset;
-    ul->req_id = req_id;
-    ul->size_expected = size_expected;
-    for (const auto &to : targets)
-        ul->Target(to);
+    ul->set_param(param) ;
     for (const auto &e : xattrs)
         ul->SetXattr(e.first, e.second);
     return std::unique_ptr<EcDownload>(ul);
@@ -360,9 +344,8 @@ class EcUpload : public oio::api::blob::Upload {
     friend class UploadBuilder;
 
  public:
-    bool Target(const oio::ec::blob::rawxSet &to) {
-        targets.insert(to);
-        return true;
+    void set_param (ec_cmd &_param) {
+        param = _param ;
     }
 
     void SetXattr(const std::string &k, const std::string &v) override {
@@ -382,8 +365,8 @@ class EcUpload : public oio::api::blob::Upload {
     Status Commit() override {
         uint ChunkSize = buffer.size();
         struct ec_args args;
-        args.k = kVal;
-        args.m = mVal;
+        args.k = param.kVal;
+        args.m = param.mVal;
         args.hd = 3;
 
         int err = ::posix_memalign(
@@ -414,14 +397,17 @@ class EcUpload : public oio::api::blob::Upload {
         }
 
         // write to Rawx
-        for (const auto &to : targets) {
+        for (const auto &to : param.targets) {
             std::shared_ptr<net::Socket> *socket = TheScoketMap.GetSocket(
-                    to.host);
+                    to.rawx.host);
             if (socket) {
                 oio::rawx::blob::UploadBuilder builder;
-                builder.ChunkId(to.filename);
-                builder.ChunkPosition(offset_pos, 0);
-                builder.RawxId(to.host);
+
+                rawx_cmd rawx_param ;
+                rawx_param.rawx = to.rawx ;
+                rawx_param.range = param.range ;
+                builder.set_param (rawx_param) ;
+
                 builder.ContainerId(xattr.find("container-id")->second);
                 builder.ContentPath(xattr.find("content-path")->second);
                 builder.ContentId(xattr.find("content-id")->second);
@@ -434,9 +420,9 @@ class EcUpload : public oio::api::blob::Upload {
                 auto ul = builder.Build(*socket);
                 auto rc = ul->Prepare();
                 if (rc.Ok()) {
-                    const char *tmp = to.chunk_number < kVal
+                    const char *tmp = to.chunk_number < param.kVal
                                       ? encoded_data[to.chunk_number]
-                                      : encoded_parity[to.chunk_number - kVal];
+                                      : encoded_parity[to.chunk_number - param.kVal];
 
                     std::string s(tmp, encoded_fragment_len);
                     ul->Write(s);
@@ -459,7 +445,7 @@ class EcUpload : public oio::api::blob::Upload {
 
     void CleanUp() {
         if (encoded_data) {
-            for (int j = 0; j < kVal; j++) {
+            for (int j = 0; j < param.kVal; j++) {
                 if (encoded_data[j])
                     free(encoded_data[j]);
             }
@@ -468,7 +454,7 @@ class EcUpload : public oio::api::blob::Upload {
         }
 
         if (encoded_parity) {
-            for (int j = 0; j < mVal; j++) {
+            for (int j = 0; j < param.mVal; j++) {
                 if (encoded_parity[j])
                     free(encoded_parity[j]);
             }
@@ -484,14 +470,16 @@ class EcUpload : public oio::api::blob::Upload {
         CleanUp();
 
         // delete all saved files.
-        for (const auto &to : targets) {
+        for (const auto &to : param.targets) {
             std::shared_ptr<net::Socket> *socket = TheScoketMap.GetSocket(
-                    to.host);
+                    to.rawx.host);
             if (socket) {
                 oio::rawx::blob::RemovalBuilder builder;
 
-                builder.ChunkId(to.filename);
-                builder.RawxId(to.host);
+                rawx_cmd rawx_param ;
+                rawx_param.rawx = to.rawx ;
+                builder.set_param (rawx_param) ;
+
                 auto rm = builder.Build(*socket);
                 auto rc = rm->Prepare();
 
@@ -509,7 +497,7 @@ class EcUpload : public oio::api::blob::Upload {
     void Write(const uint8_t *buf, uint32_t len) override {
         while (len > 0) {
             const auto oldsize = buffer.size();
-            const uint32_t avail = buffer_limit - oldsize;
+            const uint32_t avail = param.ChunkSize - oldsize;
             const uint32_t local = std::min(avail, len);
             if (local > 0) {
                 buffer.resize(oldsize + local);
@@ -531,14 +519,9 @@ class EcUpload : public oio::api::blob::Upload {
     EcUpload() {}
 
  private:
+    ec_cmd param ;
     std::vector<uint8_t> buffer;
-    uint32_t buffer_limit;
-    std::set<oio::ec::blob::rawxSet> targets;
     std::map<std::string, std::string> xattr;
-
-    int kVal, mVal, nbChunks, EncodingMethod;
-    std::string req_id;
-    int64_t offset_pos;
     char **encoded_data = NULL;
     char **encoded_parity = NULL;
     uint64_t encoded_fragment_len;
@@ -551,15 +534,8 @@ UploadBuilder::~UploadBuilder() {}
 
 std::unique_ptr<blob::Upload> UploadBuilder::Build() {
     auto ul = new EcUpload();
-    ul->buffer_limit = block_size;
-    ul->kVal = kVal;
-    ul->mVal = mVal;
-    ul->EncodingMethod = EncodingMethod;
-    ul->req_id = req_id;
-    ul->nbChunks = nbChunks;
-    ul->offset_pos = offset_pos;
-    for (const auto &to : targets)
-        ul->Target(to);
+    ul->set_param(param) ;
+
     for (const auto &e : xattrs)
         ul->SetXattr(e.first, e.second);
     return std::unique_ptr<EcUpload>(ul);

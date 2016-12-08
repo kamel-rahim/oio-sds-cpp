@@ -65,7 +65,7 @@ add_executable(oio-ec-proxy
         ec-proxy-headers.h
         ec-proxy.cpp)
 target_link_libraries(oio-ec-proxy
-        oio-http-parser oio-server oio-data-ec oio-data-rawx oio-data-http
+        oio-http-parser oio-server oio-data-router oio-data-ec oio-data-rawx oio-data-http
         ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES})
 
 add_executable(kinetic-stress-put kinetic-stress-put.cpp)

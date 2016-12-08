@@ -62,6 +62,14 @@ target_link_libraries(oio-data-ec
         oio-data oio-data-local
         ${EC_LIBRARIES})
 
+add_library(oio-data-router SHARED
+        oio/router/blob.cpp
+        oio/router/blob.h)
+target_link_libraries(oio-data-router
+        oio-data oio-data-local oio-data-ec oio-data-rawx
+        ${EC_LIBRARIES})
+
+
 add_library(oio-data-http SHARED
         oio/http/blob.cpp
         oio/http/blob.h)
@@ -106,3 +114,14 @@ target_link_libraries(oio-data-kinetic
         ${MILL_LIBRARIES} ${PROTOBUF_LIBRARIES} ${CRYPTO_LIBRARIES}
         ${GLOG_LIBRARIES} ${ATTR_LIBRARIES})
 
+add_library(oio-directory SHARED
+        oio/directory/dir.cpp
+        oio/directory/dir.h
+        oio/directory/command.h)
+target_link_libraries(oio-directory)
+
+add_library(oio-container SHARED
+        oio/container/container.cpp
+        oio/container/container.h
+        oio/container/command.h)
+target_link_libraries(oio-container)

@@ -21,8 +21,10 @@
  * Rawx service.
  */
 
+
 #include <gtest/gtest.h>
 #include <gflags/gflags.h>
+
 #include <memory>
 
 #include "utils/macros.h"
@@ -55,7 +57,8 @@ class RawxBlobOpsFactory : public BlobOpsFactory {
     std::shared_ptr<net::Socket> socket;
 
  public:
-    ~RawxBlobOpsFactory() {}
+    ~RawxBlobOpsFactory() override {}
+
     explicit RawxBlobOpsFactory(std::string u): url(u) {}
 
     void ResetConnection() {
@@ -64,9 +67,13 @@ class RawxBlobOpsFactory : public BlobOpsFactory {
     }
     std::unique_ptr<oio::api::blob::Upload> Upload() override {
         UploadBuilder op;
-        op.ChunkId(chunkid);
-        op.ChunkPosition(0, 0);
-        op.RawxId(srvid);
+
+        rawx_cmd rawx_param ;
+        rawx_param.rawx.host = srvid ;
+        rawx_param.rawx.chunk_id = chunkid ;
+        rawx_param.range.range_size = 0 ;
+        op.set_param (rawx_param);
+
         op.ContainerId(cid);
         op.ContentPath(content_path);
         op.ContentId(content_id);
@@ -79,15 +86,23 @@ class RawxBlobOpsFactory : public BlobOpsFactory {
 
     std::unique_ptr<oio::api::blob::Download> Download() override {
         DownloadBuilder op;
-        op.ChunkId(chunkid);
-        op.RawxId(srvid);
+
+        rawx_cmd rawx_param ;
+        rawx_param.rawx.host = srvid ;
+        rawx_param.rawx.chunk_id = chunkid ;
+        op.set_param (rawx_param);
+
         return op.Build(socket);
     }
 
     std::unique_ptr<oio::api::blob::Removal> Removal() override {
         RemovalBuilder op;
-        op.ChunkId(chunkid);
-        op.RawxId(srvid);
+
+        rawx_cmd rawx_param ;
+        rawx_param.rawx.host = srvid ;
+        rawx_param.rawx.chunk_id = chunkid ;
+        op.set_param (rawx_param);
+
         return op.Build(socket);
     }
 };
@@ -126,110 +141,6 @@ class RawxBlobTestSuite : public BlobTestSuite {
 
 DECLARE_BLOBTESTSUITE(RawxBlobTestSuite);
 
-#if 0
-DEFINE_string(
-        CHUNKID,
-        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-        "ChunkID to be used (X replaced by random hexadecimal char");
-DEFINE_string(
-        CONTENTID, "XXXXXXXX",
-        "ContentID to be used (X replaced by random hexadecimal char");
-DEFINE_string(
-        CONTENTPATH,
-        "path-XXXXXXXX",
-        "Content path to be used (X replaced by random hexadecimal char");
-DEFINE_string(
-        CONTAINERID,
-        "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-        "ContainerID to be used (X replaced by random hexadecimal char");
-
-static void put(std::shared_ptr<net::Socket> socket) {
-    std::string out;
-    http::Call call;
-    call.Socket(socket)
-            .Method("PUT")
-            .Field("Host", FLAGS_URL_RAWX)
-            .Field(OIO_RAWX_HEADER_PREFIX "container-id", FLAGS_CONTAINERID)
-            .Field(OIO_RAWX_HEADER_PREFIX "content-path", FLAGS_CONTENTPATH)
-            .Field(OIO_RAWX_HEADER_PREFIX "content-id", FLAGS_CONTENTID)
-            .Field(OIO_RAWX_HEADER_PREFIX "content-size", "0")
-            .Field(OIO_RAWX_HEADER_PREFIX "content-chunksnb", "1")
-            .Field(OIO_RAWX_HEADER_PREFIX "content-version", "0")
-            .Field(OIO_RAWX_HEADER_PREFIX "content-storage-policy", "SINGLE")
-            .Field(OIO_RAWX_HEADER_PREFIX "content-chunk-method", "plain")
-            .Field(OIO_RAWX_HEADER_PREFIX "content-mime-type",
-                   "application/octet-stream")
-            .Field(OIO_RAWX_HEADER_PREFIX "chunk-id", FLAGS_CHUNKID)
-            .Field(OIO_RAWX_HEADER_PREFIX "chunk-size", "0")
-            .Field(OIO_RAWX_HEADER_PREFIX "chunk-pos", "0")
-            .Selector("/rawx/" + FLAGS_CHUNKID);
-    auto rc = call.Run("", &out);
-    LOG(INFO) << "PUT rc=" << rc << " reply=" << out;
-}
-
-static void get(std::shared_ptr<net::Socket> socket) {
-    std::string out;
-    http::Call call;
-    call.Socket(socket)
-            .Method("GET")
-            .Field("Host", FLAGS_URL_RAWX)
-            .Selector("/rawx/" + FLAGS_CHUNKID);
-    auto rc = call.Run("", &out);
-    LOG(INFO) << "GET rc=" << rc << " reply=" << out;
-}
-
-static void del(std::shared_ptr<net::Socket> socket) {
-    std::string out;
-    http::Call call;
-    call.Socket(socket)
-            .Method("DELETE")
-            .Field("Host", FLAGS_URL_RAWX)
-            .Selector("/rawx/" + FLAGS_CHUNKID);
-    auto rc = call.Run("", &out);
-    LOG(INFO) << "GET rc=" << rc << " reply=" << out;
-}
-
-static void cycle(net::Socket *sptr, const char *url) {
-    std::shared_ptr<net::Socket> socket(sptr);
-    for (int i = 0; i < 3; ++i) {
-        socket->connect(url);
-        socket->setnodelay();
-        socket->setquickack();
-        put(socket);
-        socket->close();
-
-        socket->connect(url);
-        socket->setnodelay();
-        socket->setquickack();
-        get(socket);
-        socket->close();
-
-        socket->connect(url);
-        socket->setnodelay();
-        socket->setquickack();
-        del(socket);
-        socket->close();
-    }
-}
-
-TEST(Http, MillSocket_Cycle) {
-    cycle(new net::MillSocket, FLAGS_URL_RAWX.c_str());
-}
-
-TEST(Http, RegularSocket_Cycle) {
-    cycle(new net::RegularSocket, FLAGS_URL_RAWX.c_str());
-}
-
-static void _randomize(std::string *s) {
-    int next = 0;
-    auto hexa = generate_string_random(s->size(), "0123456789ABCDEF");
-    for (auto &c : *s) {
-        if (c == 'X')
-            c = hexa[next++];
-    }
-}
-#endif
-
 int main(int argc, char **argv) {
     gflags::ParseCommandLineFlags(&argc, &argv, true);
     google::InitGoogleLogging(argv[0]);
@@ -238,11 +149,5 @@ int main(int argc, char **argv) {
 
     // TODO(jfs) Run a rawx in a coroutine
 
-#if 0
-    _randomize(&FLAGS_CHUNKID);
-    _randomize(&FLAGS_CONTAINERID);
-    _randomize(&FLAGS_CONTENTID);
-    _randomize(&FLAGS_CONTENTPATH);
-#endif
     return RUN_ALL_TESTS();
 }

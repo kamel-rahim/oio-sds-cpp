@@ -85,11 +85,11 @@ RemovalBuilder::RemovalBuilder() {}
 
 RemovalBuilder::~RemovalBuilder() {}
 
-void RemovalBuilder::ChunkId(const std::string &s) {
-    return inner.Name("/rawx/" + s);
+void RemovalBuilder::set_param (rawx_cmd &_param) {
+    rawx_param = _param ;
+    inner.Host(rawx_param.rawx.host) ;
+    inner.Name("/rawx/" + rawx_param.rawx.chunk_id);
 }
-
-void RemovalBuilder::RawxId(const std::string &s) { return inner.Host(s); }
 
 std::unique_ptr<Removal> RemovalBuilder::Build(
         std::shared_ptr<net::Socket> socket) {
@@ -151,17 +151,17 @@ UploadBuilder::UploadBuilder() {}
 
 UploadBuilder::~UploadBuilder() {}
 
-void UploadBuilder::RawxId(const std::string &s) { inner.Host(s); }
 
-void UploadBuilder::ChunkId(const std::string &s) {
-    inner.Field("X-oio-chunk-meta-chunk-id", s);
-    inner.Name("/rawx/" + s);
-}
-
-void UploadBuilder::ChunkPosition(int64_t meta, int64_t sub) {
+void UploadBuilder::set_param (rawx_cmd &_param) {
+    rawx_param = _param ;
     std::stringstream ss;
-    ss << meta << '.' << sub;
+    ss << rawx_param.range.range_size << '.' << 0;
     inner.Field("X-oio-chunk-meta-chunk-pos", ss.str());
+
+    inner.Host(rawx_param.rawx.host);
+
+    inner.Field("X-oio-chunk-meta-chunk-id", rawx_param.rawx.chunk_id);
+    inner.Name("/rawx/" + rawx_param.rawx.chunk_id);
 }
 
 void UploadBuilder::ContainerId(const std::string &s) {
@@ -215,12 +215,17 @@ class RawxDownload : public Download {
 
  private:
     std::unique_ptr<Download> inner;
+    rawx_cmd rawx_param ;
     Step step_;
 
  public:
     explicit RawxDownload(Download *sub) : inner(sub), step_{Step::Init} {}
 
     ~RawxDownload() {}
+
+    void set_param (rawx_cmd &_param) {
+        rawx_param = _param ;
+    }
 
     bool IsEof() override { return inner->IsEof(); }
 
@@ -236,7 +241,21 @@ class RawxDownload : public Download {
     int32_t Read(std::vector<uint8_t> *buf) override {
         if (step_ != Step::Prepared)
             return -1;
-        return inner->Read(buf);
+
+        std::vector<uint8_t> temp_buf ;
+
+        while (!IsEof()) {
+            inner->Read(&temp_buf);
+        }
+
+        if (temp_buf.size() > rawx_param.range.range_size) {
+            buf->resize(rawx_param.range.range_size);
+            memcpy(buf->data(), &temp_buf[rawx_param.range.range_start], rawx_param.range.range_size);
+        }
+        else
+            buf->swap(temp_buf);
+
+        return buf->size() ;
     }
 };
 
@@ -244,15 +263,16 @@ DownloadBuilder::DownloadBuilder() {}
 
 DownloadBuilder::~DownloadBuilder() {}
 
-void DownloadBuilder::RawxId(const std::string &s) { return inner.Host(s); }
-
-void DownloadBuilder::ChunkId(const std::string &s) {
-    return inner.Name("/rawx/" + s);
+void DownloadBuilder::set_param (rawx_cmd &_param) {
+    rawx_param = _param ;
+    inner.Host(rawx_param.rawx.host);
+    inner.Name("/rawx/" + rawx_param.rawx.chunk_id);
 }
 
 std::unique_ptr<Download> DownloadBuilder::Build(
         std::shared_ptr<net::Socket> socket) {
     auto sub = inner.Build(socket);
     auto dl = new RawxDownload(sub.release());
+    dl->set_param(rawx_param) ;
     return std::unique_ptr<Download>(dl);
 }

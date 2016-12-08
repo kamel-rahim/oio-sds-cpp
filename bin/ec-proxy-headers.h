@@ -42,6 +42,7 @@ class EcHeader {
         ChunkPos,
         ChunkSize,
         Range,
+        Host,
         TransferEncoding,
     };
 

@@ -49,6 +49,7 @@ using oio::kinetic::rpc::Delete;
 using oio::kinetic::rpc::GetKeyRange;
 
 namespace blob = ::oio::api::blob;
+using Step = blob::TransactionStep;
 using blob::Status;
 using blob::Cause;
 
@@ -370,19 +371,39 @@ struct PendingDelete {
     }
 };
 
+static void _rolling_delete(unsigned int parallelism_factor,
+        std::vector<PendingDelete> *ops) {
+    DLOG(INFO) << __FUNCTION__ << " of " << ops->size() << " ops";
+
+    // Pre-start as many parallel operations as the configured parallelism
+    for (unsigned int i = 0; i < parallelism_factor && i < ops->size(); ++i)
+        ops->at(i).Start();
+
+    for (unsigned int i = 0; i < ops->size(); ++i) {
+        ops->at(i).sync->Wait();
+        // an operation finished, pre-start another one
+        if (i + parallelism_factor < ops->size())
+            ops->at(i + parallelism_factor).Start();
+    }
+}
+
 class KineticRemoval : public blob::Removal {
     friend class RemovalBuilder;
 
  public:
     KineticRemoval(std::shared_ptr<ClientFactory> f,
             std::vector<std::string> tv)
-            : parallelism_factor{8}, chunkid(), targets(), factory(f), ops() {
+            : parallelism_factor{8}, chunkid(), targets(), factory(f), ops(),
+              step{Step::Init} {
         targets.swap(tv);
     }
 
-    ~KineticRemoval() {}
+    ~KineticRemoval() override {}
 
     Status Prepare() override {
+        if (step != Step::Init)
+            return Status(Cause::InternalError);
+
         ListingBuilder builder(factory);
         builder.Name(chunkid);
         for (const auto &to : targets)
@@ -397,26 +418,27 @@ class KineticRemoval : public blob::Removal {
                 DLOG(INFO) << "rem(" << id << "," << key << ")";
                 ops.push_back(del);
             }
+            step = Step::Prepared;
         }
         return rc;
     }
 
     Status Commit() override {
-        DLOG(INFO) << __FUNCTION__ << " of " << ops.size() << " ops";
-        // Pre-start as many parallel operations as the configured parallelism
-        for (unsigned int i = 0; i < parallelism_factor && i < ops.size(); ++i)
-            ops[i].Start();
+        if (step != Step::Prepared)
+            return Status(Cause::InternalError);
 
-        for (unsigned int i = 0; i < ops.size(); ++i) {
-            ops[i].sync->Wait();
-            // an operation finished, pre-start another one
-            if (i + parallelism_factor < ops.size())
-                ops[i + parallelism_factor].Start();
-        }
+        _rolling_delete(parallelism_factor, &ops);
+        step = Step::Done;
         return Status();
     }
 
-    Status Abort() override { return Status(Cause::Unsupported); }
+    Status Abort() override {
+        if (step != Step::Prepared)
+            return Status(Cause::InternalError);
+        // At the Prepare() step, nothing has been done yet. \o/
+        step = Step::Done;
+        return Status();
+    }
 
  private:
     unsigned int parallelism_factor;
@@ -425,6 +447,7 @@ class KineticRemoval : public blob::Removal {
     std::shared_ptr<ClientFactory> factory;
 
     std::vector<PendingDelete> ops;
+    Step step;
 };
 
 RemovalBuilder::RemovalBuilder(std::shared_ptr<ClientFactory> f)
@@ -464,129 +487,160 @@ std::unique_ptr<blob::Removal> RemovalBuilder::Build() {
 }
 
 
+struct PendingPut {
+    std::shared_ptr<ClientInterface> client;
+    std::shared_ptr<Put> put;
+    std::shared_ptr<Sync> sync;
+    std::string key;
+
+    PendingPut(std::shared_ptr<ClientInterface> c, const std::string &k):
+            client(c), put(new Put), key(k) { put->Key(k); }
+
+    void Start() {
+        assert(put.get() != nullptr);
+        assert(sync.get() == nullptr);
+        sync = client->RPC(put.get());
+    }
+
+    void Wait() {
+        assert(put.get() != nullptr);
+        assert(sync.get() != nullptr);
+        sync->Wait();
+    }
+
+    PendingDelete Delete() const {
+        return PendingDelete(client, key);
+    }
+};
+
 class KineticUpload : public blob::Upload {
     friend class UploadBuilder;
 
  public:
-    KineticUpload();
+    ~KineticUpload() override {}
 
-    ~KineticUpload();
+    KineticUpload() : clients(), next_client{0}, ops(), step{Step::Init} {}
 
     Status Prepare() override;
 
-    void SetXattr(const std::string &k, const std::string &v) override;
+    void SetXattr(const std::string &k, const std::string &v) override {
+        xattr[k] = v;
+    }
 
-    Status Commit() override;
+    Status Commit() override {
+        if (step != Step::Prepared)
+            return Status(Cause::InternalError);
 
-    Status Abort() override;
+        // Flush the internal buffer so that we don't mix payload with xattr
+        if (buffer.size() > 0)
+            TriggerUpload();
 
-    void Write(const uint8_t *buf, uint32_t len) override;
+        // Pack then send the xattr
+        rapidjson::StringBuffer buf;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
+        writer.StartObject();
+        for (const auto &e : xattr) {
+            writer.Key(e.first.c_str());
+            writer.String(e.second.c_str());
+        }
+        writer.EndObject();
+        this->Write(reinterpret_cast<const uint8_t *>(buf.GetString()),
+                    buf.GetSize());
+        TriggerUpload("#");
+
+        // Wait for all the single PUT to finish
+        for (auto &s : ops)
+            s.Wait();
+
+        step = Step::Done;
+        return Status();
+    }
+
+    Status Abort() override {
+        if (step != Step::Prepared)
+            return Status(Cause::InternalError);
+        step = Step::Done;
+
+        // send all the removal orders, try to parallelize a bit
+        DLOG(INFO) << ops.size() << " PUT to abort";
+        if (!ops.empty()) {
+            std::vector<PendingDelete> deletes;
+            for (const auto &put : ops)
+                deletes.push_back(put.Delete());
+            _rolling_delete(8, &deletes);
+        }
+
+        return Status();
+    }
+
+    void Write(const uint8_t *buf, uint32_t len) override {
+        assert(step == Step::Prepared);
+        assert(clients.size() > 0);
+
+        while (len > 0) {
+            bool action = false;
+            const auto oldsize = buffer.size();
+            const uint32_t avail = buffer_limit - oldsize;
+            const uint32_t local = std::min(avail, len);
+            if (local > 0) {
+                buffer.resize(oldsize + local);
+                memcpy(buffer.data() + oldsize, buf, local);
+                buf += local;
+                len -= local;
+                action = true;
+            }
+            if (buffer.size() >= buffer_limit) {
+                TriggerUpload();
+                action = true;
+            }
+            assert(action);
+        }
+        yield();
+    }
 
  private:
-    void TriggerUpload();
+    void TriggerUpload() {
+        std::stringstream ss;
+        ss << next_client;
+        ss << '-';
+        ss << buffer.size();
+        return TriggerUpload(ss.str());
+    }
 
-    void TriggerUpload(const std::string &suffix);
+    void TriggerUpload(const std::string &suffix) {
+        assert(!chunkid.empty());
+        assert(clients.size() > 0);
+
+        auto client = clients[next_client % clients.size()];
+        std::stringstream ss;
+        ss << chunkid;
+        ss << '-';
+        ss << suffix;
+        next_client++;
+
+        PendingPut p(client, ss.str());
+        p.put->Value(&buffer);
+        assert(buffer.size() == 0);
+        p.Start();
+        ops.push_back(p);
+    }
 
  private:
     std::vector<std::shared_ptr<ClientInterface>> clients;
     uint32_t next_client;
-    std::vector<std::shared_ptr<Put>> puts;
-    std::vector<std::shared_ptr<Sync>> syncs;
+    std::vector<PendingPut> ops;
 
     std::vector<uint8_t> buffer;
     uint32_t buffer_limit;
     std::string chunkid;
     std::map<std::string, std::string> xattr;
+    Step step;
 };
 
-KineticUpload::~KineticUpload() {}
-
-KineticUpload::KineticUpload() : clients(), next_client{0}, puts(), syncs() {}
-
-void KineticUpload::SetXattr(const std::string &k, const std::string &v) {
-    xattr[k] = v;
-}
-
-void KineticUpload::TriggerUpload(const std::string &suffix) {
-    assert(!chunkid.empty());
-    assert(clients.size() > 0);
-
-    auto client = clients[next_client % clients.size()];
-    std::stringstream ss;
-    ss << chunkid;
-    ss << '-';
-    ss << suffix;
-    next_client++;
-
-    Put *put = new Put;
-    put->Key(ss.str());
-    put->Value(buffer);
-    assert(buffer.size() == 0);
-
-    puts.emplace_back(put);
-    syncs.emplace_back(client->RPC(put));
-}
-
-void KineticUpload::TriggerUpload() {
-    std::stringstream ss;
-    ss << next_client;
-    ss << '-';
-    ss << buffer.size();
-    return TriggerUpload(ss.str());
-}
-
-void KineticUpload::Write(const uint8_t *buf, uint32_t len) {
-    assert(clients.size() > 0);
-
-    while (len > 0) {
-        bool action = false;
-        const auto oldsize = buffer.size();
-        const uint32_t avail = buffer_limit - oldsize;
-        const uint32_t local = std::min(avail, len);
-        if (local > 0) {
-            buffer.resize(oldsize + local);
-            memcpy(buffer.data() + oldsize, buf, local);
-            buf += local;
-            len -= local;
-            action = true;
-        }
-        if (buffer.size() >= buffer_limit) {
-            TriggerUpload();
-            action = true;
-        }
-        assert(action);
-    }
-    yield();
-}
-
-Status KineticUpload::Commit() {
-    // Flush the internal buffer so that we don't mix payload with xattr
-    if (buffer.size() > 0)
-        TriggerUpload();
-
-    // Pack then send the xattr
-    rapidjson::StringBuffer buf;
-    rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
-    writer.StartObject();
-    for (const auto &e : xattr) {
-        writer.Key(e.first.c_str());
-        writer.String(e.second.c_str());
-    }
-    writer.EndObject();
-    this->Write(reinterpret_cast<const uint8_t *>(buf.GetString()),
-                buf.GetSize());
-    TriggerUpload("#");
-
-    // Wait for all the single PUT to finish
-    for (auto &s : syncs)
-        s->Wait();
-
-    return Status();
-}
-
-Status KineticUpload::Abort() { return Status(); }
-
 Status KineticUpload::Prepare() {
+    if (step != Step::Init)
+        return Status(Cause::InternalError);
+
     // Send the same listing request to all the clients, GetKeyRange allows this
     // even if it won't cleanly manage mixed errors and successes
     const std::string key_manifest(chunkid + "-#");
@@ -620,6 +674,7 @@ Status KineticUpload::Prepare() {
             return Status(Cause::Already);
     }
 
+    step = Step::Prepared;
     return Status();
 }
 

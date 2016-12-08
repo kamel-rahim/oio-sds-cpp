@@ -86,9 +86,9 @@ RemovalBuilder::RemovalBuilder() {}
 RemovalBuilder::~RemovalBuilder() {}
 
 void RemovalBuilder::set_param (rawx_cmd &_param) {
-	rawx_param = _param ;
-	inner.Host(rawx_param.rawx.host) ;
-	inner.Name("/rawx/" + rawx_param.rawx.chunk_id);
+    rawx_param = _param ;
+    inner.Host(rawx_param.rawx.host) ;
+    inner.Name("/rawx/" + rawx_param.rawx.chunk_id);
 }
 
 std::unique_ptr<Removal> RemovalBuilder::Build(
@@ -153,7 +153,7 @@ UploadBuilder::~UploadBuilder() {}
 
 
 void UploadBuilder::set_param (rawx_cmd &_param) {
-	rawx_param = _param ;
+    rawx_param = _param ;
     std::stringstream ss;
     ss << rawx_param.range.range_size << '.' << 0;
     inner.Field("X-oio-chunk-meta-chunk-pos", ss.str());
@@ -224,7 +224,7 @@ class RawxDownload : public Download {
     ~RawxDownload() {}
 
     void set_param (rawx_cmd &_param) {
-    	rawx_param = _param ;
+        rawx_param = _param ;
     }
 
     bool IsEof() override { return inner->IsEof(); }
@@ -244,18 +244,16 @@ class RawxDownload : public Download {
 
         std::vector<uint8_t> temp_buf ;
 
-    	while (!IsEof()) {
-    		inner->Read(&temp_buf);
-    	}
-
-        int size = temp_buf.size() ;
+        while (!IsEof()) {
+            inner->Read(&temp_buf);
+        }
 
         if (temp_buf.size() > rawx_param.range.range_size) {
-        	buf->resize(rawx_param.range.range_size);
+            buf->resize(rawx_param.range.range_size);
             memcpy(buf->data(), &temp_buf[rawx_param.range.range_start], rawx_param.range.range_size);
         }
         else
-        	buf->swap(temp_buf);
+            buf->swap(temp_buf);
 
         return buf->size() ;
     }
@@ -266,14 +264,14 @@ DownloadBuilder::DownloadBuilder() {}
 DownloadBuilder::~DownloadBuilder() {}
 
 void DownloadBuilder::set_param (rawx_cmd &_param) {
-	rawx_param = _param ;
-	inner.Host(rawx_param.rawx.host);
+    rawx_param = _param ;
+    inner.Host(rawx_param.rawx.host);
     inner.Name("/rawx/" + rawx_param.rawx.chunk_id);
 }
 
 std::unique_ptr<Download> DownloadBuilder::Build(
-		std::shared_ptr<net::Socket> socket) {
-	auto sub = inner.Build(socket);
+        std::shared_ptr<net::Socket> socket) {
+    auto sub = inner.Build(socket);
     auto dl = new RawxDownload(sub.release());
     dl->set_param(rawx_param) ;
     return std::unique_ptr<Download>(dl);

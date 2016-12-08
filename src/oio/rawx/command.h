@@ -74,18 +74,18 @@ public:
 
     bool get (std::vector<uint8_t> &buf) {
 
-    	std::stringstream ss;
+        std::stringstream ss;
 
         // write safety string
-    	write_safty_str (ss);
+        write_safty_str (ss);
 
         // write data
-    	write_str (ss, rawx.chunk_id     );
-    	write_str (ss, rawx.host         );
-    	write_num (ss, rawx.port         );
-    	write_num (ss, ChunkSize         );
-   		write_num (ss, range.range_start );
-   		write_num (ss, range.range_size  );
+        write_str (ss, rawx.chunk_id     );
+        write_str (ss, rawx.host         );
+        write_num (ss, rawx.port         );
+        write_num (ss, ChunkSize         );
+           write_num (ss, range.range_start );
+           write_num (ss, range.range_size  );
 
         // write safety string
         write_safty_str (ss);
@@ -98,24 +98,24 @@ public:
     }
 
     bool put (std::vector<uint8_t> &buf) {
-    	std::string s ((const char*) buf.data(), buf.size());
-    	std::stringstream ss (s) ;
+        std::string s ((const char*) buf.data(), buf.size());
+        std::stringstream ss (s) ;
 
-    	// sanity check
-		std::string OpenIoStr ;
-      	read_safty_str (ss, OpenIoStr);
+        // sanity check
+        std::string OpenIoStr ;
+          read_safty_str (ss, OpenIoStr);
 
-		// read data
-		read_str (ss, rawx.chunk_id      );
-      	read_str (ss, rawx.host          );
-      	read_num (ss, rawx.port          );
-      	read_num (ss, ChunkSize          );
-      	read_num (ss, range.range_start  );
-      	read_num (ss, range.range_size   );
+        // read data
+        read_str (ss, rawx.chunk_id      );
+          read_str (ss, rawx.host          );
+          read_num (ss, rawx.port          );
+          read_num (ss, ChunkSize          );
+          read_num (ss, range.range_start  );
+          read_num (ss, range.range_size   );
 
-	   	// sanity check
-      	read_safty_str (ss, OpenIoStr);
-    	return true ;
+           // sanity check
+          read_safty_str (ss, OpenIoStr);
+        return true ;
     }
 } ;
 

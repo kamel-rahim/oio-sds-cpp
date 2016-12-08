@@ -18,9 +18,11 @@
 
 #include <fcntl.h>
 
+#include <glog/logging.h>
 #include <libmill.h>
 #include <liberasurecode/erasurecode.h>
-#include <glog/logging.h>
+#include <liberasurecode/erasurecode_helpers.h>
+#undef str
 
 #include <algorithm>
 #include <cassert>
@@ -28,12 +30,6 @@
 #include <map>
 #include <vector>
 
-// JFS: Under certain circumstances, the subsequent header declare an str()
-// macro colliding with a glog usage as with a iostream method declaration. One
-// way to cope with this is to include glog/logging.h BEFORE, but it would place
-// a C++ header before the C header (thus breaking a cpplint rule). I prefer the
-// case where the exception is the problematic header.
-#include <liberasurecode/erasurecode_helpers.h>  // NOLINT
 
 #include "utils/utils.h"
 #include "oio/ec/blob.h"
@@ -56,7 +52,7 @@ class EcDownload : public oio::api::blob::Download {
 
  public:
     void set_param (ec_cmd &_param) {
-    	param = _param ;
+        param = _param ;
     }
 
     void SetXattr(const std::string &k, const std::string &v) {
@@ -349,7 +345,7 @@ class EcUpload : public oio::api::blob::Upload {
 
  public:
     void set_param (ec_cmd &_param) {
-    	param = _param ;
+        param = _param ;
     }
 
     void SetXattr(const std::string &k, const std::string &v) override {

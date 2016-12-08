@@ -16,8 +16,8 @@
  * License along with this library.
  */
 
-#ifndef SRC_OIO_EC_BLOB_H_
-#define SRC_OIO_EC_BLOB_H_
+#ifndef SRC_OIO_ROUTER_BLOB_H_
+#define SRC_OIO_ROUTER_BLOB_H_
 
 #include <oio/api/blob.h>
 
@@ -28,20 +28,18 @@
 #include <set>
 #include <sstream>
 #include "utils/net.h"
+
 #include "oio/api/serialize_def.h"
 #include "oio/rawx/command.h"
-#include "command.h"
+#include "oio/ec/command.h"
+
+#define MAX_DELAY 5000
+
+enum ENCODING_TYPE { ec, rawx };
 
 namespace oio {
-namespace ec {
+namespace router {
 namespace blob {
-
-struct frag_array_set {
-    unsigned int num_fragments;
-    char **array;
-
-    frag_array_set() : num_fragments{0}, array{nullptr} {}
-};
 
 class UploadBuilder {
  public:
@@ -49,8 +47,14 @@ class UploadBuilder {
 
     ~UploadBuilder();
 
-    void set_param (ec_cmd &_param) {
-    	param = _param ;
+    void set_ec_param (ec_cmd &_param) {
+    	ec_param = _param ;
+    	type = ec ;
+    }
+
+    void set_rawx_param (rawx_cmd &_param) {
+    	rawx_param = _param ;
+    	type = rawx ;
     }
 
     void SetXattr(const std::string &k, const std::string &v) {
@@ -61,7 +65,9 @@ class UploadBuilder {
 
  private:
     std::map<std::string, std::string> xattrs;
-    ec_cmd param ;
+    ec_cmd   ec_param ;
+    rawx_cmd rawx_param ;
+    ENCODING_TYPE type ;
 };
 
 class DownloadBuilder {
@@ -70,8 +76,15 @@ class DownloadBuilder {
 
     ~DownloadBuilder();
 
-    void set_param (ec_cmd &_param) {
-    	param = _param ;
+
+    void set_ec_param (ec_cmd &_param) {
+    	ec_param = _param ;
+    	type = ec ;
+    }
+
+    void set_rawx_param (rawx_cmd &_param) {
+    	rawx_param = _param ;
+      	type = rawx ;
     }
 
     void SetXattr(const std::string &k, const std::string &v) {
@@ -82,7 +95,9 @@ class DownloadBuilder {
 
  private:
     std::map<std::string, std::string> xattrs;
-    ec_cmd param ;
+    ec_cmd   ec_param ;
+    rawx_cmd rawx_param ;
+    ENCODING_TYPE type ;
 };
 
 class RemovalBuilder {
@@ -122,7 +137,7 @@ class ListingBuilder {
 };
 
 }  // namespace blob
-}  // namespace ec
+}  // namespace router
 }  // namespace oio
 
-#endif  // SRC_OIO_EC_BLOB_H_
+#endif  // SRC_OIO_ROUTER_BLOB_H_

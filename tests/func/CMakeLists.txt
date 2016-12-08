@@ -54,7 +54,19 @@ add_executable(test-http-client-proxy TestHttpClient_OioProxy.cpp)
 target_link_libraries(test-http-client-proxy
         oio-data-http
         ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES} ${GTEST_LIBRARIES})
-#add_test(NAME http/vanilla COMMAND test-http-client-proxy)
+add_test(NAME http/vanilla COMMAND test-http-client-proxy)
+
+
+add_executable(test-client TestClient.cpp)
+target_link_libraries(test-client
+        oio-directory oio-container oio-http-parser oio-utils
+        ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES} ${GTEST_LIBRARIES})
+
+add_executable(test-http-client-rawx TestHttpClient_OioRawx.cpp)
+target_link_libraries(test-http-client-rawx
+        oio-data-rawx
+        ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES} ${GTEST_LIBRARIES})
+add_test(NAME http/rawx COMMAND test-http-client-rawx)
 
 add_executable(test-kinetic-rpc TestKineticRpc.cpp)
 target_link_libraries(test-kinetic-rpc

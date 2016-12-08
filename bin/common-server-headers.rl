@@ -32,10 +32,10 @@ parse_header := |*
     /Content-type/i     { value = Value::ContentType; };
     /Expect/i           { value = Value::Expect; };
     /Connection/i       { value = Value::Connection; };
-    /Host/i             { value = Value::Host; };
     /Accept/i           { value = Value::Accept; };
     /User-agent/i       { value = Value::UserAgent; };
     /Range/i            { value = Value::Custom; };
+    /Host/i             { value = Value::Custom; };
     /X-oio-.*/i         { value = Value::Custom; };
 *|;
 }%%

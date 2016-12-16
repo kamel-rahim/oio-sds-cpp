@@ -49,14 +49,14 @@ class RouterDownload : public oio::api::blob::Download {
     friend class DownloadBuilder;
 
  public:
-    void set_ec_param (ec_cmd &_param) {
-    	ec_param = _param ;
-    	type = ec ;
+    void set_ec_param(const ec_cmd &_param) {
+        ec_param = _param;
+        type = ec;
     }
 
-    void set_rawx_param (rawx_cmd &_param) {
-    	rawx_param = _param ;
-       	type = rawx ;
+    void set_rawx_param(const rawx_cmd &_param) {
+        rawx_param = _param;
+        type = rawx;
     }
 
     void SetXattr(const std::string &k, const std::string &v) {
@@ -67,52 +67,49 @@ class RouterDownload : public oio::api::blob::Download {
     ~RouterDownload() override { DLOG(INFO) << __FUNCTION__; }
 
     Status Prepare() override {
-
         done = false;
+        bool bOk = false;
 
-        bool bOk = false ;
-
-        if (type == ec)
-        {
+        if (type == ec) {
             oio::ec::blob::DownloadBuilder builder;
-            builder.set_param (ec_param) ;
+            builder.set_param(ec_param);
 
             auto dl = builder.Build();
             auto rc = dl->Prepare();
             if (rc.Ok()) {
-            	while (!dl->IsEof()) {
-            		dl->Read(&buffer);
-            	}
-            	bOk = true ;
+                while (!dl->IsEof()) {
+                    dl->Read(&buffer);
+                }
+                bOk = true;
             }
         } else {
-			// read from rawx
-			std::shared_ptr<net::Socket> *socket = TheScoketMap.GetSocket(
-					rawx_param.rawx.host);
-			if (socket) {
-				oio::rawx::blob::DownloadBuilder builder;
+            // read from rawx
+            std::shared_ptr<net::Socket> *socket = TheScoketMap.GetSocket(
+                    rawx_param.Host_Port());
+            if (socket) {
+                oio::rawx::blob::DownloadBuilder builder;
 
-				builder.set_param (rawx_param) ;
+                builder.set_param(rawx_param);
 
-				auto dl = builder.Build(*socket);
-				auto rc = dl->Prepare();
+                auto dl = builder.Build(*socket);
+                auto rc = dl->Prepare();
 
-				if (rc.Ok()) {
-					while (!dl->IsEof()) {
-						dl->Read(&buffer);
-					}
-					bOk = true ;
-				}
-			} else {
-				LOG(ERROR) << "Router: failed to connect to rawx port: "
-						   << rawx_param.rawx.port;
-			}
-		}
+                if (rc.Ok()) {
+                    while (!dl->IsEof()) {
+                        dl->Read(&buffer);
+                    }
+                    bOk = true;
+                }
+            } else {
+                LOG(ERROR) << "Router: failed to connect to rawx port: "
+                           << rawx_param.Port();
+            }
+        }
 
         CleanUp();
 
         if (bOk)
-        	return Status(Cause::OK);
+            return Status(Cause::OK);
         else
             return Status(Cause::InternalError);
     }
@@ -143,9 +140,9 @@ class RouterDownload : public oio::api::blob::Download {
  private:
     std::vector<uint8_t> buffer;
     std::map<std::string, std::string> xattr;
-    ec_cmd   ec_param ;
-    rawx_cmd rawx_param ;
-    ENCODING_TYPE type ;
+    ec_cmd   ec_param;
+    rawx_cmd rawx_param;
+    ENCODING_TYPE type;
     bool done;
 };
 
@@ -156,9 +153,9 @@ DownloadBuilder::~DownloadBuilder() {}
 std::unique_ptr<blob::Download> DownloadBuilder::Build() {
     auto ul = new RouterDownload();
     if (type == ENCODING_TYPE::ec)
-    	ul->set_ec_param(ec_param);
+        ul->set_ec_param(ec_param);
     else
-    	ul->set_rawx_param(rawx_param);
+        ul->set_rawx_param(rawx_param);
     for (const auto &e : xattrs)
         ul->SetXattr(e.first, e.second);
     return std::unique_ptr<RouterDownload>(ul);
@@ -189,16 +186,16 @@ class RouterUpload : public oio::api::blob::Upload {
     friend class UploadBuilder;
 
  public:
-    void set_ec_param (ec_cmd &_param) {
-    	ec_param = _param ;
-    	ChunkSize = ec_param.ChunkSize ;
-    	type = ec ;
+    void set_ec_param(const ec_cmd &_param) {
+        ec_param = _param;
+        ChunkSize = ec_param.ChunkSize;
+        type = ec;
     }
 
-    void set_rawx_param (rawx_cmd &_param) {
-    	rawx_param = _param ;
-    	ChunkSize = rawx_param.ChunkSize ;
-    	type = rawx ;
+    void set_rawx_param(const rawx_cmd &_param) {
+        rawx_param = _param;
+        ChunkSize = rawx_param.ChunkSize;
+        type = rawx;
     }
 
     void SetXattr(const std::string &k, const std::string &v) override {
@@ -211,10 +208,9 @@ class RouterUpload : public oio::api::blob::Upload {
     }
 
     Status Commit() override {
-        if (type == ec)
-        {
-        	oio::ec::blob::UploadBuilder builder;
-            builder.set_param (ec_param) ;
+        if (type == ec) {
+            oio::ec::blob::UploadBuilder builder;
+            builder.set_param(ec_param);
 
             auto ul = builder.Build();
             for (const auto &e : xattrs)
@@ -226,37 +222,36 @@ class RouterUpload : public oio::api::blob::Upload {
             } else {
                 ul->Abort();
             }
-        }
-        else {
-        	// write to Rawx
-			std::shared_ptr<net::Socket> *socket = TheScoketMap.GetSocket(
-					rawx_param.rawx.host);
-			if (socket) {
-				oio::rawx::blob::UploadBuilder builder;
+        } else {
+            // write to Rawx
+            std::shared_ptr<net::Socket> *socket = TheScoketMap.GetSocket(
+                    rawx_param.Host_Port());
+            if (socket) {
+                oio::rawx::blob::UploadBuilder builder;
 
-	            builder.set_param (rawx_param) ;
+                builder.set_param(rawx_param);
 
-				builder.ContainerId(xattrs.find("container-id")->second);
-				builder.ContentPath(xattrs.find("content-path")->second);
-				builder.ContentId(xattrs.find("content-id")->second);
-				int64_t v;
-				std::istringstream(xattrs.find("content-version")->second) >> v;
-				builder.ContentVersion(v);
-				builder.StoragePolicy("SINGLE");
-				builder.MimeType(xattrs.find("content-mime-type")->second);
-				builder.ChunkMethod("plain/nb_copy=1");
-				auto ul = builder.Build(*socket);
-				auto rc = ul->Prepare();
-				if (rc.Ok()) {
-					ul->Write(buffer.data(), buffer.size());
-					ul->Commit();
-				} else {
-					ul->Abort();
-				}
-			} else {
-				LOG(ERROR) << "Router: failed to connect to rawx port: "
-						   << rawx_param.rawx.port;
-			}
+                builder.ContainerId(xattrs.find("container-id")->second);
+                builder.ContentPath(xattrs.find("content-path")->second);
+                builder.ContentId(xattrs.find("content-id")->second);
+                int64_t v;
+                std::istringstream(xattrs.find("content-version")->second) >> v;
+                builder.ContentVersion(v);
+                builder.StoragePolicy("SINGLE");
+                builder.MimeType(xattrs.find("content-mime-type")->second);
+                builder.ChunkMethod("plain/nb_copy=1");
+                auto ul = builder.Build(*socket);
+                auto rc = ul->Prepare();
+                if (rc.Ok()) {
+                    ul->Write(buffer.data(), buffer.size());
+                    ul->Commit();
+                } else {
+                    ul->Abort();
+                }
+            } else {
+                LOG(ERROR) << "Router: failed to connect to rawx port: "
+                           << rawx_param.Port();
+            }
         }
 
         CleanUp();
@@ -264,9 +259,7 @@ class RouterUpload : public oio::api::blob::Upload {
         return Status(Cause::OK);
     }
 
-    void CleanUp() {
-
-    }
+    void CleanUp() { }
 
     Status Abort() override {
         CleanUp();
@@ -300,10 +293,10 @@ class RouterUpload : public oio::api::blob::Upload {
  private:
     std::vector<uint8_t> buffer;
     std::map<std::string, std::string> xattrs;
-    ec_cmd   ec_param ;
-    rawx_cmd rawx_param ;
-    uint32_t ChunkSize ;
-    ENCODING_TYPE type ;
+    ec_cmd   ec_param;
+    rawx_cmd rawx_param;
+    uint32_t ChunkSize;
+    ENCODING_TYPE type;
 };
 
 UploadBuilder::UploadBuilder() {}
@@ -314,9 +307,9 @@ std::unique_ptr<blob::Upload> UploadBuilder::Build() {
     auto ul = new RouterUpload();
 
     if (type == ENCODING_TYPE::ec)
-    	ul->set_ec_param(ec_param);
+        ul->set_ec_param(ec_param);
     else
-    	ul->set_rawx_param(rawx_param);
+        ul->set_rawx_param(rawx_param);
 
     for (const auto &e : xattrs)
         ul->SetXattr(e.first, e.second);

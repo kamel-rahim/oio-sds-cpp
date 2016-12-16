@@ -26,7 +26,7 @@
 #include "oio/api/blob.h"
 #include "oio/http/blob.h"
 #include "oio/api/serialize_def.h"
-#include "command.h"
+#include "oio/rawx/command.h"
 
 namespace oio {
 namespace rawx {
@@ -38,14 +38,14 @@ class DownloadBuilder {
 
     ~DownloadBuilder();
 
-    void set_param (rawx_cmd &_param) ;
+    void set_param(const rawx_cmd &_param);
 
     std::unique_ptr<oio::api::blob::Download> Build(
             std::shared_ptr<net::Socket> socket);
 
  private:
     oio::http::imperative::DownloadBuilder inner;
-    rawx_cmd rawx_param ;
+    rawx_cmd rawx_param;
 };
 
 class UploadBuilder {
@@ -54,7 +54,7 @@ class UploadBuilder {
 
     ~UploadBuilder();
 
-    void set_param (rawx_cmd &_param);
+    void set_param(const rawx_cmd &_param);
 
     void ContainerId(const std::string &s);
 
@@ -77,7 +77,7 @@ class UploadBuilder {
 
  private:
     oio::http::imperative::UploadBuilder inner;
-    rawx_cmd rawx_param ;
+    rawx_cmd rawx_param;
 };
 
 class RemovalBuilder {
@@ -86,14 +86,14 @@ class RemovalBuilder {
 
     ~RemovalBuilder();
 
-    void set_param (rawx_cmd &_param) ;
+    void set_param(const rawx_cmd &_param);
 
     std::unique_ptr<oio::api::blob::Removal> Build(
             std::shared_ptr<net::Socket> socket);
 
  private:
     oio::http::imperative::RemovalBuilder inner;
-    rawx_cmd rawx_param ;
+    rawx_cmd rawx_param;
 };
 
 

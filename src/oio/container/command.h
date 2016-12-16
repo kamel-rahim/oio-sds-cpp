@@ -16,98 +16,106 @@
  * License along with this library.
  */
 
-#ifndef SRC_CONTAINER_COMMAND_H_
-#define SRC_CONTAINER_COMMAND_H_
+#ifndef SRC_OIO_CONTAINER_COMMAND_H_
+#define SRC_OIO_CONTAINER_COMMAND_H_
 
-#include "oio/api/serialize_def.h"
 #include <string.h>
 #include <algorithm>
+#include <map>
+#include <string>
+
+#include "oio/api/serialize_def.h"
 #include "rapidjson/document.h"
-#include <rapidjson/writer.h>
+#include "rapidjson/writer.h"
+#include "oio/directory/command.h"
 
-using namespace rapidjson;
-using namespace std;
 
-class _container_param {
-public:
-    string account;
-    string container;
-    string type;
-	std::map<string, string> properties;
-	std::map<string, string> system;
+class _container_param : public _file_id {
+ private:
+    std::map<std::string, std::string> properties;
+    std::map<std::string, std::string> system;
 
-private:
-public:
+ public:
+    _container_param() { }
+    explicit _container_param(_file_id &file_id) : _file_id(file_id) { }
+    _container_param(std::string _account, std::string _container,
+                     std::string _type = "")
+                             : _file_id(_account, _container, _type) { }
+
     _container_param& operator=(const _container_param& arg) {
-       account      = arg.account;
-       container    = arg.container;
-       type         = arg.type;
+       _file_id::operator =(arg);
        properties   = arg.properties;
        system       = arg.system;
        return *this;
     }
 
-    bool put_properties (std::string p) {
-    	Document document;
-    	if (document.Parse(p.c_str()).HasParseError()) {
-   	     LOG(ERROR) << "Invalid JSON";
-   	     return false;
-    	}
+    std::string& operator[](std::string key)      { return properties[key]; }
+    void erase_properties(std::string key)        { properties.erase(key);  }
+    std::map<std::string, std::string> &System () { return system;          }
+
+    bool put_properties(std::string p) {
+        properties.clear();
+        system.clear();
+        rapidjson::Document document;
+        if (document.Parse(p.c_str()).HasParseError()) {
+            LOG(ERROR) << "Invalid JSON";
+            return false;
+        }
 
         if (!document.HasMember("properties")) {
             LOG(ERROR) << "Missing 'properties' field";
             return false;
+        } else {
+            const rapidjson::Value& obj = document["properties"];
+            if (obj.IsObject()) {
+                for (auto& v : obj.GetObject())
+                    properties[v.name.GetString()] = v.value.GetString();
+            }
         }
-        else {
-			const Value& obj = document["properties"];
-			if (obj.IsObject()) {
-				for (auto& v : obj.GetObject())
-					properties [v.name.GetString()] = v.value.GetString() ;
-			}
-        }
+
         if (!document.HasMember("system")) {
             LOG(ERROR) << "Missing 'system' field";
             return false;
+        } else {
+            const rapidjson::Value& obj = document["system"];
+            if (obj.IsObject()) {
+                for (auto& v : obj.GetObject())
+                    system[v.name.GetString()] = v.value.GetString();
+            }
         }
-        else {
-			const Value& obj = document["system"];
-			if (obj.IsObject()) {
-				for (auto& v : obj.GetObject())
-					system [v.name.GetString()] = v.value.GetString() ;
-			}
+        return true;
+    }
+
+    bool get_properties(std::string *p) {
+        // Pack the properties
+        rapidjson::StringBuffer buf;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
+        writer.StartObject();
+        for (const auto &e : properties) {
+            writer.Key(e.first.c_str());
+            writer.String(e.second.c_str());
         }
-        return true ;
+        writer.EndObject();
+
+        *p = "{\"properties\":" + std::string(buf.GetString(),
+              buf.GetSize()) + "}";
+        return true;
     }
 
-    bool get_properties (std::string &p) {
-    // Pack the properties
-    	StringBuffer buf;
-    	Writer<rapidjson::StringBuffer> writer(buf);
-    	writer.StartObject();
-    	for (const auto &e : properties) {
-    		writer.Key(e.first.c_str());
-    		writer.String(e.second.c_str());
-    	}
-    	writer.EndObject();
+    bool get_properties_key(std::string *p) {
+        *p = "[";
 
-    	p = "{\"properties\":" + std::string (buf.GetString(),buf.GetSize()) + "}" ;
-    	return true ;
+        bool bfirst = false;
+        for (const auto &e : properties) {
+            if (bfirst)
+                *p += ",";
+            *p += "\"" + e.first + "\"";
+            bfirst = true;
+        }
+
+        *p += "]";
+        return true;
     }
+};
 
-    bool get_properties_key (std::string &p) {
-    	p = "[" ;
-
-    	bool bfirst = false;
-    	for (const auto &e : properties) {
-    		if (bfirst)
-    			p += "," ;
-    		p += "\"" + e.first + "\"" ;
-    		bfirst = true ;
-    	}
-
-    	p += "]" ;
-    	return true ;
-    }
-} ;
-
-#endif  // SRC_CONTAINER_COMMAND_H_
+#endif  // SRC_OIO_CONTAINER_COMMAND_H_

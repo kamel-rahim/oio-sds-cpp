@@ -125,3 +125,9 @@ add_library(oio-container SHARED
         oio/container/container.h
         oio/container/command.h)
 target_link_libraries(oio-container)
+
+add_library(oio-content SHARED
+        oio/content/content.cpp
+        oio/content/content.h
+        oio/content/command.h)
+target_link_libraries(oio-content)

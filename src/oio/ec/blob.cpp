@@ -55,8 +55,8 @@ class EcDownload : public oio::api::blob::Download {
     friend class DownloadBuilder;
 
  public:
-    void set_param (ec_cmd &_param) {
-    	param = _param ;
+    void set_param(const ec_cmd &_param) {
+        param = _param;
     }
 
     void SetXattr(const std::string &k, const std::string &v) {
@@ -169,14 +169,14 @@ out:
         // read from rawx
         for (const auto &to : param.targets) {
             std::shared_ptr<net::Socket> *socket = TheScoketMap.GetSocket(
-                    to.rawx.host);
+                    to.Host_Port());
             char *p = NULL;
             if (socket) {
                 oio::rawx::blob::DownloadBuilder builder;
 
-                rawx_cmd rawx_param ;
-                rawx_param.rawx = to.rawx ;
-                builder.set_param (rawx_param) ;
+                rawx_cmd rawx_param;
+                rawx_param = to;
+                builder.set_param(rawx_param);
 
                 auto dl = builder.Build(*socket);
                 auto rc = dl->Prepare();
@@ -237,12 +237,12 @@ out:
                                                   &out_data, &out_data_len);
 
                 if (rc_decode == 0) {  // decode ok we are done!
-                    if (out_data_len < param.range.range_size) {
+                    if (out_data_len < param.size) {
                         buffer.resize(out_data_len);
                         memcpy(&buffer[0], out_data, out_data_len);
                     } else {
-                        buffer.resize(param.range.range_size);
-                        memcpy(&buffer[0], &out_data[param.range.range_start], param.range.range_size);
+                        buffer.resize(param.size);
+                        memcpy(&buffer[0], &out_data[param.start], param.size);
                     }
                     break;
                 }
@@ -304,7 +304,7 @@ out:
  private:
     std::vector<uint8_t> buffer;
     std::map<std::string, std::string> xattr;
-    ec_cmd param ;
+    ec_cmd param;
     char **encoded_data;
     char **encoded_parity;
     uint64_t encoded_fragment_len;
@@ -317,7 +317,7 @@ DownloadBuilder::~DownloadBuilder() {}
 
 std::unique_ptr<blob::Download> DownloadBuilder::Build() {
     auto ul = new EcDownload();
-    ul->set_param(param) ;
+    ul->set_param(param);
     for (const auto &e : xattrs)
         ul->SetXattr(e.first, e.second);
     return std::unique_ptr<EcDownload>(ul);
@@ -348,8 +348,8 @@ class EcUpload : public oio::api::blob::Upload {
     friend class UploadBuilder;
 
  public:
-    void set_param (ec_cmd &_param) {
-    	param = _param ;
+    void set_param(const ec_cmd &_param) {
+        param = _param;
     }
 
     void SetXattr(const std::string &k, const std::string &v) override {
@@ -401,16 +401,16 @@ class EcUpload : public oio::api::blob::Upload {
         }
 
         // write to Rawx
-        for (const auto &to : param.targets) {
+        for (auto &to : param.targets) {
             std::shared_ptr<net::Socket> *socket = TheScoketMap.GetSocket(
-                    to.rawx.host);
+                    to.Host_Port());
             if (socket) {
                 oio::rawx::blob::UploadBuilder builder;
 
-                rawx_cmd rawx_param ;
-                rawx_param.rawx = to.rawx ;
-                rawx_param.range = param.range ;
-                builder.set_param (rawx_param) ;
+                rawx_cmd rawx_param;
+                rawx_param = to;
+                rawx_param = param.Range();
+                builder.set_param(rawx_param);
 
                 builder.ContainerId(xattr.find("container-id")->second);
                 builder.ContentPath(xattr.find("content-path")->second);
@@ -426,7 +426,8 @@ class EcUpload : public oio::api::blob::Upload {
                 if (rc.Ok()) {
                     const char *tmp = to.chunk_number < param.kVal
                                       ? encoded_data[to.chunk_number]
-                                      : encoded_parity[to.chunk_number - param.kVal];
+                                      : encoded_parity[to.chunk_number
+                                                          -param.kVal];
 
                     std::string s(tmp, encoded_fragment_len);
                     ul->Write(s);
@@ -476,13 +477,13 @@ class EcUpload : public oio::api::blob::Upload {
         // delete all saved files.
         for (const auto &to : param.targets) {
             std::shared_ptr<net::Socket> *socket = TheScoketMap.GetSocket(
-                    to.rawx.host);
+                    to.Host_Port());
             if (socket) {
                 oio::rawx::blob::RemovalBuilder builder;
 
-                rawx_cmd rawx_param ;
-                rawx_param.rawx = to.rawx ;
-                builder.set_param (rawx_param) ;
+                rawx_cmd rawx_param;
+                rawx_param = to;
+                builder.set_param(rawx_param);
 
                 auto rm = builder.Build(*socket);
                 auto rc = rm->Prepare();
@@ -523,7 +524,7 @@ class EcUpload : public oio::api::blob::Upload {
     EcUpload() {}
 
  private:
-    ec_cmd param ;
+    ec_cmd param;
     std::vector<uint8_t> buffer;
     std::map<std::string, std::string> xattr;
     char **encoded_data = NULL;
@@ -538,7 +539,7 @@ UploadBuilder::~UploadBuilder() {}
 
 std::unique_ptr<blob::Upload> UploadBuilder::Build() {
     auto ul = new EcUpload();
-    ul->set_param(param) ;
+    ul->set_param(param);
 
     for (const auto &e : xattrs)
         ul->SetXattr(e.first, e.second);

@@ -16,8 +16,8 @@
  * License along with this library.
  */
 
-#ifndef SRC_OIO_DIRECTORY_BLOB_H_
-#define SRC_OIO_DIRECTORY_BLOB_H_
+#ifndef  SRC_OIO_DIRECTORY_DIR_H_
+#define  SRC_OIO_DIRECTORY_DIR_H_
 
 #include <string>
 #include <memory>
@@ -28,49 +28,48 @@
 #include "oio/api/serialize_def.h"
 #include "oio/directory/command.h"
 
-enum calltype { META, METAS, PROPERTIES } ;
+enum calltype { META, METAS, PROPERTIES };
 
 class directory {
-private :
-	_dir_param DirParam ;
-	std::shared_ptr<net::Socket> _socket ;
+ private :
+    _dir_param DirParam;
+    std::shared_ptr<net::Socket> _socket;
 
-	oio_err HttpCall (string TypeOfCall) ;
-	oio_err HttpCall (string TypeOfCall, string data ) ;
-	oio_err HttpCall (string method, string TypeOfCall, calltype type );
+    oio_err HttpCall(std::string selector);
+    oio_err HttpCall(std::string selector, std::string data);
+    oio_err HttpCall(std::string method, std::string selector, calltype type);
 
-public:
-	directory ( std::string account, std::string container, std::string type ) {
-		DirParam.account = account;
-		DirParam.container = container;
-		DirParam.type = type;
-	}
+ public:
+    explicit directory(_file_id &file_id) : DirParam(file_id) { }
+    directory(std::string account, std::string container, std::string type) {
+        DirParam  = _dir_param(account, container, type);
+    }
 
-	void SetSocket (std::shared_ptr<net::Socket> socket ) {
-		_socket = socket ;
-	}
+    void SetSocket(std::shared_ptr<net::Socket> socket ) {
+        _socket = socket;
+    }
 
-	void SetData (_dir_param &Param ) {
-		DirParam = Param ;
-	}
+    void SetData(const _dir_param &Param) {
+        DirParam = Param;
+    }
 
-	void AddProperties (string key, string value) {
-		DirParam.Properties [key] = value;
-	}
+    void AddProperties(std::string key, std::string value) {
+        DirParam[key] = value;
+    }
 
-	_dir_param &GetData () {
-		return DirParam;
-	}
+    _dir_param &GetData() {
+        return DirParam;
+    }
 
-	oio_err Create ();
-	oio_err Link ();
-	oio_err Unlink ();
-	oio_err Destroy ();
-	oio_err SetProperties ();
-	oio_err GetProperties ();
-	oio_err DelProperties ();
-	oio_err Renew ();
-	oio_err Show();
+    oio_err Create();
+    oio_err Link();
+    oio_err Unlink();
+    oio_err Destroy();
+    oio_err SetProperties();
+    oio_err GetProperties();
+    oio_err DelProperties();
+    oio_err Renew();
+    oio_err Show();
 };
 
-#endif  // SRC_OIO_DIRECTORY_BLOB_H_
+#endif  //  SRC_OIO_DIRECTORY_DIR_H_

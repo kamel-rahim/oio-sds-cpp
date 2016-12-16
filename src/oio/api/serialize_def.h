@@ -16,8 +16,8 @@
  * License along with this library.
  */
 
-#ifndef SRC_OIO_SERIALIZE_DEF_BLOB_H_
-#define SRC_OIO_SERIALIZE_BLOB_H_
+#ifndef SRC_OIO_API_SERIALIZE_DEF_H_
+#define SRC_OIO_API_SERIALIZE_DEF_H_
 
 #define MAX_DELAY 5000
 
@@ -34,14 +34,14 @@
 
 // write delimiter string + delimiter mark
 #define write_safty_str(ss) {\
-     write_any(ss, OPENIO_STR,';') \
+     write_any(ss, OPENIO_STR, ';')\
 }
 
-// read OPENIO_STR string + delimiter mark >>>>> And validate! <<<<< 
+// read OPENIO_STR string + delimiter mark >>>>> And validate! <<<<<
 #define read_safty_str(ss, str)\
      read_and_validate(ss, str, OPENIO_STR, ';')
 
-// read string + delimiter mark >>>>> And validate! <<<<< 
+// read string + delimiter mark >>>>> And validate! <<<<<
 #define read_and_validate(ss, str, validation, del) {\
      getline(ss, str, del);\
      if (strcmp (str.data(), validation))\
@@ -51,11 +51,11 @@
 
 // remove character from string
 #define remove_p(str, p)\
-   str.erase(remove(str.begin(), str.end(), p), str.end()) \
+     str.erase(remove(str.begin(), str.end(), p), str.end())
 
 // write string + delimiter mark
 #define write_str(ss, str)\
-     write_any(ss, str,';')
+     write_any(ss, str, ';')
 
 // read string + delimiter mark
 #define read_str(ss, str)\
@@ -63,15 +63,15 @@
 
 // write number + delimiter mark
 #define write_num(ss, num)\
-     write_any(ss, num,' ')
+     write_any(ss, num, ' ')
 
 // read number + delimiter mark
 #define read_num_with_del(ss, str, num, del)\
      read_any(ss, str, del);\
-     num = atoi (str.data())
+     num = atoi(str.data())
 
 // write data + delimiter mark
 #define read_num(ss, num)\
         ss >> num;
 
-#endif  // SRC_OIO_SERIALIZE_BLOB_H_
+#endif  // SRC_OIO_API_SERIALIZE_DEF_H_

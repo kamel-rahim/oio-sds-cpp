@@ -122,10 +122,12 @@ class Request {
      */
     Code FinishRequest();
 
- private:
+ public:
     std::string method;
     std::string selector;
     std::map<std::string, std::string> fields;
+
+ private:
     std::map<std::string, std::string> query;
     std::set<std::string> trailers;
     std::shared_ptr<net::Socket> socket;
@@ -249,7 +251,8 @@ class Reply {
     * @param data the output map
     * @return a status code
     */
-    Code GetHeaders(std::map <std::string, std::string> &data, std::string prefix);
+    Code GetHeaders(std::map <std::string, std::string> *data,
+                    std::string prefix);
 
     /** Get a slice of body. The data is not copied, and must be consumed by the
      * application before the next call to ReadBody(). This call invalidates all
@@ -355,7 +358,8 @@ class Call {
      * @return a Code depicting how things happened
      */
     Code Run(const std::string &in, std::string *out);
-    Code GetReplyHeaders(std::map <std::string, std::string> &data, std::string prefix);
+    Code GetReplyHeaders(std::map <std::string, std::string> *data,
+                         std::string prefix);
 
  protected:
     Request request;

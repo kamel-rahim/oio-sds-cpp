@@ -47,14 +47,14 @@ class UploadBuilder {
 
     ~UploadBuilder();
 
-    void set_ec_param (ec_cmd &_param) {
-    	ec_param = _param ;
-    	type = ec ;
+    void set_ec_param(const ec_cmd &_param) {
+        ec_param = _param;
+        type = ec;
     }
 
-    void set_rawx_param (rawx_cmd &_param) {
-    	rawx_param = _param ;
-    	type = rawx ;
+    void set_rawx_param(const rawx_cmd &_param) {
+        rawx_param = _param;
+        type = rawx;
     }
 
     void SetXattr(const std::string &k, const std::string &v) {
@@ -65,9 +65,9 @@ class UploadBuilder {
 
  private:
     std::map<std::string, std::string> xattrs;
-    ec_cmd   ec_param ;
-    rawx_cmd rawx_param ;
-    ENCODING_TYPE type ;
+    ec_cmd   ec_param;
+    rawx_cmd rawx_param;
+    ENCODING_TYPE type;
 };
 
 class DownloadBuilder {
@@ -77,14 +77,14 @@ class DownloadBuilder {
     ~DownloadBuilder();
 
 
-    void set_ec_param (ec_cmd &_param) {
-    	ec_param = _param ;
-    	type = ec ;
+    void set_ec_param(const ec_cmd &_param) {
+        ec_param = _param;
+        type = ec;
     }
 
-    void set_rawx_param (rawx_cmd &_param) {
-    	rawx_param = _param ;
-      	type = rawx ;
+    void set_rawx_param(const rawx_cmd &_param) {
+        rawx_param = _param;
+        type = rawx;
     }
 
     void SetXattr(const std::string &k, const std::string &v) {
@@ -95,9 +95,9 @@ class DownloadBuilder {
 
  private:
     std::map<std::string, std::string> xattrs;
-    ec_cmd   ec_param ;
-    rawx_cmd rawx_param ;
-    ENCODING_TYPE type ;
+    ec_cmd   ec_param;
+    rawx_cmd rawx_param;
+    ENCODING_TYPE type;
 };
 
 class RemovalBuilder {

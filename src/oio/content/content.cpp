@@ -48,7 +48,7 @@ oio_err content::http_call_parse_body(http_param *http, body_type type) {
     if (!rc == http::Code::OK) {
         err.get_message(-1, "HTTP_exec exec error");
     } else {
-        bool ret;
+        bool ret = 0;
         switch (type) {
         case body_type::PREPARE:
         case body_type::SHOW:

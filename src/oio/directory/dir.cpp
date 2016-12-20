@@ -45,10 +45,10 @@ oio_err directory::http_call_parse_body(http_param *http, body_type type) {
     if (!rc == http::Code::OK) {
         err.get_message(-1, "HTTP_exec exec error");
     } else {
-        bool ret;
+        bool ret = 0;
         switch (type) {
         case body_type::META:
-        ret = DirParam.put_meta(http->body_out);
+            ret = DirParam.put_meta(http->body_out);
             break;
         case body_type::METAS:
             ret = DirParam.put_metas(http->body_out);

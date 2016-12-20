@@ -27,17 +27,17 @@
 #include "oio/http/blob.h"
 #include "oio/api/serialize_def.h"
 #include "oio/directory/command.h"
+#include "utils/command.h"
 
-enum calltype { META, METAS, PROPERTIES };
+enum body_type { META, METAS, PROPERTIES };
 
 class directory {
  private :
     _dir_param DirParam;
     std::shared_ptr<net::Socket> _socket;
 
-    oio_err HttpCall(std::string selector);
-    oio_err HttpCall(std::string selector, std::string data);
-    oio_err HttpCall(std::string method, std::string selector, calltype type);
+    oio_err http_call_parse_body(http_param *http, body_type type);
+    oio_err http_call(http_param *http);
 
  public:
     explicit directory(_file_id &file_id) : DirParam(file_id) { }

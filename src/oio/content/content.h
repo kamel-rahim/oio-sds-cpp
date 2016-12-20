@@ -28,22 +28,19 @@
 #include "oio/api/serialize_def.h"
 #include "oio/directory/command.h"
 #include "oio/content/command.h"
+#include "utils/command.h"
 
 namespace user_content {
 
-enum calltype { PROPERTIES, PREPARE, SHOW };
+enum body_type {PROPERTIES, PREPARE, SHOW};
 
 class content {
  private :
     _content_param ContentParam;
-    std::map<std::string, std::string> extra_headers;
     std::shared_ptr<net::Socket> _socket;
 
-    oio_err HttpCall(std::string selector);
-    oio_err HttpCall(std::string selector, std::string data);
-    oio_err HttpCall(std::string selector, std::string data, bool autocreate);
-    oio_err HttpCall(std::string method, std::string selector,
-            std::string data, calltype type, bool autocreate);
+    oio_err http_call_parse_body(http_param *http, body_type type);
+    oio_err http_call(http_param *http);
 
  public:
     explicit content(_file_id &file_id) : ContentParam(file_id) { }

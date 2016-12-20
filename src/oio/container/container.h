@@ -27,6 +27,7 @@
 #include "oio/http/blob.h"
 #include "oio/api/serialize_def.h"
 #include "oio/container/command.h"
+#include "utils/command.h"
 
 namespace user_container {
 
@@ -35,9 +36,8 @@ class container {
     _container_param ContainerParam;
     std::shared_ptr<net::Socket> _socket;
 
-    oio_err HttpCall(std::string selector);
-    oio_err HttpCall(std::string selector, std::string data, bool autocreate);
-    oio_err HttpCall(std::string method, std::string selector);
+    oio_err http_call_parse_body(http_param *http);
+    oio_err http_call(http_param *http);
 
  public:
     explicit container(_file_id &file_id) : ContainerParam(file_id) { }

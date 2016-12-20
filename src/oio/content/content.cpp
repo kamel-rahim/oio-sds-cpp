@@ -30,11 +30,9 @@
 #include "utils/net.h"
 #include "utils/Http.h"
 #include "oio/api/blob.h"
-
 #include "oio/content/content.h"
 
 using user_content::content;
-
 
 #define SELECTOR(str) std::string("/v3.0/") + ContentParam.NameSpace()    +\
                       std::string("/content/") + str                      +\
@@ -44,187 +42,97 @@ using user_content::content;
                        ContentParam.Type() :  "")                         +\
                       std::string("&path=") + ContentParam.Filename()
 
-
-static http::Code HTTP_exec(std::shared_ptr<net::Socket> socket,
-                            std::string method, std::string selector,
-                            bool autocreate, const std::string &in,
-                            std::string *out) {
-    http::Call call;
-    call.Socket(socket)
-            .Method(method)
-            .Selector(selector)
-            .Field("Connection", "keep-alive");
-    if (autocreate)
-        call.Field("x-oio-action-mode", "autocreate");
-
-    LOG(INFO) << method << " " << selector;
-    http::Code rc = call.Run(in, out);
-    LOG(INFO) << " rc=" << rc << " reply=" << *out;
-    return rc;
-}
-
-static http::Code HTTP_exec(std::shared_ptr<net::Socket> socket,
-                            std::string method, std::string selector,
-                            bool autocreate, const std::string &in,
-                            std::string *out,
-                            std::map<std::string, std::string> *system) {
-    http::Call call;
-    call.Socket(socket)
-            .Method(method)
-            .Selector(selector)
-            .Field("Connection", "keep-alive");
-    if (autocreate)
-        call.Field("x-oio-action-mode", "autocreate");
-
-    LOG(INFO) << method << " " << selector;
-    http::Code rc = call.Run(in, out);
-    LOG(INFO) << " rc=" << rc << " reply=" << *out;
-    if ( rc == http::Code::OK )
-        rc = call.GetReplyHeaders(system, "x-oio-content-meta-");
-    return rc;
-}
-
-static http::Code HTTP_exec(std::shared_ptr<net::Socket> socket,
-                            std::string method, std::string selector,
-                            const std::string &in, std::string *out,
-                            const std::map<std::string,
-                            std::string> &otherFields) {
-    http::Call call;
-    call.Socket(socket)
-            .Method(method)
-            .Selector(selector)
-            .Field("Connection", "keep-alive");
-    if (otherFields.size()) {
-        for (auto& a : otherFields) {
-            call.Field(a.first, a.second);
-        }
-    }
-
-    LOG(INFO) << method << " " << selector;
-    http::Code rc = call.Run(in, out);
-    LOG(INFO) << " rc=" << rc << " reply=" << *out;
-    return rc;
-}
-
-oio_err content::HttpCall(std::string selector) {
-    std::string in;
-    std::string out;
+oio_err content::http_call_parse_body(http_param *http, body_type type) {
+    http::Code rc = http->HTTP_call();
     oio_err err;
-    http::Code rc = HTTP_exec(_socket, "POST", selector, false, in, &out);
-    if (!rc == http::Code::OK)
-        err.get_message(-1, "HTTP_exec exec error");
-    else
-        err.put_message(out);
-    return err;
-}
-
-oio_err content::HttpCall(std::string selector, std::string data) {
-    std::string out;
-    oio_err err;
-    http::Code rc = HTTP_exec(_socket, "POST", selector, data,
-                              &out, extra_headers);
-    if (!rc == http::Code::OK)
-        err.get_message(-1, "HTTP_exec exec error");
-    else
-        err.put_message(out);
-    return err;
-}
-
-oio_err content::HttpCall(std::string selector, std::string data,
-                          bool autocreate ) {
-    std::string out;
-    oio_err err;
-    http::Code rc = HTTP_exec(_socket, "POST", selector, autocreate,
-                              data, &out);
-    if (!rc == http::Code::OK)
-        err.get_message(-1, "HTTP_exec exec error");
-    else
-        err.put_message(out);
-    return err;
-}
-
-oio_err content::HttpCall(std::string method, std::string selector,
-                          std::string data, calltype type, bool autocreate) {
-    std::string out;
-    oio_err err;
-    http::Code rc = HTTP_exec(_socket, method, selector, autocreate, data,
-                               &out, &ContentParam.System());
     if (!rc == http::Code::OK) {
         err.get_message(-1, "HTTP_exec exec error");
     } else {
         bool ret;
         switch (type) {
-        case calltype::PREPARE:
-        case calltype::SHOW:
-            ret = ContentParam.put_contents(out);
+        case body_type::PREPARE:
+        case body_type::SHOW:
+            ret = ContentParam.put_contents(http->body_out);
             break;
-        case calltype::PROPERTIES:
-            ret = ContentParam.put_properties(out);
+        case body_type::PROPERTIES:
+            ret = ContentParam.put_properties(http->body_out);
             break;
         }
         if (!ret)
-            err.put_message(out);
+            err.put_message(http->body_out);
     }
     return err;
 }
 
+oio_err content::http_call(http_param *http) {
+    http::Code rc = http->HTTP_call();
+    oio_err err;
+    if (!rc == http::Code::OK)
+        err.get_message(-1, "HTTP_exec exec error");
+    else
+        err.put_message(http->body_out);
+    return err;
+}
 
 oio_err content::Create(int size) {
-    std::string Props;
-    ContentParam.get_contents(&Props);
+    std::string body_in;
+    ContentParam.get_contents(&body_in);
+    http_param http(_socket, "POST", (SELECTOR("create")), body_in);
 
-    extra_headers.clear();
-
-    ContentParam.SetSize(size);
-
-    extra_headers["x-oio-content-meta-length"] =
-                  std::to_string(ContentParam.GetSize());
-    extra_headers["x-oio-content-meta-hash"]   =
-                  "00000000000000000000000000000000";
-    extra_headers["x-oio-content-type"]        = "octet/stream";
-
-    return HttpCall(SELECTOR ("create"), Props);
+    http.header_in["x-oio-content-meta-length"] = std::to_string(size);
+    http.header_in["x-oio-content-meta-hash"]   =
+            "00000000000000000000000000000000";
+    http.header_in["x-oio-content-type"]        = "octet/stream";
+    return http_call(&http);
 }
 
 oio_err content::Copy(std::string url) {
-    std::string in;
-    extra_headers.clear();
-    extra_headers["destination"] = url;
-
-    return HttpCall(SELECTOR ("copy"), in);
+    http_param http(_socket, "POST", (SELECTOR("copy")));
+    http.header_in["destination"] = url;
+    return http_call(&http);
 }
 
-oio_err content::Prepare() {
-    std::string Props;
-    ContentParam.get_size(&Props);
-    return HttpCall("POST", SELECTOR("prepare"), Props,
-                     calltype::PREPARE, true);
-}
 
 oio_err content::SetProperties() {
-    std::string Props;
-    ContentParam.get_properties(&Props);
-    return HttpCall(SELECTOR("set_properties"), Props, false);
+    std::string body_in;
+    ContentParam.get_properties(&body_in);
+    http_param http(_socket, "POST", SELECTOR("set_properties"), body_in);
+    return http_call(&http);
 }
 
 oio_err content::DelProperties() {
-    std::string Props;
-    ContentParam.get_properties_key(&Props);
-    return HttpCall(SELECTOR("del_properties"), Props, false);
+    std::string body_in;
+    ContentParam.get_properties_key(&body_in);
+    http_param http(_socket, "POST", SELECTOR("del_properties"), body_in);
+    return http_call(&http);
+}
+
+
+oio_err content::Delete() {
+    http_param http(_socket, "POST", (SELECTOR("delete")));
+    return http_call(&http);
 }
 
 oio_err content::Show() {
-    std::string In;
-    return HttpCall("GET", SELECTOR("show"), In,
-                    calltype::SHOW, false);
+    http_param http(_socket, "GET", SELECTOR("show"));
+    http.header_out_filter = "x-oio-content-meta-";
+    http.header_out = &ContentParam.System();
+    return http_call_parse_body(&http, body_type::SHOW);
 }
 
 oio_err content::GetProperties() {
-    std::string In;
-    return HttpCall("POST", SELECTOR("get_properties"), In,
-                    calltype::PROPERTIES, false);
+    http_param http(_socket, "POST", SELECTOR("get_properties"));
+    http.header_out_filter = "x-oio-content-meta-";
+    http.header_out = &ContentParam.System();
+    return http_call_parse_body(&http, body_type::PROPERTIES);
 }
 
-oio_err content::Delete() { return HttpCall( SELECTOR("delete")); }
-
-
+oio_err content::Prepare() {
+    std::string body_in;
+    ContentParam.get_size(&body_in);
+    http_param http(_socket, "POST", SELECTOR("prepare"), body_in);
+    http.header_in["x-oio-action-mode"] = "autocreate";
+    http.header_out_filter = "x-oio-content-meta-";
+    http.header_out = &ContentParam.System();
+    return http_call_parse_body(&http, body_type::PREPARE);
+}

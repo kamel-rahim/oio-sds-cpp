@@ -73,7 +73,6 @@ class _content_param : public _file_id {
     std::map<std::string, std::string> system;
     std::set<contentSet> targets;
     int default_ask_size;
-    int64_t size;
 
  public:
              _content_param() : default_ask_size(1) { }
@@ -101,8 +100,6 @@ class _content_param : public _file_id {
     }
 
     std::map<std::string, std::string> &System() { return system ;          }
-    int64_t GetSize()                            { return size;             }
-    void    SetSize(int64_t _size)               { size = _size ;           }
 
     void ClearData() {
         targets.clear();

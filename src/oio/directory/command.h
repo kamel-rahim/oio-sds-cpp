@@ -384,34 +384,4 @@ class _dir_param : public _file_id {
 #endif
 };
 
-class oio_err {
- public:
-    int status;
-    std::string message;
-
- public:
-    oio_err() { status = 0 ; }
-
-    bool put_message(std::string s) {
-        std::string v = s;
-        std::string u = "{}\"";
-        for (const auto &p : u)  // strip  {}"
-            remove_p(v, p);
-        std::stringstream ss(v);
-
-        std::string tmpStr;
-        read_and_validate(ss, tmpStr, "status", ':');   // read status keyword
-        read_num_with_del(ss, tmpStr, status, ',');
-        read_and_validate(ss, tmpStr, "message", ':');  // read message keyword
-        read_any(ss, message, ',');
-        return true;
-    }
-
-    void get_message(int st, std::string msg) {
-        status = st;
-        message = msg;
-    }
-};
-
-
 #endif  // SRC_OIO_DIRECTORY_COMMAND_H_

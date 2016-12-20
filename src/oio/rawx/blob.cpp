@@ -248,8 +248,6 @@ class RawxDownload : public Download {
             inner->Read(&temp_buf);
         }
 
-        int size = temp_buf.size();
-
         if (temp_buf.size() > rawx_param.size) {
             buf->resize(rawx_param.size);
             memcpy(buf->data(), &temp_buf[rawx_param.start], rawx_param.size);

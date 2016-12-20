@@ -83,7 +83,8 @@ oio_err container::SetProperties() {
 
 oio_err container::DelProperties() {
     http_param http(_socket, "POST", (SELECTOR("del_properties")));
-    ContainerParam.get_properties(&http.body_in);
+    ContainerParam.get_properties_key(&http.body_in, &del_properties);
+    del_properties.clear();
     return http_call(&http);
 }
 

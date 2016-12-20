@@ -124,6 +124,7 @@ static void cycle(net::Socket *sptr, const char *url) {
     validate(bucket.GetProperties(), "bucket.GetProperties()");
 
     // delete all remaining properties
+    bucket.RemoveProperty("Title");
     validate(bucket.DelProperties(), "bucket.DelProperties");
     // verify
     validate(bucket.GetProperties(), "bucket.GetProperties");
@@ -162,10 +163,10 @@ static void cycle(net::Socket *sptr, const char *url) {
     // verify
     validate(Superbucket.GetProperties(), "Superbucket.GetProperties");
     // delete all remaining properties
+    Superbucket.RemoveProperty("Title");
     validate(Superbucket.DelProperties(), "Superbucket.DelProperties");
     // verify
     validate(Superbucket.GetProperties(), "Superbucket.GetProperties");
-
 
 
 //    container Superbucket2 (std::string ("DOVECOT"), std::string("raymond"),

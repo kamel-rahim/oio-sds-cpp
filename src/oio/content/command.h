@@ -276,14 +276,15 @@ class _content_param : public _file_id {
         return true;
     }
 
-    bool get_properties_key(std::string *p) {
+    bool get_properties_key(std::string *p,
+                            std::set <std::string> *del_properties) {
         *p = "[";
 
         bool bfirst = false;
-        for (const auto &e : properties) {
+        for (const auto &e : *del_properties) {
             if (bfirst)
                 *p += ",";
-            *p += "\"" + e.first + "\"";
+            *p += "\"" + e + "\"";
             bfirst = true;
         }
 

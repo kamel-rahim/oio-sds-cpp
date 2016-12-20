@@ -22,6 +22,7 @@
 #include <string>
 #include <memory>
 #include <map>
+#include <set>
 
 #include "oio/api/blob.h"
 #include "oio/http/blob.h"
@@ -37,6 +38,7 @@ enum body_type {PROPERTIES, PREPARE, SHOW};
 class content {
  private :
     _content_param ContentParam;
+    std::set<std::string> del_properties;
     std::shared_ptr<net::Socket> _socket;
 
     oio_err http_call_parse_body(http_param *http, body_type type);
@@ -53,7 +55,7 @@ class content {
     void ClearData()                     { ContentParam.ClearData();          }
     void SetData(_content_param *Param)  { ContentParam = *Param;             }
     _content_param &GetData()            { return ContentParam;               }
-    void RemoveProperty(std::string key) { ContentParam.erase_properties(key);}
+    void RemoveProperty(std::string key) { del_properties.insert(key);        }
     void AddProperty(std::string key, std::string value)  {
         ContentParam[key] = value;
     }

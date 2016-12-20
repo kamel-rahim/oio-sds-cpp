@@ -22,6 +22,7 @@
 #include <string>
 #include <memory>
 #include <map>
+#include <set>
 
 #include "oio/api/blob.h"
 #include "oio/http/blob.h"
@@ -34,6 +35,7 @@ namespace user_container {
 class container {
  private :
     _container_param ContainerParam;
+    std::set<std::string> del_properties;
     std::shared_ptr<net::Socket> _socket;
 
     oio_err http_call_parse_body(http_param *http);
@@ -58,7 +60,7 @@ class container {
     }
 
     void RemoveProperty(std::string key) {
-        ContainerParam.erase_properties(key);
+        del_properties.insert(key);
     }
 
     _container_param &GetData() {

@@ -102,11 +102,11 @@ oio_err content::SetProperties() {
 
 oio_err content::DelProperties() {
     std::string body_in;
-    ContentParam.get_properties_key(&body_in);
+    ContentParam.get_properties_key(&body_in, &del_properties);
     http_param http(_socket, "POST", SELECTOR("del_properties"), body_in);
+    del_properties.clear();
     return http_call(&http);
 }
-
 
 oio_err content::Delete() {
     http_param http(_socket, "POST", (SELECTOR("delete")));

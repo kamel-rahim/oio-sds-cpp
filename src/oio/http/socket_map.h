@@ -16,8 +16,11 @@
  * License along with this library.
  */
 
-#ifndef SRC_OIO_SOCKET_MAP_H_
-#define SRC_OIO_SOCKET_MAP_H_
+#ifndef SRC_OIO_HTTP_SOCKET_MAP_H_
+#define SRC_OIO_HTTP_SOCKET_MAP_H_
+
+#include <map>
+#include <string>
 
 #define MAX_DELAY 5000
 
@@ -76,5 +79,4 @@ class SocketMap {
  private:
     std::map<std::string, SocketElement> _SocketMap;
 };
-
-#endif  // SRC_OIO_SOCKET_MAP_H_
+#endif  // SRC_OIO_HTTP_SOCKET_MAP_H_

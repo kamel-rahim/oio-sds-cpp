@@ -30,7 +30,7 @@
 #include "utils/net.h"
 #include "oio/api/serialize_def.h"
 #include "oio/rawx/command.h"
-#include "command.h"
+#include "oio/ec/command.h"
 
 namespace oio {
 namespace ec {
@@ -49,8 +49,8 @@ class UploadBuilder {
 
     ~UploadBuilder();
 
-    void set_param (ec_cmd &_param) {
-    	param = _param ;
+    void set_param(const ec_cmd &_param) {
+        param = _param;
     }
 
     void SetXattr(const std::string &k, const std::string &v) {
@@ -61,7 +61,7 @@ class UploadBuilder {
 
  private:
     std::map<std::string, std::string> xattrs;
-    ec_cmd param ;
+    ec_cmd param;
 };
 
 class DownloadBuilder {
@@ -70,8 +70,8 @@ class DownloadBuilder {
 
     ~DownloadBuilder();
 
-    void set_param (ec_cmd &_param) {
-    	param = _param ;
+    void set_param(const ec_cmd &_param) {
+        param = _param;
     }
 
     void SetXattr(const std::string &k, const std::string &v) {
@@ -82,7 +82,7 @@ class DownloadBuilder {
 
  private:
     std::map<std::string, std::string> xattrs;
-    ec_cmd param ;
+    ec_cmd param;
 };
 
 class RemovalBuilder {

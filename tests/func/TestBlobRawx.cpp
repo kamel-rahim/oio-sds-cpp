@@ -69,9 +69,9 @@ class RawxBlobOpsFactory : public BlobOpsFactory {
         UploadBuilder op;
 
         rawx_cmd rawx_param;
-        rawx_param = _rawx(std::string ("http://") + srvid + "/" + chunkid);
-        rawx_param = _range(0,0);
-        op.set_param (rawx_param);
+        rawx_param = _rawx(std::string("http://") + srvid + "/" + chunkid);
+        rawx_param = _range(0, 0);
+        op.set_param(rawx_param);
 
         op.ContainerId(cid);
         op.ContentPath(content_path);
@@ -87,8 +87,8 @@ class RawxBlobOpsFactory : public BlobOpsFactory {
         DownloadBuilder op;
 
         rawx_cmd rawx_param;
-        rawx_param = _rawx(std::string ("http://") + srvid + "/" + chunkid);
-        op.set_param (rawx_param);
+        rawx_param = _rawx(std::string("http://") + srvid + "/" + chunkid);
+        op.set_param(rawx_param);
 
         return op.Build(socket);
     }
@@ -97,8 +97,8 @@ class RawxBlobOpsFactory : public BlobOpsFactory {
         RemovalBuilder op;
 
         rawx_cmd rawx_param;
-        rawx_param = _rawx(std::string ("http://") + srvid + "/" + chunkid);
-        op.set_param (rawx_param);
+        rawx_param = _rawx(std::string("http://") + srvid + "/" + chunkid);
+        op.set_param(rawx_param);
 
         return op.Build(socket);
     }

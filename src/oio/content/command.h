@@ -38,7 +38,7 @@ struct contentSet : public _rawx {
     int64_t size;
     std::string hash;
 
-    contentSet() {}
+    contentSet() : chunk_number(0), pos (0), score(0), size(0), hash ("") {}
 
     bool operator<(const contentSet &a) const {
         return chunk_number < a.chunk_number;
@@ -97,6 +97,7 @@ class _content_param : public _file_id {
             if (to.chunk_number == index)
                return to;
         }
+        return contentSet() ;
     }
 
     std::map<std::string, std::string> &System() { return system ;          }

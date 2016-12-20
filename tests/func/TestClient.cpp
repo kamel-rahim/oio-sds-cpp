@@ -21,24 +21,32 @@
  * metadata proxy.
  */
 
-#include <string>
+#include <memory.h>
+#include <assert.h>
+#include <string.h>
 #include <signal.h>
 #include <gtest/gtest.h>
-
-#include <memory>
-#include <cassert>
-
 #include "utils/macros.h"
 #include "utils/net.h"
 #include "utils/Http.h"
-
 #include "oio/directory/dir.h"
 #include "oio/container/container.h"
+#include "oio/content/content.h"
+#include "oio/rawx/blob.h"
+
+#include "oio/api/serialize_def.h"
+#include "oio/rawx/command.h"
+#include "oio/ec/command.h"
+
 using user_container::container;
+using user_content::content;
 
 DEFINE_string(URL_PROXY, "127.0.0.1:6000", "URL of the oio-proxy");
 
-#define CONTAINER_NAME "ray36"
+static void validate(oio_err err, std::string str) {\
+    if (err.status)\
+        LOG(INFO) << str << err.status << ", message: " << err.message ;\
+}
 
 static void cycle(net::Socket *sptr, const char *url) {
     std::shared_ptr<net::Socket> socket(sptr);
@@ -46,102 +54,139 @@ static void cycle(net::Socket *sptr, const char *url) {
     assert(socket->setnodelay());
     assert(socket->setquickack());
 
-    oio_err err ;
+    _file_id FileId(std::string("OPENIO"), std::string("DOVECOT"),
+                    std::string("ray36"),  std::string(""),
+                    std::string("Myfile"));
 
-    container bucket (std::string ("DOVECOT"), std::string(CONTAINER_NAME), std::string("mail") )  ;
-    directory dir (std::string ("DOVECOT"), std::string(CONTAINER_NAME), std::string("mail") )  ;
+    directory dir(FileId);
+    container Superbucket(FileId);
+    content   bucket(FileId);
 
-    bucket.SetSocket (socket) ;
-    dir.SetSocket (socket) ;
+    Superbucket.SetSocket(socket);
+    dir.SetSocket(socket);
+    bucket.SetSocket(socket);
+
+    validate(bucket.Prepare(), "bucket.Prepare");
+    std::string buffer = "This is a test";
+
+// write to Rawx
+    std::shared_ptr<net::Socket> rawx_socket;
+    rawx_socket.reset(new net::MillSocket);
+
+    rawx_cmd rawx_param;
+    contentSet ContentSet = bucket.GetData().GetTarget(0);
+
+    rawx_param = ContentSet.Rawx();
+    rawx_param = _range(0, 0);  // ContentSet.Range() ;
+
+    if (rawx_socket->connect(rawx_param.Host_Port())) {
+        oio::rawx::blob::UploadBuilder builder;
+
+        builder.set_param(rawx_param);
+
+        std::map<std::string, std::string> &system = bucket.GetData().System();
+
+        builder.ContainerId(bucket.GetData().ContainerId());
+        builder.ContentPath(system.find("name")->second);
+        builder.ContentId(system.find("id")->second);
+        int64_t v;
+        std::istringstream(system.find("version")->second) >> v;
+        builder.ContentVersion(v);
+        builder.StoragePolicy(system.find("policy")->second);
+        builder.MimeType(system.find("mime-type")->second);
+        builder.ChunkMethod(system.find("chunk-method")->second);
+        auto ul = builder.Build(rawx_socket);
+        auto rc = ul->Prepare();
+        if (rc.Ok()) {
+            ul->Write(buffer.data(), buffer.size());
+            ul->Commit();
+        } else {
+            ul->Abort();
+        }
+        rawx_socket->close();
+    } else {
+        LOG(ERROR) << "Router: failed to connect to rawx port: "
+                   << rawx_param.Port();
+    }
+
+    validate(bucket.Create(buffer.size()), "bucket.Create");
+    validate(bucket.GetProperties(), "bucket.GetProperties");
+    bucket.AddProperty("Title", "once upon a time");
+    bucket.AddProperty("Prop1", "This is a property");
+    validate(bucket.SetProperties(), "bucket.SetProperties");
+    validate(bucket.GetProperties(), "bucket.GetProperties");
+
+    // delete Title  (remove "prop" from internal properties)
+    // and call DelProperties to delate all remaining properties
+    bucket.RemoveProperty("Prop1");
+    validate(bucket.DelProperties(), "bucket.DelProperties");
+    // verify
+    validate(bucket.GetProperties(), "bucket.GetProperties()");
+
+    // delete all remaining properties
+    validate(bucket.DelProperties(), "bucket.DelProperties");
+    // verify
+    validate(bucket.GetProperties(), "bucket.GetProperties");
+
+    bucket.ClearData();
+    validate(bucket.Show(), "bucket.Show()");
+
+    // Copy to new file & delete
+    _file_id FileId2(std::string("OPENIO"), std::string("DOVECOT"),
+                     std::string("ray36"),  std::string(""),
+                     std::string("Myfile2"));
+
+    validate(bucket.Copy(FileId2.URL()), "bucket.Copy");
+    content   bucket2(FileId2);
+    bucket2.SetSocket(socket);
+    validate(bucket2.Delete(), "bucket2.Delete");
+    validate(bucket.Delete(), "bucket.Delete");
 
 // test
-    err = dir.Create() ;
-    if (err.status)
-    	LOG(INFO) << "dir.Create status: " << err.status << ", message: " << err.message ;
+    validate(dir.Create(), "dir.Create");
+    validate(dir.Link(), "dir.Link");
+    validate(dir.Show(), "dir.Show");
 
-    err = dir.Link() ;
-    if (err.status)
-    	LOG(INFO) << "dir.Link status: " << err.status << ", message: " << err.message ;
+    Superbucket.AddProperty("Title", "once upon a time");
+    Superbucket.AddProperty("Prop1", "This is a property");
 
-    err = dir.Show() ;
-    if (err.status)
-    	LOG(INFO) << "dir.Show status: " << err.status << ", message: " << err.message ;
-
-    bucket.AddProperties ("Title", "once upon a time");
-    bucket.AddProperties ("Prop1", "This is a property");
-
-    err = bucket.Create() ;
-       if (err.status)
-       	LOG(INFO) << "bucket.Create status: " << err.status << ", message: " << err.message ;
-
-    err = bucket.SetProperties() ;
-    if (err.status)
-     	LOG(INFO) << "bucket.SetProperties status: " << err.status << ", message: " << err.message ;
-
-    err = bucket.GetProperties() ;
-    if (err.status)
-    	LOG(INFO) << "bucket.GetProperties status: " << err.status << ", message: " << err.message ;
-
-    err = bucket.DelProperties() ;
-    if (err.status)
-     	LOG(INFO) << "bucket.DelProperties status: " << err.status << ", message: " << err.message ;
-
-    err = bucket.GetProperties() ;
-    if (err.status)
-    	LOG(INFO) << "bucket.GetProperties status: " << err.status << ", message: " << err.message ;
+    validate(Superbucket.Create(), "Superbucket.Create");
+    validate(Superbucket.SetProperties(), "Superbucket.SetProperties");
+    validate(Superbucket.GetProperties(), "Superbucket.GetProperties");
 
 
-//    container bucket2 (std::string ("DOVECOT"), std::string("raymond"), std::string("") )  ;
-//    bucket2.SetSocket (socket) ;
-
-    err = bucket.Touch() ;
-    if (err.status)
-    	LOG(INFO) << "bucket.Touch status: " << err.status << ", message: " << err.message ;
-
-    err = bucket.Dedup() ;
-    if (err.status)
-    	LOG(INFO) << "bucket.Dedup status: " << err.status << ", message: " << err.message ;
-
-    err = bucket.Show() ;
-    if (err.status)
-    	LOG(INFO) << "bucket.Show status: " << err.status << ", message: " << err.message ;
-
-    err = bucket.List() ;
-    if (err.status)
-    	LOG(INFO) << "bucket.Lis status: " << err.status << ", message: " << err.message ;
+    // delete Title  (remove "prop" from internal properties)
+    // and call DelProperties to delate all remaining properties
+    Superbucket.RemoveProperty("Prop1");
+    validate(Superbucket.DelProperties(), "Superbucket.DelProperties");
+    // verify
+    validate(Superbucket.GetProperties(), "Superbucket.GetProperties");
+    // delete all remaining properties
+    validate(Superbucket.DelProperties(), "Superbucket.DelProperties");
+    // verify
+    validate(Superbucket.GetProperties(), "Superbucket.GetProperties");
 
 
-    err = bucket.Destroy() ;
-    if (err.status)
-    	LOG(INFO) << "bucket.Destroy status: " << err.status << ", message: " << err.message ;
 
-    dir.AddProperties ("Title", "once upon a time");
-    dir.AddProperties ("Prop1", "This is a property");
+//    container Superbucket2 (std::string ("DOVECOT"), std::string("raymond"),
+//    std::string("") )  ;
+//    Superbucket2.SetSocket (socket) ;
 
-    err = dir.SetProperties() ;
-    if (err.status)
-    	LOG(INFO) << "dir.SetProperties status: " << err.status << ", message: " << err.message ;
+    validate(Superbucket.Touch(), "(Superbucket.Touch");
+    validate(Superbucket.Dedup(), "Superbucket.Dedup");
+    validate(Superbucket.Show(), "Superbucket.Show");
+    validate(Superbucket.List(), "Superbucket.List");
+    validate(Superbucket.Destroy(), "Superbucket.Destroy");
 
-    err = dir.GetProperties() ;
-    if (err.status)
-    	LOG(INFO) << "dir.GetProperties status: " << err.status << ", message: " << err.message ;
+    dir.AddProperties("Title", "once upon a time");
+    dir.AddProperties("Prop1", "This is a property");
 
-    err = dir.DelProperties() ;
-    if (err.status)
-    	LOG(INFO) << "dir.DelProperties status: " << err.status << ", message: " << err.message ;
-
-    err = dir.GetProperties() ;
-    if (err.status)
-    	LOG(INFO) << "dir.GetProperties status: " << err.status << ", message: " << err.message ;
-
-
-    err = dir.Unlink() ;
-    if (err.status)
-    	LOG(INFO) << "dir.Unlink status: " << err.status << ", message: " << err.message ;
-
-    err = dir.Destroy() ;
-    if (err.status)
-    	LOG(INFO) << "dir.Destroy status: " << err.status << ", message: " << err.message ;
+    validate(dir.SetProperties(), "dir.SetProperties");
+    validate(dir.GetProperties(), "dir.GetProperties");
+    validate(dir.DelProperties(), "dir.DelProperties");
+    validate(dir.GetProperties(), "dir.GetProperties");
+    validate(dir.Unlink(),        "dir.Unlink");
+    validate(dir.Destroy(),       "dir.Destroy");
 
     socket->close();
 }

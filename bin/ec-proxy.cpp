@@ -81,11 +81,11 @@ class RouterHandler : public BlobHandler {
  private:
     std::map<std::string, std::string> xattrs;
     ec_cmd ec_param;
-    rawx_cmd rawx_param ;
+    rawx_cmd rawx_param;
 
  public:
     RouterHandler() { ec_param.Clear();
-                      rawx_param.Clear() ;
+                      rawx_param.Clear();
     }
 
     ~RouterHandler() {}
@@ -93,13 +93,13 @@ class RouterHandler : public BlobHandler {
     std::unique_ptr<oio::api::blob::Upload> GetUpload() override {
         auto builder = UploadBuilder();
 
-          ec_param.ChunkSize = 1024 * 1024 ;
-        rawx_param.ChunkSize = 1024 * 1024 ;
+          ec_param.ChunkSize = 1024 * 1024;
+        rawx_param.ChunkSize = 1024 * 1024;
 
-        if (rawx_param.rawx.chunk_id.size() > 1)
-        	builder.set_rawx_param (rawx_param) ;
+        if (rawx_param.ChunkId().size() > 1)
+            builder.set_rawx_param(rawx_param);
         else
-        	builder.set_ec_param (ec_param) ;
+            builder.set_ec_param(ec_param);
 
         auto ul = builder.Build();
         for (const auto &e : xattrs)
@@ -110,10 +110,10 @@ class RouterHandler : public BlobHandler {
     std::unique_ptr<oio::api::blob::Download> GetDownload() override {
         auto builder = DownloadBuilder();
 
-        if (rawx_param.rawx.chunk_id.size() > 1)
-        	builder.set_rawx_param (rawx_param) ;
+        if (rawx_param.ChunkId().size() > 1)
+            builder.set_rawx_param(rawx_param);
         else
-        	builder.set_ec_param (ec_param) ;
+            builder.set_ec_param(ec_param);
 
         return builder.Build();
     }
@@ -126,13 +126,13 @@ class RouterHandler : public BlobHandler {
     SoftError SetUrl(const std::string &u UNUSED) override {
         // Get the name, this is common to al the requests
         http_parser_url url;
-        if (0 == http_parser_parse_url(u.data(), u.size(), false, &url) && _http_url_has(url, UF_PATH))
-        {
-        	// Get the chunk-id, the last part of the URL path
-        	auto path = _http_url_field(url, UF_PATH, u.data(), u.size());
-        	auto sep = path.rfind('/');
-        	if (sep != std::string::npos && sep != path.size() - 1)
-        		rawx_param.rawx.chunk_id.assign(path, sep + 1, std::string::npos);
+        if (0 == http_parser_parse_url(u.data(), u.size(), false, &url) &&
+                _http_url_has(url, UF_PATH)) {
+            // Get the chunk-id, the last part of the URL path
+            auto path = _http_url_field(url, UF_PATH, u.data(), u.size());
+            auto sep = path.rfind('/');
+            if (sep != std::string::npos && sep != path.size() - 1)
+                rawx_param.ChunkId().assign(path, sep + 1, std::string::npos);
         }
         return {200, 200, "OK"};
     }
@@ -143,13 +143,7 @@ class RouterHandler : public BlobHandler {
         if (header.Matched()) {
             switch (header.Get()) {
                 case EcHeader::Value::Host: {
-                	 std::string str(k);
-                	 std::size_t pos = v.find(":");
-                	 rawx_param.rawx.host = v;
-
-                     str = v.substr(pos + 1, 4);
-                     std::stringstream ss2(str);
-                     ss2 >> rawx_param.rawx.port;
+                    rawx_param = _rawx(v);
                 }
                     break;
                 case EcHeader::Value::ChunkDest: {
@@ -161,34 +155,13 @@ class RouterHandler : public BlobHandler {
                     std::stringstream ss(str);
                     ss >> rawx_p.chunk_number;
 
-                    std::size_t pos = v.find(":");
-                    std::size_t pos2 = v.find(":",
-                                              pos + 1);  // we need second one
+                    rawx_p = _rawx(v);
 
-                    str = v.substr(pos + 3, pos2 - pos + 2);
-                    rawx_p.rawx.host = str;
+//                    LOG(ERROR) << k << ": " << v;
 
 #ifdef test_rawx
                     if (!rawx_p.chunk_number)
-                    	rawx_param.rawx.host = str ;
-#endif
-
-                    str = v.substr(pos2 + 1, 4);
-                    std::stringstream ss2(str);
-                    ss2 >> rawx_p.rawx.port;
-
-#ifdef test_rawx
-                    if (!rawx_p.chunk_number)
-                    	rawx_param.rawx.port = rawx_p.rawx.port ;
-#endif
-
-
-                    str = str = v.substr(pos2 + 6);
-                    rawx_p.rawx.chunk_id = str;
-
-#ifdef test_rawx
-                    if (!rawx_p.chunk_number)
-                    	rawx_param.rawx.chunk_id = str ;
+                        rawx_param = rawx_p;
 #endif
                     ec_param.targets.insert(rawx_p);
                 }
@@ -198,7 +171,7 @@ class RouterHandler : public BlobHandler {
                     for (const auto &e : TheEncodingMethods) {
                         std::size_t pos = v.find(e.first);
                         if (pos != std::string::npos) {
-                        	ec_param.EncodingMethod = e.second;
+                            ec_param.EncodingMethod = e.second;
                             break;
                         }
                     }
@@ -220,18 +193,19 @@ class RouterHandler : public BlobHandler {
                     ss >> ec_param.nbChunks;
                 }
                     break;
-//                case EcHeader::Value::ChunkPos: {
+                case EcHeader::Value::ChunkPos: {
 //                    std::string all_numbers(v);
 //                    std::stringstream ss(all_numbers);
 //                    ss >> offset_pos;
-//                }
+//                    LOG(ERROR) << k << ": " << v;
+                }
                     break;
                 case EcHeader::Value::ChunkSize: {
                     std::string all_numbers(v);
                     std::stringstream ss(all_numbers);
                     ss >> ec_param.ChunkSize;
 #ifdef test_rawx
-                    rawx_param.ChunkSize = ec_param.ChunkSize ;
+                    rawx_param.ChunkSize = ec_param.ChunkSize;
 #endif
                 }
                     break;
@@ -245,11 +219,11 @@ class RouterHandler : public BlobHandler {
                     std::string all_numbers(v);
                     transform_nondigit_to_space(all_numbers);
                     std::stringstream ss(all_numbers);
-                    ss >> ec_param.range.range_start;
-                    ss >> ec_param.range.range_size;
-                    ec_param.range.range_size = ec_param.range.range_size + 1 - ec_param.range.range_start;
+                    ss >> ec_param.start;
+                    ss >> ec_param.size;
+                    ec_param.size = ec_param.size + 1 - ec_param.start;
 #ifdef test_rawx
-                    rawx_param.range = ec_param.range ;
+                    rawx_param = ec_param.Range();
 #endif
                 }
                     break;

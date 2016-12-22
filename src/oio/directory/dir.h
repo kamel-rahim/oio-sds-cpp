@@ -16,8 +16,8 @@
  * License along with this library.
  */
 
-#ifndef SRC_OIO_DIRECTORY_BLOB_H_
-#define SRC_OIO_DIRECTORY_BLOB_H_
+#ifndef  SRC_OIO_DIRECTORY_DIR_H_
+#define  SRC_OIO_DIRECTORY_DIR_H_
 
 #include <string>
 #include <memory>
@@ -27,50 +27,51 @@
 #include "oio/http/blob.h"
 #include "oio/api/serialize_def.h"
 #include "oio/directory/command.h"
+#include "utils/command.h"
 
-enum calltype { META, METAS, PROPERTIES } ;
+enum body_type { META, METAS, PROPERTIES };
 
 class directory {
-private :
-	_dir_param DirParam ;
-	std::shared_ptr<net::Socket> _socket ;
+ private :
+    _dir_param DirParam;
+    std::shared_ptr<net::Socket> _socket;
 
-	oio_err HttpCall (string TypeOfCall) ;
-	oio_err HttpCall (string TypeOfCall, string data ) ;
-	oio_err HttpCall (string method, string TypeOfCall, calltype type );
+    oio_err http_call_parse_body(http_param *http, body_type type);
+    oio_err http_call(http_param *http);
 
-public:
-	directory ( std::string account, std::string container, std::string type ) {
-		DirParam.account = account;
-		DirParam.container = container;
-		DirParam.type = type;
-	}
+ public:
+    explicit directory(_file_id &file_id) : DirParam(file_id) { }
+    directory(std::string _name_space, std::string _account,
+              std::string _container, std::string _type = "",
+              std::string _filename = "") :
+              DirParam(_name_space, _account, _container,
+                       _type, _filename) { }
 
-	void SetSocket (std::shared_ptr<net::Socket> socket ) {
-		_socket = socket ;
-	}
+    void SetSocket(std::shared_ptr<net::Socket> socket ) {
+        _socket = socket;
+    }
 
-	void SetData (_dir_param &Param ) {
-		DirParam = Param ;
-	}
+    void SetData(const _dir_param &Param) {
+        DirParam = Param;
+    }
 
-	void AddProperties (string key, string value) {
-		DirParam.Properties [key] = value;
-	}
+    void AddProperties(std::string key, std::string value) {
+        DirParam[key] = value;
+    }
 
-	_dir_param &GetData () {
-		return DirParam;
-	}
+    _dir_param &GetData() {
+        return DirParam;
+    }
 
-	oio_err Create ();
-	oio_err Link ();
-	oio_err Unlink ();
-	oio_err Destroy ();
-	oio_err SetProperties ();
-	oio_err GetProperties ();
-	oio_err DelProperties ();
-	oio_err Renew ();
-	oio_err Show();
+    oio_err Create();
+    oio_err Link();
+    oio_err Unlink();
+    oio_err Destroy();
+    oio_err SetProperties();
+    oio_err GetProperties();
+    oio_err DelProperties();
+    oio_err Renew();
+    oio_err Show();
 };
 
-#endif  // SRC_OIO_DIRECTORY_BLOB_H_
+#endif  //  SRC_OIO_DIRECTORY_DIR_H_

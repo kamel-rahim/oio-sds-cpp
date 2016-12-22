@@ -397,16 +397,15 @@ Code Reply::ReadHeaders() {
     return Code::OK;
 }
 
-Code Reply::GetHeaders(std::map <std::string, std::string> &data, std::string prefix)
-{
+Code Reply::GetHeaders(std::map <std::string, std::string> *data,
+                       std::string prefix) {
     for (const auto &e : ctx.fields) {
-      	size_t pos = e.first.find(prefix);
- 		if (pos!=std::string::npos)
- 		{
- 			pos += prefix.size() ;
-            std::string v = e.first.substr(pos, e.first.size() - pos );
-            data [v] = e.second;
- 		}
+        size_t pos = e.first.find(prefix);
+        if (pos != std::string::npos) {
+            pos += prefix.size();
+            std::string v = e.first.substr(pos, e.first.size() - pos);
+            (*data) [v] = e.second;
+        }
     }
     return Code::OK;
 }
@@ -510,7 +509,7 @@ Code Call::Run(const std::string &in, std::string *out) {
     return http::Code::OK;
 }
 
-Code Call::GetReplyHeaders(std::map <std::string, std::string> &data, std::string prefix)
-{
-	return reply.GetHeaders(data, prefix);
+Code Call::GetReplyHeaders(std::map <std::string,
+                           std::string> *data, std::string prefix) {
+    return reply.GetHeaders(data, prefix);
 }

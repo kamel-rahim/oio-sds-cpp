@@ -30,93 +30,94 @@
 #include "utils/net.h"
 #include "utils/Http.h"
 #include "oio/api/blob.h"
-
 #include "oio/directory/dir.h"
 
-#define REF_DEF   std::string ("?acct=") + DirParam.account +\
-				  std::string ("&ref=") +  DirParam.container +\
-				  (DirParam.type.size() ? std::string ("&type=meta2.") + DirParam.type : "&type=meta2")
+#define SELECTOR(str) std::string("/v3.0/") + DirParam.NameSpace()    +\
+                      std::string("/reference/") + str                +\
+                      std::string("?acct=") + DirParam.Account()      +\
+                      std::string("&ref=") +  DirParam.Container()    +\
+                      (DirParam.Type().size() ? std::string("&type=") +\
+                              DirParam.Type() : "&type=meta2")
 
-static http::Code HTTP_exec(std::shared_ptr<net::Socket> socket, std::string method, std::string op, std::string &in, std::string &out) {
-    http::Call call;
-    call.Socket(socket)
-            .Method(method)
-            .Selector("/v3.0/OPENIO/reference/" + op)
-            .Field("Connection", "keep-alive");
-    http::Code rc = call.Run(in, &out);
-    LOG(INFO) << method << " rc=" << rc << " reply=" << out;
-    return rc ;
+oio_err directory::http_call_parse_body(http_param *http, body_type type) {
+    http::Code rc = http->HTTP_call();
+    oio_err err;
+    if (!rc == http::Code::OK) {
+        err.get_message(-1, "HTTP_exec exec error");
+    } else {
+        bool ret = 0;
+        switch (type) {
+        case body_type::META:
+            ret = DirParam.put_meta(http->body_out);
+            break;
+        case body_type::METAS:
+            ret = DirParam.put_metas(http->body_out);
+            break;
+        case body_type::PROPERTIES:
+            ret = DirParam.put_properties(http->body_out);
+                break;
+        }
+        if (!ret)
+            err.put_message(http->body_out);
+    }
+    return err;
 }
 
-oio_err directory::HttpCall (string TypeOfCall ) {
-    string in;
-    string out;
-	oio_err err;
-    http::Code rc = HTTP_exec(_socket, "POST", TypeOfCall, in, out) ;
-	if (!rc == http::Code::OK)
-		err.get_message (-1,"HTTP_exec exec error") ;
-	else
-		err.put_message (out) ;
-	return err;
+oio_err directory::http_call(http_param *http) {
+    http::Code rc = http->HTTP_call();
+    oio_err err;
+    if (!rc == http::Code::OK)
+        err.get_message(-1, "HTTP_exec exec error");
+    else
+        err.put_message(http->body_out);
+    return err;
 }
 
-oio_err directory::HttpCall (string TypeOfCall, string data ) {
-    string out;
-	oio_err err;
-    http::Code rc = HTTP_exec(_socket, "POST", TypeOfCall, data, out) ;
-	if (!rc == http::Code::OK)
-		err.get_message (-1,"HTTP_exec exec error") ;
-	else
-		err.put_message (out) ;
-	return err;
+oio_err directory::Create() {
+    http_param http(_socket, "POST", (SELECTOR("create")));
+    return http_call(&http);
 }
 
-oio_err directory::HttpCall (string method, string TypeOfCall, calltype type ) {
-    string in;
-    std::string out;
-	oio_err err;
-    http::Code rc = HTTP_exec(_socket, method,  TypeOfCall, in, out) ;
-	if (!rc == http::Code::OK)
-		err.get_message (-1,"HTTP_exec exec error") ;
-	else {
-		bool ret ;
-		switch (type) {
-		case calltype::META:
-		ret = DirParam.put_meta (out, metatype::META2) ;
-			break ;
-		case calltype::METAS:
-			ret = DirParam.put_metas (out) ;
-			break ;
-		case calltype::PROPERTIES:
-			ret = DirParam.put_properties (out);
-				break ;
-		}
-	    if (!ret)
-	    	err.put_message (out) ;
-	}
-	return err;
+oio_err directory::Unlink() {
+    http_param http(_socket, "POST", (SELECTOR("unlink")));
+    return http_call(&http);
 }
 
-oio_err directory::Create () { return HttpCall ("create" + REF_DEF) ; }
+oio_err directory::Destroy() {
+    http_param http(_socket, "POST", (SELECTOR("destroy")));
+    return http_call(&http);
+}
 
-oio_err directory::Unlink () { return HttpCall ("unlink" + REF_DEF) ; }
+oio_err directory::DelProperties() {
+    http_param http(_socket, "POST", SELECTOR("del_properties"));
+    return http_call(&http);
+}
 
-oio_err directory::Destroy () { return HttpCall ("destroy" + REF_DEF) ; }
+oio_err directory::Renew() {
+    http_param http(_socket, "POST", SELECTOR("Renew"));
+    return http_call(&http);
+}
 
-oio_err directory::DelProperties () { return HttpCall ("del_properties" + REF_DEF) ; }
+oio_err directory::Show() {
+    http_param http(_socket, "GET", SELECTOR("show"));
+    return http_call_parse_body(&http, body_type::METAS);
+}
 
-oio_err directory::Renew () { return HttpCall ("Renew" + REF_DEF) ; }
+oio_err directory::GetProperties() {
+    http_param http(_socket, "POST", SELECTOR("get_properties"));
+    return http_call_parse_body(&http, body_type::PROPERTIES);
+}
 
-oio_err directory::Show() {	return HttpCall ("GET", "show" + REF_DEF, calltype::METAS ); }
+oio_err directory::Link() {
+    http_param http(_socket, "POST", SELECTOR("link"));
+    return http_call_parse_body(&http, body_type::META);
+}
 
-oio_err directory::GetProperties () { return HttpCall ("POST", "get_properties" + REF_DEF, calltype::PROPERTIES ); }
-
-oio_err directory::Link () { return HttpCall ("POST", "link" + REF_DEF, calltype::META ); }
-
-oio_err directory::SetProperties () {
-	string Props;
-	DirParam.get_properties (Props) ;
-	return HttpCall ("set_properties" + REF_DEF, Props);
+oio_err directory::SetProperties() {
+    std::string body_in;
+    DirParam.get_properties(&body_in);
+    http_param http(_socket, "POST", SELECTOR("set_properties"), body_in);
+    return http_call(&http);
 }
 
 

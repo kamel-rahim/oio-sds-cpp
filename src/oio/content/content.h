@@ -46,10 +46,11 @@ class content {
 
  public:
     explicit content(_file_id &file_id) : ContentParam(file_id) { }
-    content(std::string account, std::string container, std::string type,
-            std::string filename) {
-        ContentParam = _content_param(account, container, type, filename);
-    }
+    content(std::string _name_space, std::string _account,
+            std::string _container, std::string _type = "",
+            std::string _filename = "") :
+            ContentParam(_name_space, _account, _container,
+                         _type, _filename) { }
 
     void SetSocket(std::shared_ptr<net::Socket> socket)  {_socket = socket;   }
     void ClearData()                     { ContentParam.ClearData();          }
@@ -61,7 +62,7 @@ class content {
     }
 
     oio_err Create(int size);
-    oio_err Prepare();
+    oio_err Prepare(bool autocreate);
     oio_err Show();
     oio_err List();
     oio_err Delete();

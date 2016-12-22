@@ -78,10 +78,11 @@ class _content_param : public _file_id {
              _content_param() : default_ask_size(1) { }
     explicit _content_param(_file_id &file_id) : _file_id(file_id),
                              default_ask_size(1) { }
-             _content_param(std::string _account, std::string _container,
-                            std::string _type = "", std::string _filename = "")
-                          : _file_id(_account, _container, _type, _filename),
-                            default_ask_size(1) { }
+             _content_param(std::string _name_space, std::string _account,
+                            std::string _container, std::string _type = "",
+                            std::string _filename = "")
+                 : _file_id(_name_space, _account, _container, _type,
+                            _filename), default_ask_size(1) { }
 
     _content_param& operator=(const _content_param& arg) {
         _file_id::operator =(arg);
@@ -91,7 +92,9 @@ class _content_param : public _file_id {
 
     std::string& operator[](std::string key)     { return properties[key];  }
     void erase_properties(std::string key)       {  properties.erase(key);  }
-
+    void UpdateTarget(contentSet *set)           { targets.erase(*set);
+                                                   targets.insert(*set);    }
+    int GetTargetsSize ()                        { return targets.size();   }
     contentSet GetTarget(int index)              {
         for (auto &to : targets) {
             if (to.chunk_number == index)
@@ -192,7 +195,15 @@ class _content_param : public _file_id {
             } else {
                 std::stringstream ss(tmpStr);
                 ss >> set.pos;
-                set.chunk_number = targets.size();
+                if (set.pos) {
+                    set.chunk_number = set.pos;
+                } else {
+                    std::set<contentSet>::iterator it = targets.begin();
+                    if (targets.size() && it->pos)
+                        set.chunk_number = set.pos;
+                    else
+                        set.chunk_number = targets.size();
+                }
             }
         }
 

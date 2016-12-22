@@ -41,9 +41,11 @@ class directory {
 
  public:
     explicit directory(_file_id &file_id) : DirParam(file_id) { }
-    directory(std::string account, std::string container, std::string type) {
-        DirParam  = _dir_param(account, container, type);
-    }
+    directory(std::string _name_space, std::string _account,
+              std::string _container, std::string _type = "",
+              std::string _filename = "") :
+              DirParam(_name_space, _account, _container,
+                       _type, _filename) { }
 
     void SetSocket(std::shared_ptr<net::Socket> socket ) {
         _socket = socket;

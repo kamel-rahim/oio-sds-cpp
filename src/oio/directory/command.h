@@ -23,6 +23,7 @@
 #include <map>
 #include <string>
 #include <algorithm>
+#include <iomanip>
 
 #include "openssl/sha.h"
 #include "oio/api/serialize_def.h"
@@ -117,6 +118,10 @@ class _file_id {
        return *this;
     }
 
+    _file_id& FileId() {
+        return *this;
+    }
+
     std::string URL() {
        std::string str = name_space + "/" + account + "/" + container + "/"
                                     + type + "/" + filename;
@@ -160,9 +165,10 @@ class _dir_param : public _file_id {
     _dir_param() { }
 
     explicit _dir_param(_file_id &file_id) : _file_id(file_id) { }
-    _dir_param(std::string _account, std::string _container,
-               std::string _type = "")
-                : _file_id(_account, _container, _type) { }
+    _dir_param(std::string _name_space, std::string _account,
+               std::string _container, std::string _type = "",
+               std::string _filename = "") :
+              _file_id(_name_space, _account, _container, _type, _filename) { }
 
     _dir_param& operator=(const _dir_param& arg) {
         _file_id::operator =(arg);

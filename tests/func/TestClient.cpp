@@ -66,7 +66,7 @@ static void cycle(net::Socket *sptr, const char *url) {
     dir.SetSocket(socket);
     bucket.SetSocket(socket);
 
-    validate(bucket.Prepare(), "bucket.Prepare");
+    validate(bucket.Prepare(true), "bucket.Prepare");
     std::string buffer = "This is a test";
 
 // write to Rawx
@@ -116,13 +116,10 @@ static void cycle(net::Socket *sptr, const char *url) {
     validate(bucket.SetProperties(), "bucket.SetProperties");
     validate(bucket.GetProperties(), "bucket.GetProperties");
 
-    // delete Title  (remove "prop" from internal properties)
-    // and call DelProperties to delate all remaining properties
     bucket.RemoveProperty("Prop1");
     validate(bucket.DelProperties(), "bucket.DelProperties");
     // verify
     validate(bucket.GetProperties(), "bucket.GetProperties()");
-
     // delete all remaining properties
     bucket.RemoveProperty("Title");
     validate(bucket.DelProperties(), "bucket.DelProperties");
@@ -143,7 +140,6 @@ static void cycle(net::Socket *sptr, const char *url) {
     validate(bucket2.Delete(), "bucket2.Delete");
     validate(bucket.Delete(), "bucket.Delete");
 
-// test
     validate(dir.Create(), "dir.Create");
     validate(dir.Link(), "dir.Link");
     validate(dir.Show(), "dir.Show");
@@ -155,9 +151,6 @@ static void cycle(net::Socket *sptr, const char *url) {
     validate(Superbucket.SetProperties(), "Superbucket.SetProperties");
     validate(Superbucket.GetProperties(), "Superbucket.GetProperties");
 
-
-    // delete Title  (remove "prop" from internal properties)
-    // and call DelProperties to delate all remaining properties
     Superbucket.RemoveProperty("Prop1");
     validate(Superbucket.DelProperties(), "Superbucket.DelProperties");
     // verify
@@ -167,11 +160,6 @@ static void cycle(net::Socket *sptr, const char *url) {
     validate(Superbucket.DelProperties(), "Superbucket.DelProperties");
     // verify
     validate(Superbucket.GetProperties(), "Superbucket.GetProperties");
-
-
-//    container Superbucket2 (std::string ("DOVECOT"), std::string("raymond"),
-//    std::string("") )  ;
-//    Superbucket2.SetSocket (socket) ;
 
     validate(Superbucket.Touch(), "(Superbucket.Touch");
     validate(Superbucket.Dedup(), "Superbucket.Dedup");

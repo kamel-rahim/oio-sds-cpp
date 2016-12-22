@@ -127,11 +127,12 @@ oio_err content::GetProperties() {
     return http_call_parse_body(&http, body_type::PROPERTIES);
 }
 
-oio_err content::Prepare() {
+oio_err content::Prepare(bool autocreate) {
     std::string body_in;
     ContentParam.get_size(&body_in);
     http_param http(_socket, "POST", SELECTOR("prepare"), body_in);
-    http.header_in["x-oio-action-mode"] = "autocreate";
+    if (autocreate)
+        http.header_in["x-oio-action-mode"] = "autocreate";
     http.header_out_filter = "x-oio-content-meta-";
     http.header_out = &ContentParam.System();
     return http_call_parse_body(&http, body_type::PREPARE);

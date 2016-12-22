@@ -43,9 +43,11 @@ class container {
 
  public:
     explicit container(_file_id &file_id) : ContainerParam(file_id) { }
-    container(std::string account, std::string container, std::string type) {
-        ContainerParam = _container_param(account , container, type);
-    }
+    container(std::string _name_space, std::string _account,
+             std::string _container, std::string _type = "",
+             std::string _filename = "") :
+             ContainerParam(_name_space, _account, _container,
+                            _type, _filename) { }
 
     void SetSocket(std::shared_ptr<net::Socket> socket) {
         _socket = socket;

@@ -120,6 +120,12 @@ add_library(oio-directory SHARED
         oio/directory/command.h)
 target_link_libraries(oio-directory)
 
+add_library(oio-sds SHARED
+        oio/sds/sds.cpp
+        oio/sds/sds.h
+        oio/sds/command.h)
+target_link_libraries(oio-sds)
+
 add_library(oio-container SHARED
         oio/container/container.cpp
         oio/container/container.h

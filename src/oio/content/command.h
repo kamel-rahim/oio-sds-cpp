@@ -25,7 +25,7 @@
 #include <map>
 #include <string>
 
-#include "oio/api/serialize_def.h"
+#include "utils/serialize_def.h"
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
 #include "oio/directory/command.h"

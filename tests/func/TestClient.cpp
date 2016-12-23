@@ -34,7 +34,7 @@
 #include "oio/content/content.h"
 #include "oio/rawx/blob.h"
 
-#include "oio/api/serialize_def.h"
+#include "utils/serialize_def.h"
 #include "oio/rawx/command.h"
 #include "oio/ec/command.h"
 

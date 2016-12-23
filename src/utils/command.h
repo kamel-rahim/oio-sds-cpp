@@ -22,7 +22,7 @@
 #include <map>
 #include <string>
 
-#include "oio/api/serialize_def.h"
+#include "serialize_def.h"
 #include "utils/Http.h"
 
 class http_param {

@@ -29,7 +29,7 @@
 #include <sstream>
 #include "utils/net.h"
 
-#include "oio/api/serialize_def.h"
+#include "utils/serialize_def.h"
 #include "oio/rawx/command.h"
 #include "oio/ec/command.h"
 

@@ -26,7 +26,7 @@
 #include <iomanip>
 
 #include "openssl/sha.h"
-#include "oio/api/serialize_def.h"
+#include "utils/serialize_def.h"
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
 

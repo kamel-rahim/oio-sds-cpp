@@ -60,10 +60,10 @@ DEFINE_uint64(test_batch_size,
 
 #define OP_LOOP_ON(op, Step, head, tail) do { \
         auto rc = op->Step(); \
-        ASSERT_EQ(oio::api::blob::Cause::head, rc.Why()); \
+        ASSERT_EQ(oio::api::Cause::head, rc.Why()); \
         for (int i=0; i < 2; ++i) { \
             rc = op->Step(); \
-            ASSERT_EQ(oio::api::blob::Cause::tail, rc.Why()); \
+            ASSERT_EQ(oio::api::Cause::tail, rc.Why()); \
         } \
     } while (0)
 
@@ -160,7 +160,7 @@ class BlobTestSuite : public ::testing::Test {
                 rc = op->Commit();
                 ASSERT_FALSE(rc.Ok());
             }
-            ASSERT_EQ(rc.Why(), oio::api::blob::Cause::NotFound);
+            ASSERT_EQ(rc.Why(), oio::api::Cause::NotFound);
         } while (0);
     }
 
@@ -205,7 +205,7 @@ class BlobTestSuite : public ::testing::Test {
         auto op = Removal();
         auto rc = op->Prepare();
         if (!rc.Ok()) {
-            ASSERT_EQ(rc.Why(), oio::api::blob::Cause::NotFound);
+            ASSERT_EQ(rc.Why(), oio::api::Cause::NotFound);
             LOOP_ON(Prepare, NotFound, NotFound);
             LOOP_ON(Commit, InternalError, InternalError);
         } else {
@@ -221,7 +221,6 @@ class BlobTestSuite : public ::testing::Test {
         auto op = Removal();
         auto rc = op->Prepare();
         if (!rc.Ok()) {
-            ASSERT_EQ(rc.Why(), oio::api::blob::Cause::NotFound);
             LOOP_ON(Prepare, NotFound, NotFound);
             LOOP_ON(Abort, InternalError, InternalError);
         } else {

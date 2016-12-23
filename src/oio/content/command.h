@@ -25,13 +25,13 @@
 #include <map>
 #include <string>
 
-#include "oio/api/serialize_def.h"
+#include "utils/serialize_def.h"
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
 #include "oio/directory/command.h"
-#include "oio/rawx/command.h"
+#include "oio/blob/rawx/command.h"
 
-struct contentSet : public _rawx {
+struct contentSet : public RawxUrl {
     int chunk_number;
     int pos;
     int score;
@@ -48,13 +48,13 @@ struct contentSet : public _rawx {
         return chunk_number == a.chunk_number;
     }
 
-    contentSet& operator=(const _rawx& arg) {
-        _rawx::operator =(arg);
+    contentSet& operator=(const RawxUrl& arg) {
+        RawxUrl::operator =(arg);
        return *this;
     }
 
     contentSet& operator=(const contentSet& arg) {
-        _rawx::operator =(arg);
+        RawxUrl::operator =(arg);
         chunk_number    = arg.chunk_number;
         pos             = arg.pos;
         size            = arg.size;
@@ -63,7 +63,7 @@ struct contentSet : public _rawx {
        return *this;
     }
 
-    _range Range () { return _range (0, size); }
+    Range GetRange () { return Range(0, size); }
 };
 
 
@@ -156,7 +156,7 @@ class _content_param : public _file_id {
             LOG(ERROR) << "Missing 'url' field";
             return false;
         } else {
-            set = _rawx(document["url"].GetString());
+            set = RawxUrl(document["url"].GetString());
         }
 
         if (!document.HasMember("hash")) {

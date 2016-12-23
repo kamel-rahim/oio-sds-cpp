@@ -26,11 +26,11 @@
 
 #include "bin/MillDaemon.h"
 
+using oio::api::Cause;
 namespace blob = oio::api::blob;
 using blob::Upload;
 using blob::Download;
 using blob::Removal;
-using blob::Cause;
 
 DEFINE_bool(verbose_daemon, false, "Trace server events");
 

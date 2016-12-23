@@ -26,17 +26,18 @@
 #include <string.h>
 #include <signal.h>
 #include <gtest/gtest.h>
+
 #include "utils/macros.h"
 #include "utils/net.h"
 #include "utils/Http.h"
+#include "utils/serialize_def.h"
+
 #include "oio/directory/dir.h"
 #include "oio/container/container.h"
 #include "oio/content/content.h"
-#include "oio/rawx/blob.h"
-
-#include "oio/api/serialize_def.h"
-#include "oio/rawx/command.h"
-#include "oio/ec/command.h"
+#include "oio/blob/rawx/blob.h"
+#include "oio/blob/rawx/command.h"
+#include "oio/blob/ec/command.h"
 
 using user_container::container;
 using user_content::content;
@@ -73,11 +74,11 @@ static void cycle(net::Socket *sptr, const char *url) {
     std::shared_ptr<net::Socket> rawx_socket;
     rawx_socket.reset(new net::MillSocket);
 
-    rawx_cmd rawx_param;
+    RawxCommand rawx_param;
     contentSet ContentSet = bucket.GetData().GetTarget(0);
 
     rawx_param = ContentSet.Rawx();
-    rawx_param = _range(0, 0);  // ContentSet.Range() ;
+    rawx_param = Range(0, 0);  // ContentSet.Range() ;
 
     if (rawx_socket->connect(rawx_param.Host_Port())) {
         oio::rawx::blob::UploadBuilder builder;

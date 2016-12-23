@@ -29,9 +29,9 @@
 #include "utils/utils.h"
 #include "utils/net.h"
 #include "utils/Http.h"
-#include "oio/kinetic/coro/rpc/GetLog.h"
-#include "oio/kinetic/coro/client/CoroutineClient.h"
-#include "oio/kinetic/coro/client/CoroutineClientFactory.h"
+#include "oio/blob/kinetic/coro/RPC.h"
+#include "oio/blob/kinetic/coro/CoroutineClient.h"
+#include "oio/blob/kinetic/coro/CoroutineClientFactory.h"
 
 #ifndef PERIOD_REG
 #define PERIOD_REG          5000
@@ -59,8 +59,8 @@ using oio::kinetic::client::ClientInterface;
 using oio::kinetic::client::CoroutineClientFactory;
 using oio::kinetic::client::CoroutineClient;
 using oio::kinetic::client::Sync;
-using oio::kinetic::rpc::Exchange;
-using oio::kinetic::rpc::GetLog;
+using oio::kinetic::client::Exchange;
+using oio::kinetic::client::GetLog;
 
 static std::map<std::string, std::string> REGISTRATIONS;
 

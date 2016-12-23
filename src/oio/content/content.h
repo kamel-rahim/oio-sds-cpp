@@ -24,12 +24,12 @@
 #include <map>
 #include <set>
 
+#include "utils/command.h"
 #include "oio/api/blob.h"
-#include "oio/http/blob.h"
-#include "oio/api/serialize_def.h"
+#include "utils/serialize_def.h"
+#include "oio/blob/http/blob.h"
 #include "oio/directory/command.h"
 #include "oio/content/command.h"
-#include "utils/command.h"
 
 namespace user_content {
 

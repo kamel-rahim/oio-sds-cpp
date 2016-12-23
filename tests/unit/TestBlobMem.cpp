@@ -24,15 +24,15 @@
 
 #include "utils/macros.h"
 #include "utils/utils.h"
-#include "oio/mem/blob.h"
+#include "oio/blob/mem/blob.h"
 #include "tests/common/BlobTestSuite.h"
 
+using oio::api::Status;
+using oio::api::Cause;
 using oio::mem::blob::Cache;
 using oio::mem::blob::UploadBuilder;
 using oio::mem::blob::RemovalBuilder;
 using oio::mem::blob::DownloadBuilder;
-using oio::api::blob::Status;
-using oio::api::blob::Cause;
 
 class MemBlobOpsFactory : public BlobOpsFactory {
  private:

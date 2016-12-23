@@ -26,17 +26,17 @@
 #include <chrono>  // NOLINT
 
 #include "utils/macros.h"
-#include "oio/kinetic/coro/client/ClientInterface.h"
-#include "oio/kinetic/coro/client/CoroutineClientFactory.h"
-#include "oio/kinetic/coro/rpc/Put.h"
-#include "oio/kinetic/coro/blob.h"
+#include "oio/blob/kinetic/coro/ClientInterface.h"
+#include "oio/blob/kinetic/coro/CoroutineClientFactory.h"
+#include "oio/blob/kinetic/coro/RPC.h"
+#include "oio/blob/kinetic/coro/blob.h"
 
 using oio::kinetic::client::CoroutineClientFactory;
 using oio::kinetic::client::ClientInterface;
 using oio::kinetic::client::Sync;
-using oio::kinetic::rpc::Exchange;
-using oio::kinetic::rpc::Slice;
-using oio::kinetic::rpc::Put;
+using oio::kinetic::client::Exchange;
+using oio::kinetic::client::Slice;
+using oio::kinetic::client::Put;
 using oio::kinetic::blob::UploadBuilder;
 
 using Clock = std::chrono::steady_clock;

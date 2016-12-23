@@ -23,8 +23,8 @@
 
 #include "utils/utils.h"
 #include "oio/api/blob.h"
-#include "oio/kinetic/coro/blob.h"
-#include "oio/kinetic/coro/client/CoroutineClientFactory.h"
+#include "oio/blob/kinetic/coro/blob.h"
+#include "oio/blob/kinetic/coro/CoroutineClientFactory.h"
 
 #include "bin/MillDaemon.h"
 #include "bin/kinetic-proxy-headers.h"

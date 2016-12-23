@@ -49,7 +49,7 @@ class UploadBuilder {
 
     ~UploadBuilder();
 
-    void set_param(const ec_cmd &_param) {
+    void set_param(const EcCommand &_param) {
         param = _param;
     }
 
@@ -61,7 +61,7 @@ class UploadBuilder {
 
  private:
     std::map<std::string, std::string> xattrs;
-    ec_cmd param;
+    EcCommand param;
 };
 
 class DownloadBuilder {
@@ -70,7 +70,7 @@ class DownloadBuilder {
 
     ~DownloadBuilder();
 
-    void set_param(const ec_cmd &_param) {
+    void set_param(const EcCommand &_param) {
         param = _param;
     }
 
@@ -82,7 +82,7 @@ class DownloadBuilder {
 
  private:
     std::map<std::string, std::string> xattrs;
-    ec_cmd param;
+    EcCommand param;
 };
 
 class RemovalBuilder {
@@ -93,13 +93,13 @@ class RemovalBuilder {
 
     inline void BlockSize(uint32_t s) { block_size = s; }
 
-    inline bool Target(const rawxSet &to) {
+    inline bool Target(const RawxUrlSet &to) {
         targets.insert(to);
         return true;
     }
 
  private:
-    std::set<rawxSet> targets;
+    std::set<RawxUrlSet> targets;
     uint32_t block_size;
 };
 
@@ -111,13 +111,13 @@ class ListingBuilder {
 
     inline void BlockSize(uint32_t s) { block_size = s; }
 
-    inline bool Target(const rawxSet &to) {
+    inline bool Target(const RawxUrlSet &to) {
         targets.insert(to);
         return true;
     }
 
  private:
-    std::set<rawxSet> targets;
+    std::set<RawxUrlSet> targets;
     uint32_t block_size;
 };
 

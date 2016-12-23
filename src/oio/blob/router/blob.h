@@ -47,12 +47,12 @@ class UploadBuilder {
 
     ~UploadBuilder();
 
-    void set_ec_param(const ec_cmd &_param) {
+    void set_ec_param(const EcCommand &_param) {
         ec_param = _param;
         type = ec;
     }
 
-    void set_rawx_param(const rawx_cmd &_param) {
+    void set_rawx_param(const RawxCommand &_param) {
         rawx_param = _param;
         type = rawx;
     }
@@ -65,8 +65,8 @@ class UploadBuilder {
 
  private:
     std::map<std::string, std::string> xattrs;
-    ec_cmd   ec_param;
-    rawx_cmd rawx_param;
+    EcCommand   ec_param;
+    RawxCommand rawx_param;
     ENCODING_TYPE type;
 };
 
@@ -77,12 +77,12 @@ class DownloadBuilder {
     ~DownloadBuilder();
 
 
-    void set_ec_param(const ec_cmd &_param) {
+    void set_ec_param(const EcCommand &_param) {
         ec_param = _param;
         type = ec;
     }
 
-    void set_rawx_param(const rawx_cmd &_param) {
+    void set_rawx_param(const RawxCommand &_param) {
         rawx_param = _param;
         type = rawx;
     }
@@ -95,8 +95,8 @@ class DownloadBuilder {
 
  private:
     std::map<std::string, std::string> xattrs;
-    ec_cmd   ec_param;
-    rawx_cmd rawx_param;
+    EcCommand   ec_param;
+    RawxCommand rawx_param;
     ENCODING_TYPE type;
 };
 
@@ -108,13 +108,13 @@ class RemovalBuilder {
 
     inline void BlockSize(uint32_t s) { block_size = s; }
 
-    inline bool Target(const rawxSet &to) {
+    inline bool Target(const RawxUrlSet &to) {
         targets.insert(to);
         return true;
     }
 
  private:
-    std::set<rawxSet> targets;
+    std::set<RawxUrlSet> targets;
     uint32_t block_size;
 };
 
@@ -126,13 +126,13 @@ class ListingBuilder {
 
     inline void BlockSize(uint32_t s) { block_size = s; }
 
-    inline bool Target(const rawxSet &to) {
+    inline bool Target(const RawxUrlSet &to) {
         targets.insert(to);
         return true;
     }
 
  private:
-    std::set<rawxSet> targets;
+    std::set<RawxUrlSet> targets;
     uint32_t block_size;
 };
 

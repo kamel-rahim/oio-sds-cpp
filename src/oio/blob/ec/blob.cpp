@@ -52,7 +52,7 @@ class EcDownload : public oio::api::blob::Download {
     friend class DownloadBuilder;
 
  public:
-    void set_param(const ec_cmd &_param) {
+    void set_param(const EcCommand &_param) {
         param = _param;
     }
 
@@ -171,7 +171,7 @@ out:
             if (socket) {
                 oio::rawx::blob::DownloadBuilder builder;
 
-                rawx_cmd rawx_param;
+                RawxCommand rawx_param;
                 rawx_param = to;
                 builder.set_param(rawx_param);
 
@@ -301,7 +301,7 @@ out:
  private:
     std::vector<uint8_t> buffer;
     std::map<std::string, std::string> xattr;
-    ec_cmd param;
+    EcCommand param;
     char **encoded_data;
     char **encoded_parity;
     uint64_t encoded_fragment_len;
@@ -345,7 +345,7 @@ class EcUpload : public oio::api::blob::Upload {
     friend class UploadBuilder;
 
  public:
-    void set_param(const ec_cmd &_param) {
+    void set_param(const EcCommand &_param) {
         param = _param;
     }
 
@@ -404,9 +404,9 @@ class EcUpload : public oio::api::blob::Upload {
             if (socket) {
                 oio::rawx::blob::UploadBuilder builder;
 
-                rawx_cmd rawx_param;
+                RawxCommand rawx_param;
                 rawx_param = to;
-                rawx_param = param.Range();
+                rawx_param = param.GetRange();
                 builder.set_param(rawx_param);
 
                 builder.ContainerId(xattr.find("container-id")->second);
@@ -478,7 +478,7 @@ class EcUpload : public oio::api::blob::Upload {
             if (socket) {
                 oio::rawx::blob::RemovalBuilder builder;
 
-                rawx_cmd rawx_param;
+                RawxCommand rawx_param;
                 rawx_param = to;
                 builder.set_param(rawx_param);
 
@@ -521,7 +521,7 @@ class EcUpload : public oio::api::blob::Upload {
     EcUpload() {}
 
  private:
-    ec_cmd param;
+    EcCommand param;
     std::vector<uint8_t> buffer;
     std::map<std::string, std::string> xattr;
     char **encoded_data = NULL;

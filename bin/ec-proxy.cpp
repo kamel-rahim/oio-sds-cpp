@@ -80,8 +80,8 @@ struct numeric_only : std::ctype<char> {
 class RouterHandler : public BlobHandler {
  private:
     std::map<std::string, std::string> xattrs;
-    ec_cmd ec_param;
-    rawx_cmd rawx_param;
+    EcCommand ec_param;
+    RawxCommand rawx_param;
 
  public:
     RouterHandler() { ec_param.Clear();
@@ -143,11 +143,11 @@ class RouterHandler : public BlobHandler {
         if (header.Matched()) {
             switch (header.Get()) {
                 case EcHeader::Value::Host: {
-                    rawx_param = _rawx(v);
+                    rawx_param = RawxUrl(v);
                 }
                     break;
                 case EcHeader::Value::ChunkDest: {
-                    rawxSet rawx_p;
+                    RawxUrlSet rawx_p;
 
                     std::string str(k);
                     transform_nondigit_to_space(str);
@@ -155,7 +155,7 @@ class RouterHandler : public BlobHandler {
                     std::stringstream ss(str);
                     ss >> rawx_p.chunk_number;
 
-                    rawx_p = _rawx(v);
+                    rawx_p = RawxUrl(v);
 
 //                    LOG(ERROR) << k << ": " << v;
 
@@ -223,7 +223,7 @@ class RouterHandler : public BlobHandler {
                     ss >> ec_param.size;
                     ec_param.size = ec_param.size + 1 - ec_param.start;
 #ifdef test_rawx
-                    rawx_param = ec_param.Range();
+                    rawx_param = ec_param.GetRange();
 #endif
                 }
                     break;

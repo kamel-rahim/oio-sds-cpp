@@ -24,49 +24,51 @@
 #include <sstream>
 
 
-class _range {
+class Range {
  public:
     uint64_t start;
     uint64_t size;
 
  public:
-    _range()  {  }
-    _range(uint64_t _start, uint64_t _size ) {
-         start = _start;
-         size = _size;
+    ~Range() { Clear(); }
+
+    Range() : start{0}, size{0} {}
+
+    Range(uint64_t _start, uint64_t _size) : start{_start}, size{_size} {}
+
+    Range(const Range &r) : start{r.start}, size{r.size} {}
+
+    Range &operator=(const Range &arg) {
+        start = arg.start;
+        size = arg.size;
+        return *this;
     }
 
-    _range& operator=(const _range& arg) {
-       start = arg.start;
-       size  = arg.size;
-       return *this;
-    }
-
-    void Clear() {
-        start =
-        size  = 0;
-    }
-
-    _range& Range() { return *this; }
+    void Clear() { start = 0, size = 0; }
 };
 
-class _rawx {
-    friend class rawx_cmd;
+class RawxUrl {
+    friend class RawxCommand;
+
     friend class ec_cmd;
+
  private:
     std::string chunk_id;
     std::string host;
     int port;
 
  public:
-    _rawx() { Clear(); }
+    ~RawxUrl() { Clear(); }
+    
+    RawxUrl() { Clear(); }
 
     void Clear() {
-        chunk_id = host = "";
+        chunk_id.clear();
+        host.clear();
         port = 0;
     }
 
-    explicit _rawx(std::string v) {
+    explicit RawxUrl(const std::string v) {
         std::size_t pos = v.find("http");
         // parse: http://IP:port/chink_id
         if (pos != std::string::npos) {
@@ -75,7 +77,7 @@ class _rawx {
                 std::size_t pos2 = v.find(":", pos + 1);  // we need second one
 
                 if (pos2 != std::string::npos) {
-                    std::string str = v.substr(pos + 3, pos2 - pos -3);
+                    std::string str = v.substr(pos + 3, pos2 - pos - 3);
                     host = str;
 
                     str = v.substr(pos2 + 1, 4);
@@ -107,75 +109,78 @@ class _rawx {
         return str;
     }
 
-    std::string & ChunkId() { return chunk_id; }
-    int Port () { return port; }
+    std::string ChunkId() const { return chunk_id; }
 
-    std::string GetString() {
+    int Port() const { return port; }
+
+    std::string GetString() const {
         std::stringstream ss;
         ss << "http://" << host << ":" << port << "/" << chunk_id;
         std::string str = ss.str();
         return str;
     }
 
-    _rawx& operator=(const _rawx& arg) {
-        chunk_id     = arg.chunk_id;
-        host         = arg.host;
-        port         = arg.port;
+    RawxUrl &operator=(const RawxUrl &arg) {
+        chunk_id = arg.chunk_id;
+        host = arg.host;
+        port = arg.port;
         return *this;
     }
 
-    _rawx& Rawx() { return *this; }
+    RawxUrl &Rawx() { return *this; }
 };
 
-struct rawxSet : public _rawx {
+struct RawxUrlSet : public RawxUrl {
     int chunk_number;
 
-    rawxSet() {}
+    RawxUrlSet() {}
 
-    bool operator<(const rawxSet &a) const {
+    bool operator<(const RawxUrlSet &a) const {
         return chunk_number < a.chunk_number;
     }
 
-    bool operator==(const rawxSet &a) const {
+    bool operator==(const RawxUrlSet &a) const {
         return chunk_number == a.chunk_number;
     }
 
-    rawxSet& operator=(const _rawx& arg) {
-        _rawx::operator =(arg);
-       return *this;
+    RawxUrlSet &operator=(const RawxUrl &arg) {
+        RawxUrl::operator=(arg);
+        return *this;
     }
 };
 
-class rawx_cmd : public _rawx, public _range {
+class RawxCommand : public RawxUrl, public Range {
  public:
-     uint32_t ChunkSize;
+    uint32_t ChunkSize;
 
  public:
     void Clear() {
-        _rawx::Clear();
-        _range::Clear();
+        RawxUrl::Clear();
+        Range::Clear();
         ChunkSize = 0;
     }
 
-    rawx_cmd& operator=(const rawx_cmd& arg) {
-        _rawx::operator =(arg);
-        _range::operator =(arg);
+    RawxCommand(): RawxUrl(), Range(), ChunkSize{0} {}
+
+    RawxCommand &operator=(const RawxCommand &arg) {
+        RawxUrl::operator=(arg);
+        Range::operator=(arg);
         ChunkSize = arg.ChunkSize;
         return *this;
     }
 
-    rawx_cmd& operator=(const _rawx& arg) {
-        _rawx::operator =(arg);
+    RawxCommand &operator=(const RawxUrl &arg) {
+        RawxUrl::operator=(arg);
         return *this;
     }
 
-    rawx_cmd& operator=(const rawxSet& arg) {
-        _rawx::operator =(arg);
+    RawxCommand &operator=(const RawxUrlSet &arg) {
+        RawxUrl::operator=(arg);
         return *this;
     }
 
-    rawx_cmd& operator=(const _range& arg) {
-        _range::operator =(arg);
+    RawxCommand &operator=(const Range &arg) {
+        Range::operator=(arg);
         return *this;
     }
 };

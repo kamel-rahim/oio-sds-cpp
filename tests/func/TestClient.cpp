@@ -74,11 +74,11 @@ static void cycle(net::Socket *sptr, const char *url) {
     std::shared_ptr<net::Socket> rawx_socket;
     rawx_socket.reset(new net::MillSocket);
 
-    rawx_cmd rawx_param;
+    RawxCommand rawx_param;
     contentSet ContentSet = bucket.GetData().GetTarget(0);
 
     rawx_param = ContentSet.Rawx();
-    rawx_param = _range(0, 0);  // ContentSet.Range() ;
+    rawx_param = Range(0, 0);  // ContentSet.Range() ;
 
     if (rawx_socket->connect(rawx_param.Host_Port())) {
         oio::rawx::blob::UploadBuilder builder;

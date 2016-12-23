@@ -22,25 +22,23 @@
 #include <set>
 #include <string>
 
-class rawxSet;
-
-class ec_cmd : public _range {
+class EcCommand : public Range {
  public:
-    std::set<rawxSet> targets;
+    std::set<RawxUrlSet> targets;
     std::string req_id;
     int kVal, mVal, nbChunks, EncodingMethod;
     uint32_t ChunkSize;
 
  public:
     void Clear() {
-        _range::Clear();
+        Range::Clear();
         targets.clear();
         req_id = "";
         kVal = mVal = nbChunks = EncodingMethod = ChunkSize = 0;
     }
 
-    ec_cmd& operator=(const ec_cmd& arg) {
-        _range::operator =(arg);
+    EcCommand& operator=(const EcCommand& arg) {
+        Range::operator =(arg);
         for (const auto &to : arg.targets)
           targets.insert(to);
 
@@ -53,8 +51,8 @@ class ec_cmd : public _range {
         return *this;
     }
 
-    _range Range() {
-        return _range(start, size);
+    Range GetRange() {
+        return Range(start, size);
     }
 };
 

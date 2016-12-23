@@ -48,12 +48,12 @@ class RouterDownload : public oio::api::blob::Download {
     friend class DownloadBuilder;
 
  public:
-    void set_ec_param(const ec_cmd &_param) {
+    void set_ec_param(const EcCommand &_param) {
         ec_param = _param;
         type = ec;
     }
 
-    void set_rawx_param(const rawx_cmd &_param) {
+    void set_rawx_param(const RawxCommand &_param) {
         rawx_param = _param;
         type = rawx;
     }
@@ -139,8 +139,8 @@ class RouterDownload : public oio::api::blob::Download {
  private:
     std::vector<uint8_t> buffer;
     std::map<std::string, std::string> xattr;
-    ec_cmd   ec_param;
-    rawx_cmd rawx_param;
+    EcCommand   ec_param;
+    RawxCommand rawx_param;
     ENCODING_TYPE type;
     bool done;
 };
@@ -185,13 +185,13 @@ class RouterUpload : public oio::api::blob::Upload {
     friend class UploadBuilder;
 
  public:
-    void set_ec_param(const ec_cmd &_param) {
+    void set_ec_param(const EcCommand &_param) {
         ec_param = _param;
         ChunkSize = ec_param.ChunkSize;
         type = ec;
     }
 
-    void set_rawx_param(const rawx_cmd &_param) {
+    void set_rawx_param(const RawxCommand &_param) {
         rawx_param = _param;
         ChunkSize = rawx_param.ChunkSize;
         type = rawx;
@@ -292,8 +292,8 @@ class RouterUpload : public oio::api::blob::Upload {
  private:
     std::vector<uint8_t> buffer;
     std::map<std::string, std::string> xattrs;
-    ec_cmd   ec_param;
-    rawx_cmd rawx_param;
+    EcCommand   ec_param;
+    RawxCommand rawx_param;
     uint32_t ChunkSize;
     ENCODING_TYPE type;
 };

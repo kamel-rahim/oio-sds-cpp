@@ -85,7 +85,7 @@ RemovalBuilder::RemovalBuilder() {}
 
 RemovalBuilder::~RemovalBuilder() {}
 
-void RemovalBuilder::set_param(const rawx_cmd &_param) {
+void RemovalBuilder::set_param(const RawxCommand &_param) {
     rawx_param = _param;
     inner.Host(rawx_param.Host_Port());
     inner.Name("/rawx/" + rawx_param.ChunkId());
@@ -152,7 +152,7 @@ UploadBuilder::UploadBuilder() {}
 UploadBuilder::~UploadBuilder() {}
 
 
-void UploadBuilder::set_param(const rawx_cmd &_param) {
+void UploadBuilder::set_param(const RawxCommand &_param) {
     rawx_param = _param;
     std::stringstream ss;
     ss << rawx_param.size << '.' << 0;
@@ -215,7 +215,7 @@ class RawxDownload : public Download {
 
  private:
     std::unique_ptr<Download> inner;
-    rawx_cmd rawx_param;
+    RawxCommand rawx_param;
     Step step_;
 
  public:
@@ -223,7 +223,7 @@ class RawxDownload : public Download {
 
     ~RawxDownload() {}
 
-    void set_param(const rawx_cmd &_param) {
+    void set_param(const RawxCommand &_param) {
         rawx_param = _param;
     }
 
@@ -263,7 +263,7 @@ DownloadBuilder::DownloadBuilder() {}
 
 DownloadBuilder::~DownloadBuilder() {}
 
-void DownloadBuilder::set_param(const rawx_cmd &_param) {
+void DownloadBuilder::set_param(const RawxCommand &_param) {
     rawx_param = _param;
     inner.Host(rawx_param.Host_Port());
     inner.Name("/rawx/" + rawx_param.ChunkId());

@@ -86,9 +86,9 @@ oio_err oio_sds::upload(std::string filepath, bool autocreate) {
 
             contentSet ContentSet = bucket.GetData().GetTarget(metachunk);
 
-            rawx_cmd rawx_param;
+            RawxCommand rawx_param;
             rawx_param = ContentSet.Rawx();
-            rawx_param = _range(0, ret);  // ContentSet.Range();
+            rawx_param = Range(0, ret);  // ContentSet.Range();
 
             ContentSet.size = ret;
             ContentSet.pos  = metachunk;
@@ -172,9 +172,9 @@ oio_err oio_sds::download(std::string filepath) {
 
     // replace rawx call by router and implement xcopies, plain & EC
 
-            rawx_cmd rawx_param;
+            RawxCommand rawx_param;
             rawx_param = ContentSet.Rawx();
-            rawx_param = _range(0, ContentSet.size);  // ContentSet.Range();
+            rawx_param = Range(0, ContentSet.size);  // ContentSet.Range();
 
 
             std::shared_ptr<net::Socket> rawx_socket;

@@ -34,12 +34,12 @@
 
 #include "oio/http/socket_map.h"
 
+using oio::api::Status;
+using oio::api::Errno;
+using oio::api::Cause;
 using oio::router::blob::DownloadBuilder;
 using oio::router::blob::RemovalBuilder;
 using oio::router::blob::UploadBuilder;
-using oio::api::blob::Status;
-using oio::api::blob::Errno;
-using oio::api::blob::Cause;
 
 namespace blob = ::oio::api::blob;
 

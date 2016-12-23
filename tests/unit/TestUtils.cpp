@@ -24,9 +24,9 @@
 #include "utils/utils.h"
 #include "oio/api/blob.h"
 
-using oio::api::blob::Status;
-using oio::api::blob::Cause;
-using oio::api::blob::Errno;
+using oio::api::Status;
+using oio::api::Cause;
+using oio::api::Errno;
 
 TEST(Utils, Checksum) {
     auto checksum = checksum_make_MD5();

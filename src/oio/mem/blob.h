@@ -76,7 +76,7 @@ class Cache {
      * @param name the name of the entry
      * @return
      */
-    oio::api::blob::Status Create(const std::string &name);
+    oio::api::Status Create(const std::string &name);
 
     /**
      * Append data to an entry in pending state
@@ -85,7 +85,7 @@ class Cache {
      * @param len
      * @return
      */
-    oio::api::blob::Status Write(const std::string &name,
+    oio::api::Status Write(const std::string &name,
             const uint8_t *buf, uint32_t len);
 
     /**
@@ -95,7 +95,7 @@ class Cache {
      * @param v
      * @return
      */
-    oio::api::blob::Status Xattr(const std::string &name,
+    oio::api::Status Xattr(const std::string &name,
             const std::string &k, const std::string &v);
 
     /**
@@ -103,14 +103,14 @@ class Cache {
      * @param name the name of the entry
      * @return
      */
-    oio::api::blob::Status Commit(const std::string &name);
+    oio::api::Status Commit(const std::string &name);
 
     /**
      * Removes an entry in pending state
      * @param name the name of the entry
      * @return
      */
-    oio::api::blob::Status Abort(const std::string &name);
+    oio::api::Status Abort(const std::string &name);
 
     /**
      * Returns the value associated to the given key in the cache
@@ -118,7 +118,7 @@ class Cache {
      * @param out
      * @return
      */
-    oio::api::blob::Status Get(const std::string &name,
+    oio::api::Status Get(const std::string &name,
                                std::vector<uint8_t> *out);
 
     /**

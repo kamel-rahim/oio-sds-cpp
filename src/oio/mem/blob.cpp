@@ -20,9 +20,9 @@
 
 #include "oio/mem/blob.h"
 
-using oio::api::blob::Cause;
+using oio::api::Cause;
+using oio::api::Status;
 using Step = oio::api::blob::TransactionStep;
-using oio::api::blob::Status;
 using oio::api::blob::Upload;
 using oio::api::blob::Download;
 using oio::api::blob::Removal;
@@ -37,7 +37,7 @@ void Cache::Item::Write(const uint8_t *buf, size_t len) {
     ::memcpy(data.data() + old_len, buf, len);
 }
 
-oio::api::blob::Status Cache::Create(const std::string &name) {
+Status Cache::Create(const std::string &name) {
     auto it = items.find(name);
     if (it != items.end())
         return Status(Cause::Already);
@@ -45,7 +45,7 @@ oio::api::blob::Status Cache::Create(const std::string &name) {
     return Status();
 }
 
-oio::api::blob::Status Cache::Commit(const std::string &name) {
+Status Cache::Commit(const std::string &name) {
     auto it = items.find(name);
     if (it == items.end())
         return Status(Cause::NotFound);
@@ -55,7 +55,7 @@ oio::api::blob::Status Cache::Commit(const std::string &name) {
     return Status(Cause::OK);
 }
 
-oio::api::blob::Status Cache::Abort(const std::string &name) {
+Status Cache::Abort(const std::string &name) {
     auto it = items.find(name);
     if (it == items.end())
         return Status(Cause::OK);
@@ -65,7 +65,7 @@ oio::api::blob::Status Cache::Abort(const std::string &name) {
     return Status(Cause::OK);
 }
 
-oio::api::blob::Status Cache::Write(const std::string &name,
+Status Cache::Write(const std::string &name,
         const uint8_t *buf, uint32_t len) {
     auto it = items.find(name);
     if (it != items.end()) {
@@ -78,7 +78,7 @@ oio::api::blob::Status Cache::Write(const std::string &name,
     return Status(Cause::NotFound);
 }
 
-oio::api::blob::Status Cache::Xattr(const std::string &name,
+Status Cache::Xattr(const std::string &name,
         const std::string &k, const std::string &v) {
     auto it = items.find(name);
     if (it == items.end())
@@ -89,7 +89,7 @@ oio::api::blob::Status Cache::Xattr(const std::string &name,
     return Status();
 }
 
-oio::api::blob::Status Cache::Get(const std::string &name,
+Status Cache::Get(const std::string &name,
         std::vector<uint8_t> *out) {
     assert(out != nullptr);
     auto it = items.find(name);

@@ -25,6 +25,9 @@
 #include "utils/Http.h"
 #include "oio/http/blob.h"
 
+using oio::api::Status;
+using oio::api::Errno;
+using oio::api::Cause;
 using http::Code;
 using oio::http::imperative::RemovalBuilder;
 using oio::http::imperative::UploadBuilder;
@@ -32,9 +35,6 @@ using oio::http::imperative::DownloadBuilder;
 using oio::api::blob::Removal;
 using oio::api::blob::Upload;
 using oio::api::blob::Download;
-using oio::api::blob::Status;
-using oio::api::blob::Errno;
-using oio::api::blob::Cause;
 using Step = oio::api::blob::TransactionStep;
 
 DEFINE_bool(blob_http_trace, false, "Log all calls to the blob HTTP client");

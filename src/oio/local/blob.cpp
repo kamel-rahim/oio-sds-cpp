@@ -31,12 +31,12 @@
 
 #include "utils/macros.h"
 
+using oio::api::Status;
+using oio::api::Errno;
+using oio::api::Cause;
 using oio::local::blob::DownloadBuilder;
 using oio::local::blob::RemovalBuilder;
 using oio::local::blob::UploadBuilder;
-using oio::api::blob::Status;
-using oio::api::blob::Errno;
-using oio::api::blob::Cause;
 using Step = oio::api::blob::TransactionStep;
 
 DEFINE_uint64(mode_mkdir, 0755, "Mode for freshly create directories");

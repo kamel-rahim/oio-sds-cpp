@@ -25,9 +25,9 @@
 #include "utils/net.h"
 #include "oio/http/blob.h"
 
+using oio::api::Cause;
 using oio::http::imperative::UploadBuilder;
 namespace blob = oio::api::blob;
-using blob::Cause;
 
 static void _load_env(std::string *dst, const char *key) {
     assert(dst != nullptr);

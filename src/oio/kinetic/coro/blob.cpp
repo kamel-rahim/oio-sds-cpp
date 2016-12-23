@@ -36,6 +36,8 @@
 #include "oio/kinetic/coro/rpc/Delete.h"
 #include "oio/kinetic/coro/rpc/GetKeyRange.h"
 
+using oio::api::Cause;
+using oio::api::Status;
 using oio::kinetic::blob::ListingBuilder;
 using oio::kinetic::blob::DownloadBuilder;
 using oio::kinetic::blob::RemovalBuilder;
@@ -50,8 +52,6 @@ using oio::kinetic::rpc::GetKeyRange;
 
 namespace blob = ::oio::api::blob;
 using Step = blob::TransactionStep;
-using blob::Status;
-using blob::Cause;
 
 struct PendingGet {
     uint32_t sequence;

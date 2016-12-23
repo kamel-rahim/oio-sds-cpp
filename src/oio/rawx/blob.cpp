@@ -32,14 +32,14 @@
 #include "utils/Http.h"
 #include "oio/api/blob.h"
 
+using oio::api::Cause;
+using oio::api::Status;
 using oio::rawx::blob::RemovalBuilder;
 using oio::rawx::blob::UploadBuilder;
 using oio::rawx::blob::DownloadBuilder;
 using oio::api::blob::Removal;
 using oio::api::blob::Upload;
 using oio::api::blob::Download;
-using oio::api::blob::Status;
-using oio::api::blob::Cause;
 using Step = oio::api::blob::TransactionStep;
 
 /**

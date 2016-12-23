@@ -28,24 +28,21 @@
 #include <map>
 #include <vector>
 
-// JFS: Under certain circumstances, the subsequent header declare an str()
-// macro colliding with a glog usage as with a iostream method declaration. One
-// way to cope with this is to include glog/logging.h BEFORE, but it would place
-// a C++ header before the C header (thus breaking a cpplint rule). I prefer the
-// case where the exception is the problematic header.
 #include <liberasurecode/erasurecode_helpers.h>  // NOLINT
+// A shady bastard dared defining a macro name `str`.
+#undef str
 
 #include "utils/utils.h"
 #include "oio/ec/blob.h"
 #include "oio/rawx/blob.h"
 #include "oio/http/socket_map.h"
 
+using oio::api::Cause;
+using oio::api::Status;
+using oio::api::Errno;
 using oio::ec::blob::DownloadBuilder;
 using oio::ec::blob::RemovalBuilder;
 using oio::ec::blob::UploadBuilder;
-using oio::api::blob::Status;
-using oio::api::blob::Errno;
-using oio::api::blob::Cause;
 
 namespace blob = ::oio::api::blob;
 

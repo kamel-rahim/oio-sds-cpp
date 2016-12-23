@@ -28,7 +28,7 @@
 using oio::local::blob::UploadBuilder;
 using oio::local::blob::DownloadBuilder;
 using oio::local::blob::RemovalBuilder;
-using oio::api::blob::Cause;
+using oio::api::Cause;
 
 DEFINE_string(test_file_path,
               "/tmp/blob-",

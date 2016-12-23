@@ -16,6 +16,8 @@
  * License along with this library.
  */
 
+#include "oio/blob/kinetic/coro/blob.h"
+
 #include <libmill.h>
 #include <rapidjson/filereadstream.h>
 #include <rapidjson/document.h>
@@ -30,11 +32,7 @@
 
 #include "utils/macros.h"
 #include "oio/api/blob.h"
-#include "blob.h"
-#include "oio/blob/kinetic/coro/rpc/Get.h"
-#include "oio/blob/kinetic/coro/rpc/Put.h"
-#include "oio/blob/kinetic/coro/rpc/Delete.h"
-#include "oio/blob/kinetic/coro/rpc/GetKeyRange.h"
+#include "RPC.h"
 
 using oio::api::Cause;
 using oio::api::Status;
@@ -45,10 +43,10 @@ using oio::kinetic::blob::UploadBuilder;
 using oio::kinetic::client::ClientInterface;
 using oio::kinetic::client::ClientFactory;
 using oio::kinetic::client::Sync;
-using oio::kinetic::rpc::Put;
-using oio::kinetic::rpc::Get;
-using oio::kinetic::rpc::Delete;
-using oio::kinetic::rpc::GetKeyRange;
+using oio::kinetic::client::Put;
+using oio::kinetic::client::Get;
+using oio::kinetic::client::Delete;
+using oio::kinetic::client::GetKeyRange;
 
 namespace blob = ::oio::api::blob;
 using Step = blob::TransactionStep;

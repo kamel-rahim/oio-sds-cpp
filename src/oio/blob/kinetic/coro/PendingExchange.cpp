@@ -16,17 +16,15 @@
  * License along with this library.
  */
 
-#include <libmill.h>
-
-#include <cstdint>
-
 #include "PendingExchange.h"
+
+#include <libmill.h>
 
 using oio::kinetic::client::PendingExchange;
 
 int64_t oio::kinetic::client::rpc_default_ttl = OIO_KINETIC_RPC_DEFAULT_TTL;
 
-PendingExchange::PendingExchange(oio::kinetic::rpc::Exchange *e) :
+PendingExchange::PendingExchange(oio::kinetic::client::Exchange *e) :
         exchange_(e), notification_{nullptr}, sequence_id_{0} {
     notification_ = chmake(int, 1);
     deadline_ = mill_now() + oio::kinetic::client::rpc_default_ttl;
@@ -60,7 +58,7 @@ void PendingExchange::Wait() {
     (void) rc;
 }
 
-void PendingExchange::ManageReply(oio::kinetic::rpc::Request *rep) {
+void PendingExchange::ManageReply(oio::kinetic::client::Request *rep) {
     assert(exchange_ != nullptr);
     return exchange_->ManageReply(rep);
 }
@@ -70,8 +68,8 @@ void PendingExchange::ManageError(int errcode) {
     return exchange_->ManageError(errcode);
 }
 
-int PendingExchange::Write(net::Channel *chan, oio::kinetic::rpc::Context *ctx,
-        int64_t dl) {
+int PendingExchange::Write(net::Channel *chan,
+        oio::kinetic::client::Context *ctx, int64_t dl) {
     if (exchange_ == nullptr)
         return ECANCELED;
     SetSequence(ctx->sequence_id_ ++);

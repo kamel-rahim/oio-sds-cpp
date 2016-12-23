@@ -16,9 +16,9 @@
  * License along with this library.
  */
 
-#include <cassert>
+#include "oio/blob/mem/blob.h"
 
-#include "blob.h"
+#include <cassert>
 
 using oio::api::Cause;
 using oio::api::Status;

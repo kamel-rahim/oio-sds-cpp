@@ -16,11 +16,12 @@
  * License along with this library.
  */
 
-#ifndef SRC_OIO_KINETIC_CORO_CLIENT_PENDINGEXCHANGE_H_
-#define SRC_OIO_KINETIC_CORO_CLIENT_PENDINGEXCHANGE_H_
+#ifndef SRC_OIO_BLOB_KINETIC_CORO_PENDINGEXCHANGE_H_
+#define SRC_OIO_BLOB_KINETIC_CORO_PENDINGEXCHANGE_H_
 
 #include <cstdint>
-#include "oio/blob/kinetic/coro/rpc/Exchange.h"
+
+#include "oio/blob/kinetic/coro/RPC.h"
 #include "ClientInterface.h"
 
 /**
@@ -42,7 +43,7 @@ extern int64_t rpc_default_ttl;
 
 class PendingExchange : public Sync {
  public:
-    explicit PendingExchange(oio::kinetic::rpc::Exchange *e);
+    explicit PendingExchange(oio::kinetic::client::Exchange *e);
 
     ~PendingExchange();
 
@@ -54,13 +55,14 @@ class PendingExchange : public Sync {
 
     inline int64_t Deadline() const { return deadline_; }
 
-    int Write(net::Channel *chan, oio::kinetic::rpc::Context *ctx, int64_t dl);
+    int Write(net::Channel *chan, oio::kinetic::client::Context *ctx,
+            int64_t dl);
 
     /**
      * A reply hass been received.
      * @param rep
      */
-    void ManageReply(oio::kinetic::rpc::Request *rep);
+    void ManageReply(oio::kinetic::client::Request *rep);
 
     /**
      * A Network error occured. No reply could be received, and there is no clue
@@ -74,7 +76,7 @@ class PendingExchange : public Sync {
     void Wait();
 
  private:
-    oio::kinetic::rpc::Exchange *exchange_;
+    oio::kinetic::client::Exchange *exchange_;
     struct mill_chan *notification_;
     int64_t sequence_id_;
     int64_t deadline_;
@@ -85,4 +87,4 @@ class PendingExchange : public Sync {
 }  // namespace oio
 
 
-#endif  // SRC_OIO_KINETIC_CORO_CLIENT_PENDINGEXCHANGE_H_
+#endif  // SRC_OIO_BLOB_KINETIC_CORO_PENDINGEXCHANGE_H_

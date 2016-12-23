@@ -16,22 +16,23 @@
  * License along with this library.
  */
 
+#include "CoroutineClient.h"
+
 #include <netinet/in.h>
 
 #include <libmill.h>
 
 #include <utility>
 #include <algorithm>
-#include <sstream>
 
+#include <sstream>
 #include "utils/macros.h"
 #include "utils/utils.h"
 #include "utils/net.h"
-#include "CoroutineClient.h"
 
 using net::MillSocket;
-using oio::kinetic::rpc::Request;
-using oio::kinetic::rpc::Exchange;
+using oio::kinetic::client::Request;
+using oio::kinetic::client::Exchange;
 using oio::kinetic::client::CoroutineClient;
 using oio::kinetic::client::Sync;
 
@@ -79,7 +80,7 @@ CoroutineClient::pop_rpc(int64_t seqid) {
     return pe;
 }
 
-bool CoroutineClient::manage(oio::kinetic::rpc::Request *req) {
+bool CoroutineClient::manage(oio::kinetic::client::Request *req) {
     const auto id = req->cmd.header().connectionid();
     if (id > 0)
         ctx.cnx_id_ = id;
@@ -126,7 +127,7 @@ coroutine void CoroutineClient::run_agent_consumer(chan done) {
 
     // wait for a banner
     while (running_) {
-        oio::kinetic::rpc::Request banner;
+        oio::kinetic::client::Request banner;
         int err = banner.Read(sock_.get(), handshake_deadline);
         if (err == 0) {
             if (banner.cmd.status().code() !=
@@ -149,7 +150,7 @@ coroutine void CoroutineClient::run_agent_consumer(chan done) {
 
         // consume frames from the device
         while (running_) {
-            oio::kinetic::rpc::Request msg;
+            oio::kinetic::client::Request msg;
             int err = msg.Read(sock_.get(), mill_now() + 1000);
             if (err == 0) {
                 if (!manage(&msg)) {

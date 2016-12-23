@@ -16,8 +16,8 @@
  * License along with this library.
  */
 
-#ifndef SRC_OIO_HTTP_BLOB_H_
-#define SRC_OIO_HTTP_BLOB_H_
+#ifndef SRC_OIO_BLOB_HTTP_BLOB_H__
+#define SRC_OIO_BLOB_HTTP_BLOB_H__
 
 #include <string>
 #include <memory>
@@ -104,4 +104,4 @@ class RemovalBuilder {
 }  // namespace http
 }  // namespace oio
 
-#endif  // SRC_OIO_HTTP_BLOB_H_
+#endif  // SRC_OIO_BLOB_HTTP_BLOB_H__

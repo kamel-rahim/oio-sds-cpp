@@ -16,8 +16,8 @@
  * License along with this library.
  */
 
-#ifndef SRC_OIO_API_SERIALIZE_DEF_H_
-#define SRC_OIO_API_SERIALIZE_DEF_H_
+#ifndef SRC_UTILS_SERIALIZE_DEF_H_
+#define SRC_UTILS_SERIALIZE_DEF_H_
 
 #define MAX_DELAY 5000
 
@@ -74,4 +74,4 @@
 #define read_num(ss, num)\
         ss >> num;
 
-#endif  // SRC_OIO_API_SERIALIZE_DEF_H_
+#endif  // SRC_UTILS_SERIALIZE_DEF_H_

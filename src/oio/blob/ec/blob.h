@@ -16,8 +16,8 @@
  * License along with this library.
  */
 
-#ifndef SRC_OIO_EC_BLOB_H_
-#define SRC_OIO_EC_BLOB_H_
+#ifndef SRC_OIO_BLOB_EC_BLOB_H_
+#define SRC_OIO_BLOB_EC_BLOB_H_
 
 #include <oio/api/blob.h>
 
@@ -27,10 +27,10 @@
 #include <iostream>
 #include <set>
 #include <sstream>
+
 #include "utils/net.h"
 #include "utils/serialize_def.h"
-#include "oio/blob/rawx/command.h"
-#include "command.h"
+#include "oio/blob/ec/command.h"
 
 namespace oio {
 namespace ec {
@@ -125,4 +125,4 @@ class ListingBuilder {
 }  // namespace ec
 }  // namespace oio
 
-#endif  // SRC_OIO_EC_BLOB_H_
+#endif  // SRC_OIO_BLOB_EC_BLOB_H_

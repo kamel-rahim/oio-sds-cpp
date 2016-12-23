@@ -16,7 +16,7 @@
  * License along with this library.
  */
 
-#include "blob.h"
+#include "oio/blob/rawx/blob.h"
 
 #include <cassert>
 #include <string>

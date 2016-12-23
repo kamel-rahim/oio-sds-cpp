@@ -18,7 +18,7 @@
 
 #include "utils/macros.h"
 
-#include "common.h"
+#include "oio/api/common.h"
 
 using oio::api::Status;
 using oio::api::Cause;

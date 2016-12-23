@@ -19,6 +19,8 @@
 #ifndef SRC_OIO_API_COMMON_H_
 #define SRC_OIO_API_COMMON_H_
 
+#include <string>
+
 namespace oio {
 namespace api {
 

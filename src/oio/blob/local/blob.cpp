@@ -16,7 +16,7 @@
  * License along with this library.
  */
 
-#include "blob.h"
+#include "oio/blob/local/blob.h"
 
 #include <fcntl.h>
 #include <unistd.h>

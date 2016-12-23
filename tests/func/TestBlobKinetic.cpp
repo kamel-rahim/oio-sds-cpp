@@ -25,8 +25,8 @@
 #include "utils/macros.h"
 #include "utils/utils.h"
 #include "oio/api/blob.h"
-#include "oio/blob/kinetic/coro/client/ClientInterface.h"
-#include "oio/blob/kinetic/coro/client/CoroutineClientFactory.h"
+#include "oio/blob/kinetic/coro/ClientInterface.h"
+#include "oio/blob/kinetic/coro/CoroutineClientFactory.h"
 #include "oio/blob/kinetic/coro/blob.h"
 #include "tests/common/BlobTestSuite.h"
 

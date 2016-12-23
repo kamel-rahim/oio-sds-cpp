@@ -16,8 +16,8 @@
  * License along with this library.
  */
 
-#ifndef SRC_OIO_RAWX_COMMAND_H_
-#define SRC_OIO_RAWX_COMMAND_H_
+#ifndef SRC_OIO_BLOB_RAWX_COMMAND_H_
+#define SRC_OIO_BLOB_RAWX_COMMAND_H_
 
 #include <string>
 #include <iostream>
@@ -180,4 +180,4 @@ class rawx_cmd : public _rawx, public _range {
     }
 };
 
-#endif  // SRC_OIO_RAWX_COMMAND_H_
+#endif  // SRC_OIO_BLOB_RAWX_COMMAND_H_

@@ -23,23 +23,19 @@
 #include <cassert>
 
 #include "utils/macros.h"
-#include "oio/blob/kinetic/coro/rpc/Put.h"
-#include "oio/blob/kinetic/coro/rpc/Get.h"
-#include "oio/blob/kinetic/coro/rpc/GetNext.h"
-#include "oio/blob/kinetic/coro/rpc/GetKeyRange.h"
-#include "oio/blob/kinetic/coro/rpc/GetLog.h"
-#include "oio/blob/kinetic/coro/client/CoroutineClient.h"
-#include "oio/blob/kinetic/coro/client/CoroutineClientFactory.h"
+#include "oio/blob/kinetic/coro/RPC.h"
+#include "oio/blob/kinetic/coro/CoroutineClient.h"
+#include "oio/blob/kinetic/coro/CoroutineClientFactory.h"
 
 using oio::kinetic::client::ClientInterface;
 using oio::kinetic::client::CoroutineClientFactory;
 using oio::kinetic::client::Sync;
-using oio::kinetic::rpc::Exchange;
-using oio::kinetic::rpc::Put;
-using oio::kinetic::rpc::Get;
-using oio::kinetic::rpc::GetKeyRange;
-using oio::kinetic::rpc::GetNext;
-using oio::kinetic::rpc::GetLog;
+using oio::kinetic::client::Exchange;
+using oio::kinetic::client::Put;
+using oio::kinetic::client::Get;
+using oio::kinetic::client::GetKeyRange;
+using oio::kinetic::client::GetNext;
+using oio::kinetic::client::GetLog;
 
 DEFINE_string(url_device, "", "URL of the Kinetic device");
 

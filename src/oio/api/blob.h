@@ -23,7 +23,7 @@
 #include <string>
 #include <vector>
 
-#include "common.h"
+#include "oio/api/common.h"
 
 namespace oio {
 namespace api {

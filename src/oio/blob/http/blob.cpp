@@ -23,7 +23,7 @@
 #include <vector>
 
 #include "utils/Http.h"
-#include "blob.h"
+#include "oio/blob/http/blob.h"
 
 using oio::api::Status;
 using oio::api::Errno;

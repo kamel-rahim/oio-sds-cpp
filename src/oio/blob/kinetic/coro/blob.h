@@ -16,8 +16,8 @@
  * License along with this library.
  */
 
-#ifndef SRC_OIO_KINETIC_CORO_BLOB_H_
-#define SRC_OIO_KINETIC_CORO_BLOB_H_
+#ifndef SRC_OIO_BLOB_KINETIC_CORO_BLOB_H_
+#define SRC_OIO_BLOB_KINETIC_CORO_BLOB_H_
 
 #include <string>
 #include <map>
@@ -25,7 +25,7 @@
 #include <memory>
 
 #include "oio/api/blob.h"
-#include "oio/blob/kinetic/coro/client/ClientInterface.h"
+#include "ClientInterface.h"
 
 namespace oio {
 namespace kinetic {
@@ -128,4 +128,4 @@ class ListingBuilder {
 }  // namespace kinetic
 }  // namespace oio
 
-#endif  // SRC_OIO_KINETIC_CORO_BLOB_H_
+#endif  // SRC_OIO_BLOB_KINETIC_CORO_BLOB_H_

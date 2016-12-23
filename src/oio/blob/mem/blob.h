@@ -16,8 +16,8 @@
  * License along with this library.
  */
 
-#ifndef SRC_OIO_MEM_BLOB_H_
-#define SRC_OIO_MEM_BLOB_H_
+#ifndef SRC_OIO_BLOB_MEM_BLOB_H_
+#define SRC_OIO_BLOB_MEM_BLOB_H_
 
 #include <memory>
 #include <vector>
@@ -206,4 +206,4 @@ class ListingBuilder {
 }  // namespace oio
 
 
-#endif  // SRC_OIO_MEM_BLOB_H_
+#endif  // SRC_OIO_BLOB_MEM_BLOB_H_

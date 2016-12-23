@@ -16,8 +16,8 @@
  * License along with this library.
  */
 
-#ifndef SRC_OIO_KINETIC_CORO_CLIENT_COROUTINECLIENT_H_
-#define SRC_OIO_KINETIC_CORO_CLIENT_COROUTINECLIENT_H_
+#ifndef SRC_OIO_BLOB_KINETIC_CORO_COROUTINECLIENT_H_
+#define SRC_OIO_BLOB_KINETIC_CORO_COROUTINECLIENT_H_
 
 #include <src/kinetic.pb.h>
 
@@ -29,9 +29,10 @@
 
 #include "utils/utils.h"
 #include "utils/net.h"
-#include "oio/blob/kinetic/coro/rpc/Exchange.h"
+
+#include "oio/blob/kinetic/coro/RPC.h"
 #include "ClientInterface.h"
-#include "PendingExchange.h"
+#include "oio/blob/kinetic/coro/PendingExchange.h"
 
 #define SIGNAL_AGENT_STOP 0
 #define SIGNAL_AGENT_DATA 1
@@ -42,14 +43,13 @@ namespace oio {
 namespace kinetic {
 namespace client {
 
-
 namespace proto = ::com::seagate::kinetic::proto;
 
 class CoroutineClient : public ClientInterface {
  private:
     std::string url_;
     std::shared_ptr<net::Socket> sock_;
-    oio::kinetic::rpc::Context ctx;
+    oio::kinetic::client::Context ctx;
 
     std::queue<std::shared_ptr<PendingExchange>> waiting_;
     std::vector<std::shared_ptr<PendingExchange>> pending_;
@@ -71,14 +71,14 @@ class CoroutineClient : public ClientInterface {
     /**
      * @see ClientInterface::Start()
      */
-    std::shared_ptr<Sync> RPC(oio::kinetic::rpc::Exchange *ex) override;
+    std::shared_ptr<Sync> RPC(oio::kinetic::client::Exchange *ex) override;
 
     /**
      * Manage the frame just received from the socket
      * @param req
      * @return
      */
-    bool manage(oio::kinetic::rpc::Request *req);
+    bool manage(oio::kinetic::client::Request *req);
 
     /**
      * Start the RPC right out of the queue
@@ -129,4 +129,4 @@ class CoroutineClient : public ClientInterface {
 }  // namespace kinetic
 }  // namespace oio
 
-#endif  // SRC_OIO_KINETIC_CORO_CLIENT_COROUTINECLIENT_H_
+#endif  // SRC_OIO_BLOB_KINETIC_CORO_COROUTINECLIENT_H_

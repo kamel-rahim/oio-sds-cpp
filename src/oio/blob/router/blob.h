@@ -16,8 +16,8 @@
  * License along with this library.
  */
 
-#ifndef SRC_OIO_ROUTER_BLOB_H_
-#define SRC_OIO_ROUTER_BLOB_H_
+#ifndef SRC_OIO_BLOB_ROUTER_BLOB_H_
+#define SRC_OIO_BLOB_ROUTER_BLOB_H_
 
 #include <oio/api/blob.h>
 
@@ -140,4 +140,4 @@ class ListingBuilder {
 }  // namespace router
 }  // namespace oio
 
-#endif  // SRC_OIO_ROUTER_BLOB_H_
+#endif  // SRC_OIO_BLOB_ROUTER_BLOB_H_

@@ -16,35 +16,21 @@
  * License along with this library.
  */
 
-#include "utils/macros.h"
-#include "oio/blob/kinetic/coro/client/ClientInterface.h"
-#include "Get.h"
+#include "CoroutineClientFactory.h"
+#include "CoroutineClient.h"
 
 using oio::kinetic::client::ClientInterface;
-using oio::kinetic::rpc::Get;
-namespace proto = ::com::seagate::kinetic::proto;
+using oio::kinetic::client::CoroutineClient;
+using oio::kinetic::client::CoroutineClientFactory;
 
-Get::Get() : Exchange(), out_() {
-    auto h = cmd.mutable_header();
-    h->set_messagetype(proto::Command_MessageType_GET);
-    auto kv = cmd.mutable_body()->mutable_keyvalue();
-    kv->set_algorithm(proto::Command_Algorithm_SHA1);
-}
+std::shared_ptr<ClientInterface>
+CoroutineClientFactory::Get(const std::string &url) {
+    auto it = cnx.find(url);
+    if (it != cnx.end())
+        return it->second;
 
-Get::~Get() {}
-
-void Get::ManageReply(Request *rep) {
-    checkStatus(rep);
-    if (status_) {
-        out_.clear();
-        out_.swap(rep->value);
-    }
-}
-
-void Get::Key(const char *k) {
-    cmd.mutable_body()->mutable_keyvalue()->set_key(k);
-}
-
-void Get::Key(const std::string &k) {
-    cmd.mutable_body()->mutable_keyvalue()->set_key(k);
+    CoroutineClient *client = new CoroutineClient(url);
+    std::shared_ptr<ClientInterface> shared(client);
+    cnx[url] = shared;
+    return shared;
 }

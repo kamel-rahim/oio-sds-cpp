@@ -16,47 +16,33 @@
  * License along with this library.
  */
 
-#ifndef SRC_OIO_KINETIC_CORO_CLIENT_CLIENTINTERFACE_H_
-#define SRC_OIO_KINETIC_CORO_CLIENT_CLIENTINTERFACE_H_
-
-#include <src/kinetic.pb.h>
+#ifndef SRC_OIO_BLOB_KINETIC_CORO_COROUTINECLIENTFACTORY_H_
+#define SRC_OIO_BLOB_KINETIC_CORO_COROUTINECLIENTFACTORY_H_
 
 #include <memory>
+#include <map>
 #include <string>
-#include <vector>
 
-#include "oio/blob/kinetic/coro/rpc/Exchange.h"
+#include "ClientInterface.h"
 
 namespace oio {
 namespace kinetic {
 namespace client {
 
-/* Represents a pending RPC */
-class Sync {
+class CoroutineClientFactory : public ClientFactory {
  public:
-    virtual ~Sync() {}
+    CoroutineClientFactory() : cnx() {}
 
-    virtual void Wait() = 0;
-};
+    ~CoroutineClientFactory() {}
 
-class ClientInterface {
- public:
-    virtual std::shared_ptr<Sync> RPC(
-            oio::kinetic::rpc::Exchange *ex) = 0;
+    std::shared_ptr<ClientInterface> Get(const std::string &url);
 
-    virtual std::string Id() const = 0;
-};
-
-class ClientFactory {
- public:
-    ~ClientFactory() {}
-
-    virtual std::shared_ptr<ClientInterface> Get(
-            const std::string &url) = 0;
+ private:
+    std::map<std::string, std::shared_ptr<ClientInterface>> cnx;
 };
 
 }  // namespace client
 }  // namespace kinetic
 }  // namespace oio
 
-#endif  // SRC_OIO_KINETIC_CORO_CLIENT_CLIENTINTERFACE_H_
+#endif  // SRC_OIO_BLOB_KINETIC_CORO_COROUTINECLIENTFACTORY_H_

@@ -16,8 +16,9 @@
  * License along with this library.
  */
 
-#include <fcntl.h>
+#include "oio/blob/router/blob.h"
 
+#include <fcntl.h>
 #include <libmill.h>
 #include <glog/logging.h>
 
@@ -28,10 +29,8 @@
 #include <vector>
 
 #include "utils/utils.h"
-#include "blob.h"
 #include "oio/blob/ec/blob.h"
 #include "oio/blob/rawx/blob.h"
-
 #include "oio/blob/http/socket_map.h"
 
 using oio::api::Status;

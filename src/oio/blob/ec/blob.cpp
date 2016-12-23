@@ -33,8 +33,8 @@
 #undef str
 
 #include "utils/utils.h"
-#include "blob.h"
 #include "oio/blob/rawx/blob.h"
+#include "oio/blob/ec/blob.h"
 #include "oio/blob/http/socket_map.h"
 
 using oio::api::Cause;

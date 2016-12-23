@@ -26,17 +26,18 @@
 #include <string.h>
 #include <signal.h>
 #include <gtest/gtest.h>
+
 #include "utils/macros.h"
 #include "utils/net.h"
 #include "utils/Http.h"
+#include "utils/serialize_def.h"
+
 #include "oio/directory/dir.h"
 #include "oio/container/container.h"
 #include "oio/content/content.h"
-#include "oio/rawx/blob.h"
-
-#include "utils/serialize_def.h"
-#include "oio/rawx/command.h"
-#include "oio/ec/command.h"
+#include "oio/blob/rawx/blob.h"
+#include "oio/blob/rawx/command.h"
+#include "oio/blob/ec/command.h"
 
 using user_container::container;
 using user_content::content;

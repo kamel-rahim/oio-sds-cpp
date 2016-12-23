@@ -29,7 +29,7 @@
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
 #include "oio/directory/command.h"
-#include "oio/rawx/command.h"
+#include "oio/blob/rawx/command.h"
 
 struct contentSet : public _rawx {
     int chunk_number;

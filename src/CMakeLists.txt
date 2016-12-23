@@ -48,69 +48,69 @@ target_link_libraries(oio-data oio-utils)
 
 
 add_library(oio-data-mem SHARED
-        oio/mem/blob.cpp
-        oio/mem/blob.h)
+		oio/blob/mem/blob.cpp
+		oio/blob/mem/blob.h)
 target_link_libraries(oio-data-mem oio-data)
 
 add_library(oio-data-local SHARED
-        oio/local/blob.cpp
-        oio/local/blob.h)
+		oio/blob/local/blob.cpp
+		oio/blob/local/blob.h)
 target_link_libraries(oio-data-local oio-data)
 
 add_library(oio-data-ec SHARED
-        oio/ec/blob.cpp
-        oio/ec/blob.h)
+		oio/blob/ec/blob.cpp
+		oio/blob/ec/blob.h)
 target_link_libraries(oio-data-ec
         oio-data oio-data-local
         ${EC_LIBRARIES})
 
 add_library(oio-data-router SHARED
-        oio/router/blob.cpp
-        oio/router/blob.h)
+		oio/blob/router/blob.cpp
+		oio/blob/router/blob.h)
 target_link_libraries(oio-data-router
         oio-data oio-data-local oio-data-ec oio-data-rawx
         ${EC_LIBRARIES})
 
 
 add_library(oio-data-http SHARED
-        oio/http/blob.cpp
-        oio/http/blob.h)
+		oio/blob/http/blob.cpp
+		oio/blob/http/blob.h)
 target_link_libraries(oio-data-http
         oio-data oio-http-parser)
 
 
 add_library(oio-data-rawx SHARED
-        oio/rawx/blob.cpp
-        oio/rawx/blob.h)
+		oio/blob/rawx/blob.cpp
+		oio/blob/rawx/blob.h)
 target_link_libraries(oio-data-rawx oio-data-http)
 
 
 add_library(oio-data-kinetic SHARED
-        oio/kinetic/coro/blob.h
-        oio/kinetic/coro/blob.cpp
+		oio/blob/kinetic/coro/blob.h
+		oio/blob/kinetic/coro/blob.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/kinetic.pb.cc
         ${CMAKE_CURRENT_BINARY_DIR}/kinetic.pb.h
-        oio/kinetic/coro/rpc/Exchange.h
-        oio/kinetic/coro/rpc/Exchange.cpp
-        oio/kinetic/coro/rpc/Put.cpp
-        oio/kinetic/coro/rpc/Put.h
-        oio/kinetic/coro/rpc/Get.cpp
-        oio/kinetic/coro/rpc/Get.h
-        oio/kinetic/coro/rpc/GetKeyRange.cpp
-        oio/kinetic/coro/rpc/GetKeyRange.h
-        oio/kinetic/coro/rpc/GetNext.cpp
-        oio/kinetic/coro/rpc/GetNext.h
-        oio/kinetic/coro/rpc/Delete.cpp
-        oio/kinetic/coro/rpc/Delete.h
-        oio/kinetic/coro/rpc/GetLog.cpp
-        oio/kinetic/coro/rpc/GetLog.h
-        oio/kinetic/coro/client/ClientInterface.h
-        oio/kinetic/coro/client/CoroutineClient.cpp
-        oio/kinetic/coro/client/CoroutineClient.h
-        oio/kinetic/coro/client/CoroutineClientFactory.cpp
-        oio/kinetic/coro/client/CoroutineClientFactory.h
-        oio/kinetic/coro/client/PendingExchange.cpp
-        oio/kinetic/coro/client/PendingExchange.h)
+		oio/blob/kinetic/coro/rpc/Exchange.h
+		oio/blob/kinetic/coro/rpc/Exchange.cpp
+		oio/blob/kinetic/coro/rpc/Put.cpp
+		oio/blob/kinetic/coro/rpc/Put.h
+		oio/blob/kinetic/coro/rpc/Get.cpp
+		oio/blob/kinetic/coro/rpc/Get.h
+		oio/blob/kinetic/coro/rpc/GetKeyRange.cpp
+		oio/blob/kinetic/coro/rpc/GetKeyRange.h
+		oio/blob/kinetic/coro/rpc/GetNext.cpp
+		oio/blob/kinetic/coro/rpc/GetNext.h
+		oio/blob/kinetic/coro/rpc/Delete.cpp
+		oio/blob/kinetic/coro/rpc/Delete.h
+		oio/blob/kinetic/coro/rpc/GetLog.cpp
+		oio/blob/kinetic/coro/rpc/GetLog.h
+		oio/blob/kinetic/coro/client/ClientInterface.h
+		oio/blob/kinetic/coro/client/CoroutineClient.cpp
+		oio/blob/kinetic/coro/client/CoroutineClient.h
+		oio/blob/kinetic/coro/client/CoroutineClientFactory.cpp
+		oio/blob/kinetic/coro/client/CoroutineClientFactory.h
+		oio/blob/kinetic/coro/client/PendingExchange.cpp
+		oio/blob/kinetic/coro/client/PendingExchange.h)
 target_link_libraries(oio-data-kinetic
         oio-utils oio-data oio-http-parser
         ${MILL_LIBRARIES} ${PROTOBUF_LIBRARIES} ${CRYPTO_LIBRARIES}

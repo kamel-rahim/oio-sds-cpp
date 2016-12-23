@@ -24,7 +24,7 @@
 
 #include "utils/macros.h"
 #include "utils/utils.h"
-#include "oio/mem/blob.h"
+#include "oio/blob/mem/blob.h"
 #include "tests/common/BlobTestSuite.h"
 
 using oio::api::Status;

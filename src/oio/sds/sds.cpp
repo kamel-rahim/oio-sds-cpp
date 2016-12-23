@@ -35,7 +35,7 @@
 #include "oio/api/blob.h"
 #include "oio/sds/sds.h"
 #include "oio/content/content.h"
-#include "oio/rawx/blob.h"
+#include "oio/blob/rawx/blob.h"
 
 
 using user_content::content;

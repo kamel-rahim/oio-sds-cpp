@@ -23,9 +23,10 @@
 #include <memory>
 
 #include "utils/utils.h"
-#include "oio/local/blob.h"
-#include "./rawx-server-headers.h"
-#include "./MillDaemon.h"
+#include "oio/blob/local/blob.h"
+
+#include "bin/rawx-server-headers.h"
+#include "bin/MillDaemon.h"
 
 using oio::local::blob::UploadBuilder;
 using oio::local::blob::DownloadBuilder;

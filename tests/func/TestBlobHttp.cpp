@@ -23,7 +23,7 @@
 #include "utils/macros.h"
 #include "utils/utils.h"
 #include "utils/net.h"
-#include "oio/http/blob.h"
+#include "oio/blob/http/blob.h"
 
 using oio::api::Cause;
 using oio::http::imperative::UploadBuilder;

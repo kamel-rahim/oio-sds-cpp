@@ -23,13 +23,13 @@
 #include <cassert>
 
 #include "utils/macros.h"
-#include "oio/kinetic/coro/rpc/Put.h"
-#include "oio/kinetic/coro/rpc/Get.h"
-#include "oio/kinetic/coro/rpc/GetNext.h"
-#include "oio/kinetic/coro/rpc/GetKeyRange.h"
-#include "oio/kinetic/coro/rpc/GetLog.h"
-#include "oio/kinetic/coro/client/CoroutineClient.h"
-#include "oio/kinetic/coro/client/CoroutineClientFactory.h"
+#include "oio/blob/kinetic/coro/rpc/Put.h"
+#include "oio/blob/kinetic/coro/rpc/Get.h"
+#include "oio/blob/kinetic/coro/rpc/GetNext.h"
+#include "oio/blob/kinetic/coro/rpc/GetKeyRange.h"
+#include "oio/blob/kinetic/coro/rpc/GetLog.h"
+#include "oio/blob/kinetic/coro/client/CoroutineClient.h"
+#include "oio/blob/kinetic/coro/client/CoroutineClientFactory.h"
 
 using oio::kinetic::client::ClientInterface;
 using oio::kinetic::client::CoroutineClientFactory;

@@ -22,7 +22,7 @@
 
 #include "utils/macros.h"
 #include "utils/utils.h"
-#include "oio/local/blob.h"
+#include "oio/blob/local/blob.h"
 #include "tests/common/BlobTestSuite.h"
 
 using oio::local::blob::UploadBuilder;

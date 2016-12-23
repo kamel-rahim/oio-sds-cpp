@@ -23,11 +23,11 @@
 #include <memory>
 #include <map>
 
-#include "oio/api/blob.h"
-#include "oio/http/blob.h"
 #include "utils/serialize_def.h"
-#include "oio/directory/command.h"
 #include "utils/command.h"
+#include "oio/api/blob.h"
+#include "oio/blob/http/blob.h"
+#include "oio/directory/command.h"
 
 enum body_type { META, METAS, PROPERTIES };
 

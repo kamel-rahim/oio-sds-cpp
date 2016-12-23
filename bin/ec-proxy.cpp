@@ -27,7 +27,7 @@
 
 #include "utils/utils.h"
 #include "oio/api/blob.h"
-#include "oio/router/blob.h"
+#include "oio/blob/router/blob.h"
 
 #include "bin/MillDaemon.h"
 #include "bin/ec-proxy-headers.h"

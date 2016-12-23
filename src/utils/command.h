@@ -19,6 +19,8 @@
 #ifndef SRC_UTILS_COMMAND_H_
 #define SRC_UTILS_COMMAND_H_
 
+#include <rapidjson/writer.h>
+
 #include <map>
 #include <string>
 
@@ -78,19 +80,16 @@ class oio_err {
  public:
     oio_err() { status = 0 ; }
 
-    bool put_message(std::string s) {
-        std::string v = s;
-        std::string u = "{}\"";
-        for (const auto &p : u)  // strip  {}"
-            remove_p(v, p);
-        std::stringstream ss(v);
-
-        std::string tmpStr;
-        read_and_validate(ss, tmpStr, "status", ':');   // read status keyword
-        read_num_with_del(ss, tmpStr, status, ',');
-        read_and_validate(ss, tmpStr, "message", ':');  // read message keyword
-        read_any(ss, message, ',');
-        return true;
+    void put_message(std::string s) {
+        rapidjson::StringBuffer buf;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
+        writer.StartObject();
+        writer.Key("status");
+        writer.Int(status);
+        writer.Key("message");
+        writer.String(message.c_str());
+        writer.EndObject();
+        s.assign(buf.GetString());
     }
 
     void get_message(int st, std::string msg) {

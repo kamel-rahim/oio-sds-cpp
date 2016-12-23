@@ -26,10 +26,10 @@
 #include <chrono>  // NOLINT
 
 #include "utils/macros.h"
-#include "oio/kinetic/coro/client/ClientInterface.h"
-#include "oio/kinetic/coro/client/CoroutineClientFactory.h"
-#include "oio/kinetic/coro/rpc/Put.h"
-#include "oio/kinetic/coro/blob.h"
+#include "oio/blob/kinetic/coro/client/ClientInterface.h"
+#include "oio/blob/kinetic/coro/client/CoroutineClientFactory.h"
+#include "oio/blob/kinetic/coro/rpc/Put.h"
+#include "oio/blob/kinetic/coro/blob.h"
 
 using oio::kinetic::client::CoroutineClientFactory;
 using oio::kinetic::client::ClientInterface;

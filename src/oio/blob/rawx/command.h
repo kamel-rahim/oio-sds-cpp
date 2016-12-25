@@ -38,10 +38,9 @@ class Range {
 
     Range(const Range &r) : start{r.start}, size{r.size} {}
 
-    Range &operator=(const Range &arg) {
+    void SetRange(const Range &arg) {
         start = arg.start;
         size = arg.size;
-        return *this;
     }
 
     void Clear() { start = 0, size = 0; }
@@ -50,7 +49,7 @@ class Range {
 class RawxUrl {
     friend class RawxCommand;
 
-    friend class ec_cmd;
+    friend class EcCommand;
 
  private:
     std::string chunk_id;
@@ -59,16 +58,21 @@ class RawxUrl {
 
  public:
     ~RawxUrl() { Clear(); }
-    
-    RawxUrl() { Clear(); }
 
-    void Clear() {
-        chunk_id.clear();
-        host.clear();
-        port = 0;
+    RawxUrl() : chunk_id(), host(), port{0} {}
+
+    explicit RawxUrl(const std::string &v) : RawxUrl() { Parse(v); }
+
+    RawxUrl(const RawxUrl &o) : chunk_id(o.chunk_id), host{o.host},
+                                port{o.port} {}
+
+    void SetUrl(const RawxUrl &u) {
+        chunk_id.assign(u.chunk_id);
+        host.assign(u.host);
+        port = u.port;
     }
 
-    explicit RawxUrl(const std::string v) {
+    void Parse(const std::string &v) {
         std::size_t pos = v.find("http");
         // parse: http://IP:port/chink_id
         if (pos != std::string::npos) {
@@ -102,6 +106,13 @@ class RawxUrl {
         }
     }
 
+    void Clear() {
+        chunk_id.clear();
+        host.clear();
+        port = 0;
+    }
+
+
     std::string Host_Port() const {
         std::stringstream ss;
         ss << host << ":" << port;
@@ -110,6 +121,8 @@ class RawxUrl {
     }
 
     std::string ChunkId() const { return chunk_id; }
+
+    std::string Host() const { return host; }
 
     int Port() const { return port; }
 
@@ -120,14 +133,7 @@ class RawxUrl {
         return str;
     }
 
-    RawxUrl &operator=(const RawxUrl &arg) {
-        chunk_id = arg.chunk_id;
-        host = arg.host;
-        port = arg.port;
-        return *this;
-    }
-
-    RawxUrl &Rawx() { return *this; }
+    RawxUrl &GetUrl() { return *this; }
 };
 
 struct RawxUrlSet : public RawxUrl {
@@ -160,7 +166,7 @@ class RawxCommand : public RawxUrl, public Range {
         ChunkSize = 0;
     }
 
-    RawxCommand(): RawxUrl(), Range(), ChunkSize{0} {}
+    RawxCommand() : RawxUrl(), Range(), ChunkSize{0} {}
 
     RawxCommand &operator=(const RawxCommand &arg) {
         RawxUrl::operator=(arg);

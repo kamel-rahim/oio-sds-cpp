@@ -31,79 +31,81 @@
 #include "oio/directory/command.h"
 #include "oio/blob/rawx/command.h"
 
-struct contentSet : public RawxUrl {
+struct ContentSet : public RawxUrl {
     int chunk_number;
     int pos;
     int score;
     int64_t size;
     std::string hash;
 
-    contentSet() : chunk_number(0), pos(0), score(0), size(0), hash("") {}
+    ContentSet() : chunk_number(0), pos(0), score(0), size(0), hash("") {}
 
-    bool operator<(const contentSet &a) const {
+    bool operator<(const ContentSet &a) const {
         return chunk_number < a.chunk_number;
     }
 
-    bool operator==(const contentSet &a) const {
+    bool operator==(const ContentSet &a) const {
         return chunk_number == a.chunk_number;
     }
 
-    contentSet& operator=(const RawxUrl& arg) {
-        RawxUrl::operator =(arg);
-       return *this;
+    void SetContent(const ContentSet &arg) {
+        RawxUrl::SetUrl(arg);
+        chunk_number = arg.chunk_number;
+        pos = arg.pos;
+        size = arg.size;
+        score = arg.score;
+        hash = arg.hash;
     }
 
-    contentSet& operator=(const contentSet& arg) {
-        RawxUrl::operator =(arg);
-        chunk_number    = arg.chunk_number;
-        pos             = arg.pos;
-        size            = arg.size;
-        score           = arg.score;
-        hash            = arg.hash;
-       return *this;
-    }
-
-    Range GetRange () { return Range(0, size); }
+    Range GetRange() { return Range(0, size); }
 };
 
 
-class _content_param : public _file_id {
+class ContentParam : public FileId {
  private:
     std::map<std::string, std::string> properties;
     std::map<std::string, std::string> system;
-    std::set<contentSet> targets;
+    std::set<ContentSet> targets;
     int default_ask_size;
 
  public:
-             _content_param() : default_ask_size(1) { }
-    explicit _content_param(_file_id &file_id) : _file_id(file_id),
-                             default_ask_size(1) { }
-             _content_param(std::string _name_space, std::string _account,
-                            std::string _container, std::string _type = "",
-                            std::string _filename = "")
-                 : _file_id(_name_space, _account, _container, _type,
-                            _filename), default_ask_size(1) { }
+    ContentParam() : default_ask_size(1) {}
 
-    _content_param& operator=(const _content_param& arg) {
-        _file_id::operator =(arg);
-       properties   = arg.properties;
-       return *this;
+    explicit ContentParam(FileId &file_id) : FileId(file_id),
+                                                 default_ask_size(1) {}
+
+    ContentParam(std::string _name_space, std::string _account,
+            std::string _container, std::string _type = "",
+            std::string _filename = "")
+            : FileId(_name_space, _account, _container, _type,
+                       _filename), default_ask_size(1) {}
+
+    ContentParam &operator=(const ContentParam &arg) {
+        FileId::operator=(arg);
+        properties = arg.properties;
+        return *this;
     }
 
-    std::string& operator[](std::string key)     { return properties[key];  }
-    void erase_properties(std::string key)       {  properties.erase(key);  }
-    void UpdateTarget(contentSet *set)           { targets.erase(*set);
-                                                   targets.insert(*set);    }
-    int GetTargetsSize ()                        { return targets.size();   }
-    contentSet GetTarget(int index)              {
+    std::string &operator[](std::string key) { return properties[key]; }
+
+    void erase_properties(std::string key) { properties.erase(key); }
+
+    void UpdateTarget(ContentSet *set) {
+        targets.erase(*set);
+        targets.insert(*set);
+    }
+
+    int GetTargetsSize() { return targets.size(); }
+
+    ContentSet GetTarget(int index) {
         for (auto &to : targets) {
             if (to.chunk_number == index)
-               return to;
+                return to;
         }
-        return contentSet();
+        return ContentSet();
     }
 
-    std::map<std::string, std::string> &System() { return system ;          }
+    std::map<std::string, std::string> &System() { return system; }
 
     void ClearData() {
         targets.clear();
@@ -131,7 +133,7 @@ class _content_param : public _file_id {
         }
 
         if (document.IsArray()) {
-            for (auto& a : document.GetArray()) {
+            for (auto &a : document.GetArray()) {
                 if (a.IsObject()) {
                     rapidjson::StringBuffer buffer;
                     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
@@ -144,7 +146,7 @@ class _content_param : public _file_id {
     }
 
     bool put_content(std::string v) {
-        contentSet set;
+        ContentSet set;
         std::string tmpStr;
         rapidjson::Document document;
         if (document.Parse(v.c_str()).HasParseError()) {
@@ -156,7 +158,7 @@ class _content_param : public _file_id {
             LOG(ERROR) << "Missing 'url' field";
             return false;
         } else {
-            set = RawxUrl(document["url"].GetString());
+            set.SetUrl(RawxUrl(document["url"].GetString()));
         }
 
         if (!document.HasMember("hash")) {
@@ -198,7 +200,7 @@ class _content_param : public _file_id {
                 if (set.pos) {
                     set.chunk_number = set.pos;
                 } else {
-                    std::set<contentSet>::iterator it = targets.begin();
+                    std::set<ContentSet>::iterator it = targets.begin();
                     if (targets.size() && it->pos)
                         set.chunk_number = set.pos;
                     else
@@ -211,7 +213,8 @@ class _content_param : public _file_id {
 
         return true;
     }
-    bool get_content(std::string *p, contentSet *set) {
+
+    bool get_content(std::string *p, ContentSet *set) {
         rapidjson::StringBuffer buf;
         rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
         writer.StartObject();
@@ -237,7 +240,7 @@ class _content_param : public _file_id {
     bool get_contents(std::string *p) {
         *p = "[";
         bool bfirst = true;
-        for (contentSet to : targets) {
+        for (ContentSet to : targets) {
             if (bfirst)
                 bfirst = false;
             else
@@ -262,9 +265,9 @@ class _content_param : public _file_id {
             LOG(ERROR) << "Missing 'properties' field";
             return false;
         } else {
-            const rapidjson::Value& obj = document["properties"];
+            const rapidjson::Value &obj = document["properties"];
             if (obj.IsObject()) {
-                for (auto& v : obj.GetObject())
+                for (auto &v : obj.GetObject())
                     properties[v.name.GetString()] = v.value.GetString();
             }
         }
@@ -272,7 +275,7 @@ class _content_param : public _file_id {
     }
 
     bool get_properties(std::string *p) {
-    // Pack the properties
+        // Pack the properties
         rapidjson::StringBuffer buf;
         rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
         writer.StartObject();
@@ -283,12 +286,12 @@ class _content_param : public _file_id {
         writer.EndObject();
 
         *p = "{\"properties\":" + std::string(buf.GetString(),
-                                             buf.GetSize()) + "}";
+                                              buf.GetSize()) + "}";
         return true;
     }
 
     bool get_properties_key(std::string *p,
-                            std::set <std::string> *del_properties) {
+            std::set<std::string> *del_properties) {
         *p = "[";
 
         bool bfirst = false;

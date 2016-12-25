@@ -34,13 +34,13 @@
 
 using user_content::content;
 
-#define SELECTOR(str) std::string("/v3.0/") + ContentParam.NameSpace()    +\
+#define SELECTOR(str) std::string("/v3.0/") + contentParam.NameSpace()    +\
                       std::string("/content/") + str                      +\
-                      std::string("?acct=") + ContentParam.Account()      +\
-                      std::string("&ref=") +  ContentParam.Container()    +\
-                      (ContentParam.Type().size() ? std::string("&type=") +\
-                       ContentParam.Type() :  "")                         +\
-                      std::string("&path=") + ContentParam.Filename()
+                      std::string("?acct=") + contentParam.Account()      +\
+                      std::string("&ref=") +  contentParam.Container()    +\
+                      (contentParam.Type().size() ? std::string("&type=") +\
+                       contentParam.Type() :  "")                         +\
+                      std::string("&path=") + contentParam.Filename()
 
 oio_err content::http_call_parse_body(http_param *http, body_type type) {
     http::Code rc = http->HTTP_call();
@@ -52,10 +52,10 @@ oio_err content::http_call_parse_body(http_param *http, body_type type) {
         switch (type) {
         case body_type::PREPARE:
         case body_type::SHOW:
-            ret = ContentParam.put_contents(http->body_out);
+            ret = contentParam.put_contents(http->body_out);
             break;
         case body_type::PROPERTIES:
-            ret = ContentParam.put_properties(http->body_out);
+            ret = contentParam.put_properties(http->body_out);
             break;
         }
         if (!ret)
@@ -76,7 +76,7 @@ oio_err content::http_call(http_param *http) {
 
 oio_err content::Create(int size) {
     std::string body_in;
-    ContentParam.get_contents(&body_in);
+    contentParam.get_contents(&body_in);
     http_param http(_socket, "POST", (SELECTOR("create")), body_in);
 
     http.header_in["x-oio-content-meta-length"] = std::to_string(size);
@@ -95,14 +95,14 @@ oio_err content::Copy(std::string url) {
 
 oio_err content::SetProperties() {
     std::string body_in;
-    ContentParam.get_properties(&body_in);
+    contentParam.get_properties(&body_in);
     http_param http(_socket, "POST", SELECTOR("set_properties"), body_in);
     return http_call(&http);
 }
 
 oio_err content::DelProperties() {
     std::string body_in;
-    ContentParam.get_properties_key(&body_in, &del_properties);
+    contentParam.get_properties_key(&body_in, &del_properties);
     http_param http(_socket, "POST", SELECTOR("del_properties"), body_in);
     del_properties.clear();
     return http_call(&http);
@@ -116,24 +116,24 @@ oio_err content::Delete() {
 oio_err content::Show() {
     http_param http(_socket, "GET", SELECTOR("show"));
     http.header_out_filter = "x-oio-content-meta-";
-    http.header_out = &ContentParam.System();
+    http.header_out = &contentParam.System();
     return http_call_parse_body(&http, body_type::SHOW);
 }
 
 oio_err content::GetProperties() {
     http_param http(_socket, "POST", SELECTOR("get_properties"));
     http.header_out_filter = "x-oio-content-meta-";
-    http.header_out = &ContentParam.System();
+    http.header_out = &contentParam.System();
     return http_call_parse_body(&http, body_type::PROPERTIES);
 }
 
 oio_err content::Prepare(bool autocreate) {
     std::string body_in;
-    ContentParam.get_size(&body_in);
+    contentParam.get_size(&body_in);
     http_param http(_socket, "POST", SELECTOR("prepare"), body_in);
     if (autocreate)
         http.header_in["x-oio-action-mode"] = "autocreate";
     http.header_out_filter = "x-oio-content-meta-";
-    http.header_out = &ContentParam.System();
+    http.header_out = &contentParam.System();
     return http_call_parse_body(&http, body_type::PREPARE);
 }

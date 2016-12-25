@@ -40,7 +40,7 @@ class directory {
     oio_err http_call(http_param *http);
 
  public:
-    explicit directory(_file_id &file_id) : DirParam(file_id) { }
+    explicit directory(FileId &file_id) : DirParam(file_id) { }
     directory(std::string _name_space, std::string _account,
               std::string _container, std::string _type = "",
               std::string _filename = "") :

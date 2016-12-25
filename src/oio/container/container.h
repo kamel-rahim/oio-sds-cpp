@@ -42,7 +42,7 @@ class container {
     oio_err http_call(http_param *http);
 
  public:
-    explicit container(_file_id &file_id) : ContainerParam(file_id) { }
+    explicit container(FileId &file_id) : ContainerParam(file_id) { }
     container(std::string _name_space, std::string _account,
              std::string _container, std::string _type = "",
              std::string _filename = "") :

@@ -31,22 +31,22 @@
 #include "oio/directory/command.h"
 
 
-class _container_param : public _file_id {
+class _container_param : public FileId {
  private:
     std::map<std::string, std::string> properties;
     std::map<std::string, std::string> system;
 
  public:
     _container_param() { }
-    explicit _container_param(_file_id &file_id) : _file_id(file_id) { }
+    explicit _container_param(FileId &file_id) : FileId(file_id) { }
     _container_param(std::string _name_space, std::string _account,
                      std::string _container, std::string _type = "",
                      std::string _filename = "") :
-                     _file_id(_name_space, _account, _container, _type,
+                     FileId(_name_space, _account, _container, _type,
                               _filename) { }
 
     _container_param& operator=(const _container_param& arg) {
-       _file_id::operator =(arg);
+       FileId::operator =(arg);
        properties   = arg.properties;
        system       = arg.system;
        return *this;

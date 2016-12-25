@@ -86,7 +86,7 @@ class _meta_data {
 };
 
 
-class _file_id {
+class FileId {
  private:
     std::string name_space;
     std::string account;
@@ -96,9 +96,9 @@ class _file_id {
     std::string container_id;
 
  public:
-     _file_id() { }
-     explicit _file_id(const _file_id &data ) {  *this = data; }
-     _file_id(std::string _name_space, std::string _account,
+     FileId() { }
+     explicit FileId(const FileId &data ) {  *this = data; }
+     FileId(std::string _name_space, std::string _account,
                std::string _container, std::string _type = "",
                std::string _filename = "") {
     name_space   = _name_space;
@@ -108,7 +108,7 @@ class _file_id {
     filename     = _filename;
     container_id = _container_id();
     }
-    _file_id& operator=(const _file_id& arg) {
+    FileId& operator=(const FileId& arg) {
        name_space   = arg.name_space;
        account      = arg.account;
        container    = arg.container;
@@ -118,7 +118,7 @@ class _file_id {
        return *this;
     }
 
-    _file_id& FileId() {
+    FileId& GetFile() {
         return *this;
     }
 
@@ -156,7 +156,7 @@ class _file_id {
     }
 };
 
-class _dir_param : public _file_id {
+class _dir_param : public FileId {
  private:
     std::set<_meta_data> metas;
     std::map<std::string, std::string> properties;
@@ -164,14 +164,14 @@ class _dir_param : public _file_id {
  public:
     _dir_param() { }
 
-    explicit _dir_param(_file_id &file_id) : _file_id(file_id) { }
+    explicit _dir_param(FileId &file_id) : FileId(file_id) { }
     _dir_param(std::string _name_space, std::string _account,
                std::string _container, std::string _type = "",
                std::string _filename = "") :
-              _file_id(_name_space, _account, _container, _type, _filename) { }
+              FileId(_name_space, _account, _container, _type, _filename) { }
 
     _dir_param& operator=(const _dir_param& arg) {
-        _file_id::operator =(arg);
+        FileId::operator =(arg);
         for (const auto &to : arg.metas)
             metas.insert(to);
         return *this;

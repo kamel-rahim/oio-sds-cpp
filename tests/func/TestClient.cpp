@@ -23,30 +23,25 @@
 
 #include <memory.h>
 #include <assert.h>
-#include <string.h>
-#include <signal.h>
 #include <gtest/gtest.h>
 
 #include "utils/macros.h"
 #include "utils/net.h"
 #include "utils/Http.h"
-#include "utils/serialize_def.h"
 
 #include "oio/directory/dir.h"
 #include "oio/container/container.h"
 #include "oio/content/content.h"
 #include "oio/blob/rawx/blob.h"
-#include "oio/blob/rawx/command.h"
-#include "oio/blob/ec/command.h"
 
-using user_container::container;
-using user_content::content;
+using user_container::ContainerClient;
+using user_content::Content;
 
 DEFINE_string(URL_PROXY, "127.0.0.1:6000", "URL of the oio-proxy");
 
-static void validate(oio_err err, std::string str) {\
-    if (err.status)\
-        LOG(INFO) << str << err.status << ", message: " << err.message ;\
+static void validate(oio_err err, std::string str) {
+    if (err.status)
+        LOG(INFO) << str << err.status << ", message: " << err.message;
 }
 
 static void cycle(net::Socket *sptr, const char *url) {
@@ -55,13 +50,13 @@ static void cycle(net::Socket *sptr, const char *url) {
     assert(socket->setnodelay());
     assert(socket->setquickack());
 
-    _file_id FileId(std::string("OPENIO"), std::string("DOVECOT"),
-                    std::string("ray36"),  std::string(""),
-                    std::string("Myfile"));
+    OioUrl id(std::string("OPENIO"), std::string("DOVECOT"),
+              std::string("ray36"), std::string(""),
+              std::string("Myfile"));
 
-    directory dir(FileId);
-    container Superbucket(FileId);
-    content   bucket(FileId);
+    DirectoryClient dir(id);
+    ContainerClient Superbucket(id);
+    Content bucket(id);
 
     Superbucket.SetSocket(socket);
     dir.SetSocket(socket);
@@ -70,15 +65,13 @@ static void cycle(net::Socket *sptr, const char *url) {
     validate(bucket.Prepare(true), "bucket.Prepare");
     std::string buffer = "This is a test";
 
-// write to Rawx
+    // write to Rawx
     std::shared_ptr<net::Socket> rawx_socket;
     rawx_socket.reset(new net::MillSocket);
 
     RawxCommand rawx_param;
-    contentSet ContentSet = bucket.GetData().GetTarget(0);
-
-    rawx_param = ContentSet.Rawx();
-    rawx_param = Range(0, 0);  // ContentSet.Range() ;
+    rawx_param.SetUrl(bucket.GetData().GetTarget(0));
+    rawx_param.SetRange(Range(0, 0));
 
     if (rawx_socket->connect(rawx_param.Host_Port())) {
         oio::rawx::blob::UploadBuilder builder;
@@ -87,7 +80,7 @@ static void cycle(net::Socket *sptr, const char *url) {
 
         std::map<std::string, std::string> &system = bucket.GetData().System();
 
-        builder.ContainerId(bucket.GetData().ContainerId());
+        builder.ContainerId(bucket.GetUrl().ContainerId());
         builder.ContentPath(system.find("name")->second);
         builder.ContentId(system.find("id")->second);
         int64_t v;
@@ -131,12 +124,12 @@ static void cycle(net::Socket *sptr, const char *url) {
     validate(bucket.Show(), "bucket.Show()");
 
     // Copy to new file & delete
-    _file_id FileId2(std::string("OPENIO"), std::string("DOVECOT"),
-                     std::string("ray36"),  std::string(""),
-                     std::string("Myfile2"));
+    OioUrl id2(std::string("OPENIO"), std::string("DOVECOT"),
+               std::string("ray36"), std::string(""),
+               std::string("Myfile2"));
 
-    validate(bucket.Copy(FileId2.URL()), "bucket.Copy");
-    content   bucket2(FileId2);
+    validate(bucket.Copy(id2.URL()), "bucket.Copy");
+    Content bucket2(id2);
     bucket2.SetSocket(socket);
     validate(bucket2.Delete(), "bucket2.Delete");
     validate(bucket.Delete(), "bucket.Delete");
@@ -175,8 +168,8 @@ static void cycle(net::Socket *sptr, const char *url) {
     validate(dir.GetProperties(), "dir.GetProperties");
     validate(dir.DelProperties(), "dir.DelProperties");
     validate(dir.GetProperties(), "dir.GetProperties");
-    validate(dir.Unlink(),        "dir.Unlink");
-    validate(dir.Destroy(),       "dir.Destroy");
+    validate(dir.Unlink(), "dir.Unlink");
+    validate(dir.Destroy(), "dir.Destroy");
 
     socket->close();
 }

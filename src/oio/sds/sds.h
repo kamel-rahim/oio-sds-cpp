@@ -37,7 +37,7 @@ class oio_sds {
     oio_sds_param oio_sds_Param;
 
  public:
-    explicit oio_sds(_file_id &file_id) : oio_sds_Param(file_id) { }
+    explicit oio_sds(OioUrl &file_id) : oio_sds_Param(file_id) { }
     oio_sds(std::string _name_space, std::string _account,
             std::string _container, std::string _type = "",
             std::string _filename = "") :

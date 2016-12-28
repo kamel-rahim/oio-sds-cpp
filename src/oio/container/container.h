@@ -32,9 +32,10 @@
 
 namespace user_container {
 
-class container {
- private :
-    _container_param ContainerParam;
+class ContainerClient {
+ private:
+    OioUrl url;
+    ContainerProperties payload;
     std::set<std::string> del_properties;
     std::shared_ptr<net::Socket> _socket;
 
@@ -42,31 +43,24 @@ class container {
     oio_err http_call(http_param *http);
 
  public:
-    explicit container(_file_id &file_id) : ContainerParam(file_id) { }
-    container(std::string _name_space, std::string _account,
-             std::string _container, std::string _type = "",
-             std::string _filename = "") :
-             ContainerParam(_name_space, _account, _container,
-                            _type, _filename) { }
+    explicit ContainerClient(OioUrl &file_id) : url(file_id) { }
 
-    void SetSocket(std::shared_ptr<net::Socket> socket) {
-        _socket = socket;
-    }
+    void SetSocket(std::shared_ptr<net::Socket> socket) { _socket = socket; }
 
-    void SetData(const _container_param &Param) {
-        ContainerParam = Param;
+    void SetData(const ContainerProperties &Param) {
+        payload = Param;
     }
 
     void AddProperty(std::string key, std::string value) {
-        ContainerParam[key] =  value;
+        payload[key] =  value;
     }
 
     void RemoveProperty(std::string key) {
         del_properties.insert(key);
     }
 
-    _container_param &GetData() {
-        return ContainerParam;
+    ContainerProperties &GetData() {
+        return payload;
     }
 
     oio_err Create();

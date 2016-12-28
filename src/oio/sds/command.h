@@ -26,19 +26,19 @@
 
 #include "oio/directory/command.h"
 
-class oio_sds_param : public _file_id {
+class oio_sds_param : public OioUrl {
  public:
     oio_sds_param() { }
 
-    explicit oio_sds_param(_file_id &file_id) : _file_id(file_id) { }
+    explicit oio_sds_param(OioUrl &file_id) : OioUrl(file_id) { }
     oio_sds_param(std::string _name_space, std::string _account,
                   std::string _container, std::string _type = "",
                   std::string _filename = "") :
-                  _file_id(_name_space, _account, _container, _type,
+                  OioUrl(_name_space, _account, _container, _type,
                            _filename) { }
 
     oio_sds_param& operator=(const oio_sds_param& arg) {
-        _file_id::operator =(arg);
+        OioUrl::operator =(arg);
         return *this;
     }
 };

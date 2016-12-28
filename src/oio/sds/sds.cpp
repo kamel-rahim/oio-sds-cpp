@@ -38,7 +38,7 @@
 #include "oio/blob/rawx/blob.h"
 
 
-using user_content::content;
+using user_content::Content;
 
 oio_err oio_sds::upload(std::string filepath, bool autocreate) {
 // connect to proxy
@@ -47,28 +47,28 @@ oio_err oio_sds::upload(std::string filepath, bool autocreate) {
     assert(socket->setnodelay());
     assert(socket->setquickack());
 
-    content bucket(oio_sds_Param.FileId());
+    Content bucket(oio_sds_Param.GetFile());
     bucket.SetSocket(socket);
 
     std::ifstream file(filepath, std::ifstream::binary);
-    int ret  = 0;
+    int ret = 0;
 
     uint64_t fullSize = 0;
-    uint32_t metachunk  = 0;
+    uint32_t metachunk = 0;
 
     //  prime bucket
     oio_err err = bucket.Prepare(autocreate);
-    contentSet ContentSet = bucket.GetData().GetTarget(0);
-    int size = ContentSet.size;
+    ChunkInfo contentSet = bucket.GetData().GetTarget(0);
+    int size = contentSet.size;
     bool bfirst = true;
 
     do {
-        std::vector <char> buffer;
+        std::vector<char> buffer;
 
-        buffer.resize(ContentSet.size);
+        buffer.resize(contentSet.size);
 
         if (file.is_open())
-           file.read(buffer.data(), size);
+            file.read(buffer.data(), size);
 
         ret = file.gcount();
 
@@ -78,26 +78,27 @@ oio_err oio_sds::upload(std::string filepath, bool autocreate) {
             if (!bfirst) {
                 err = bucket.Prepare(autocreate);
                 if (err.status)
-                    LOG(INFO) << "unable to prepare content:" <<err.status <<
-                                 ", message: " << err.message;
+                    LOG(INFO) << "unable to prepare content:" << err.status <<
+                              ", message: " << err.message;
             } else {
                 bfirst = false;
             }
 
-            contentSet ContentSet = bucket.GetData().GetTarget(metachunk);
+            ChunkInfo contentSet;
+            contentSet.SetUrl(bucket.GetData().GetTarget(metachunk));
 
             RawxCommand rawx_param;
-            rawx_param = ContentSet.Rawx();
-            rawx_param = Range(0, ret);  // ContentSet.Range();
+            rawx_param.SetUrl(contentSet.GetUrl());
+            rawx_param.SetRange(Range(0, ret));
 
-            ContentSet.size = ret;
-            ContentSet.pos  = metachunk;
-// set HASH here
-//            ContentSet.hash =
+            contentSet.size = ret;
+            contentSet.pos = metachunk;
+            // TODO(ray): set HASH here
+            // ChunkInfo.hash =
 
-            bucket.GetData().UpdateTarget(&ContentSet);
+            bucket.GetData().UpdateTarget(&contentSet);
 
-// replace rawx call by router and implement xcopies, plain & EC
+            // replace rawx call by router and implement xcopies, plain & EC
             std::shared_ptr<net::Socket> rawx_socket;
             rawx_socket.reset(new net::MillSocket);
 
@@ -109,7 +110,7 @@ oio_err oio_sds::upload(std::string filepath, bool autocreate) {
                 std::map<std::string, std::string> &system =
                         bucket.GetData().System();
 
-                builder.ContainerId(bucket.GetData().ContainerId());
+                builder.ContainerId(bucket.GetUrl().ContainerId());
                 builder.ContentPath(system.find("name")->second);
                 builder.ContentId(system.find("id")->second);
                 int64_t v;
@@ -154,7 +155,7 @@ oio_err oio_sds::download(std::string filepath) {
     assert(socket->setnodelay());
     assert(socket->setquickack());
 
-    content bucket(oio_sds_Param.FileId());
+    Content bucket(oio_sds_Param.GetFile());
     bucket.SetSocket(socket);
 
     std::ofstream file(filepath, std::ifstream::binary);
@@ -164,18 +165,17 @@ oio_err oio_sds::download(std::string filepath) {
         int maxchunk = bucket.GetData().GetTargetsSize();
 
         for (int i = 0; i < maxchunk; i++) {
-            contentSet ContentSet = bucket.GetData().GetTarget(i);
+            ChunkInfo contentSet = bucket.GetData().GetTarget(i);
 
-            std::vector <uint8_t> buffer;
-            int size = ContentSet.size;
-            buffer.resize(ContentSet.size);
+            std::vector<uint8_t> buffer;
+            int size = contentSet.size;
+            buffer.resize(contentSet.size);
 
-    // replace rawx call by router and implement xcopies, plain & EC
+            // replace rawx call by router and implement xcopies, plain & EC
 
             RawxCommand rawx_param;
-            rawx_param = ContentSet.Rawx();
-            rawx_param = Range(0, ContentSet.size);  // ContentSet.Range();
-
+            rawx_param.SetUrl(contentSet.GetUrl());
+            rawx_param.SetRange(Range(0, contentSet.size));
 
             std::shared_ptr<net::Socket> rawx_socket;
             rawx_socket.reset(new net::MillSocket);
@@ -195,10 +195,10 @@ oio_err oio_sds::download(std::string filepath) {
                 }
             } else {
                 LOG(ERROR) << "failed to connect to rawx port: "
-                        << rawx_param.Port();
+                           << rawx_param.Port();
             }
             if (file.is_open())
-                file.write((const char*) buffer.data(), size);
+                file.write((const char *) buffer.data(), size);
         }
     }
     return err;

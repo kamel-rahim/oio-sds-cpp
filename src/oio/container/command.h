@@ -33,7 +33,7 @@
 
 class ContainerProperties {
  public:
-    using PropSet = std::map<std::string, std::string>
+    using PropSet = std::map<std::string, std::string>;
 
  private:
     PropSet user;
@@ -48,7 +48,7 @@ class ContainerProperties {
         return *this;
     }
 
-    std::string &operator[](std::string key) const { return user[key]; }
+    std::string &operator[](std::string key) { return user[key]; }
 
     void erase_properties(std::string key) { user.erase(key); }
 

@@ -30,117 +30,22 @@
 #include "rapidjson/document.h"
 #include "rapidjson/writer.h"
 
-enum metatype { META0, META1, META2 };
-
-#define USE_JSON
-
-class meta_host {
- public:
-    std::string host;
-    int port;
-    int seq;
-
-    meta_host() {}
-    meta_host(std::string _host, int _port, int _seq) {
-        host = _host;
-        port = _port;
-        seq  = _seq;
-    }
-
- public:
-    meta_host& operator=(const meta_host& arg) {
-        host = arg.host;
-        port = arg.port;
-        seq  = arg.seq;
-        return *this;
-    }
-};
-
-class _meta_data {
- public:
-    metatype     MetaType;
-    meta_host    MetaHost;
-    std::string  args;
-
- public:
-    _meta_data() {}
-    _meta_data(metatype _MetaType, std::string host, int port, int seq) {
-        MetaType = _MetaType;
-        MetaHost = meta_host(host, port, seq);
-    }
-
-    _meta_data& operator=(const _meta_data& arg) {
-        MetaType = arg.MetaType;
-        MetaHost = arg.MetaHost;
-        args     = arg.args;
-        return *this;
-    }
-
-    bool operator<(const _meta_data &a) const {
-        return MetaType < a.MetaType;
-    }
-
-    bool operator==(const _meta_data &a) const {
-        return MetaType == a.MetaType;
-    }
-};
-
-
-class FileId {
+class OioUrl {
  private:
-    std::string name_space;
+    std::string ns;
     std::string account;
     std::string container;
     std::string type;
-    std::string filename;
-    std::string container_id;
+    std::string path;
+    std::string cid;
 
- public:
-     FileId() { }
-     explicit FileId(const FileId &data ) {  *this = data; }
-     FileId(std::string _name_space, std::string _account,
-               std::string _container, std::string _type = "",
-               std::string _filename = "") {
-    name_space   = _name_space;
-    account      = _account;
-    container    = _container;
-    type         = _type;
-    filename     = _filename;
-    container_id = _container_id();
-    }
-    FileId& operator=(const FileId& arg) {
-       name_space   = arg.name_space;
-       account      = arg.account;
-       container    = arg.container;
-       type         = arg.type;
-       filename     = arg.filename;
-       container_id = arg.container_id;
-       return *this;
-    }
-
-    FileId& GetFile() {
-        return *this;
-    }
-
-    std::string URL() {
-       std::string str = name_space + "/" + account + "/" + container + "/"
-                                    + type + "/" + filename;
-       return str;
-    }
-
-    std::string &NameSpace()                { return name_space;    }
-    std::string &Account()                  { return account;       }
-    std::string &Container()                { return container;     }
-    std::string &Type()                     { return type;          }
-    std::string &Filename()                 { return filename;      }
-    std::string &ContainerId()              { return container_id;  }
-
-    std::string _container_id() {
+ private:
+    void compute_container_id() {
         unsigned char hash[SHA256_DIGEST_LENGTH];
         SHA256_CTX sha256;
         SHA256_Init(&sha256);
 
-        char zero = 0;
+        static const char zero = 0;
 
         SHA256_Update(&sha256, account.c_str(), account.size());
         SHA256_Update(&sha256, &zero, 1);
@@ -150,40 +55,176 @@ class FileId {
         std::stringstream ss;
         for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
             ss << std::uppercase << std::hex << std::setw(2)
-               << std::setfill('0') <<  static_cast<int> (hash[i]);
+               << std::setfill('0') << static_cast<int> (hash[i]);
         }
-        return ss.str();
-    }
-};
 
-class _dir_param : public FileId {
- private:
-    std::set<_meta_data> metas;
-    std::map<std::string, std::string> properties;
+        cid.assign(ss.str());
+    }
 
  public:
-    _dir_param() { }
+    OioUrl() : ns(), account(), container(), type(), path(), cid() {}
 
-    explicit _dir_param(FileId &file_id) : FileId(file_id) { }
-    _dir_param(std::string _name_space, std::string _account,
-               std::string _container, std::string _type = "",
-               std::string _filename = "") :
-              FileId(_name_space, _account, _container, _type, _filename) { }
+    explicit OioUrl(const OioUrl &o) : ns(o.ns), account(o.account),
+                                       container(o.container), type(o.type),
+                                       path(o.path), cid(o.cid) {}
 
-    _dir_param& operator=(const _dir_param& arg) {
-        FileId::operator =(arg);
-        for (const auto &to : arg.metas)
-            metas.insert(to);
+    OioUrl(const std::string _ns,
+            const std::string _acct,
+            const std::string _cname,
+            const std::string _type = "",
+            const std::string _cpath = "") : ns(_ns), account(_acct),
+                                             container(_cname), type(_type),
+                                             path(_cpath), cid() {}
+
+    void Set(const OioUrl &o) {
+        ns.assign(o.ns);
+        account.assign(o.account);
+        container.assign(o.container);
+        type.assign(o.type);
+        path.assign(o.path);
+        cid.assign(o.cid);
+    }
+
+    OioUrl &operator=(const OioUrl &arg) {
+        Set(arg);
         return *this;
     }
 
-    std::string& operator[](std::string key)   { return properties[key];     }
+    OioUrl &GetFile() { return *this; }
+
+    const std::string &NS() const { return ns; }
+
+    const std::string &Account() const { return account; }
+
+    const std::string &Container() const { return container; }
+
+    const std::string &Type() const { return type; }
+
+    const std::string &Filename() const { return path; }
+
+    const std::string &ContainerId() const { return cid; }
+
+    std::string URL() const {
+        std::stringstream ss;
+        ss << ns << '/' << account << '/' << container
+           << '/' << type << '/' + path;
+        return ss.str();
+    }
+
+};
+
+class SrvID {
+ protected:
+    std::string host;
+    int port;
+
+ public:
+    ~SrvID() {}
+
+    SrvID() {}
+
+    SrvID(const std::string _host, int _port) : host(_host), port(_port) {}
+
+    SrvID(const SrvID &o) : host(o.host), port{o.port} {}
+
+    SrvID(SrvID &&o) : host(), port{o.port} { host.swap(o.host); }
+
+    void Set(const SrvID &o) {
+        host.assign(o.host);
+        port = o.port;
+    }
+
+    bool Parse(const std::string packed) {
+        auto colon = packed.rfind(':');
+        if (colon == packed.npos)
+            return false;
+        host.assign(packed, 0, colon);
+        auto strport = std::string(packed, colon + 1);
+        port = ::atoi(strport.c_str());
+        return true;
+    }
+};
+
+class DirURL {
+ protected:
+    int seq;
+    std::string type;
+    std::string args;
+    SrvID host;
+
+ public:
+    ~DirURL() {}
+
+    DirURL() {}
+
+    DirURL(const std::string _type, std::string _h, int _p, int _seq = 1) :
+            seq{_seq}, type(_type), host(_h, _p) {}
+
+    DirURL &operator=(const DirURL &arg) {
+        type.assign(arg.type);
+        host.Set(arg.host);
+        args = arg.args;
+        return *this;
+    }
+
+    bool operator<(const DirURL &a) const { return type < a.type; }
+
+    bool Parse(std::string v) {
+        std::string tmpStr;
+        rapidjson::Document document;
+        if (document.Parse(v.c_str()).HasParseError()) {
+            LOG(ERROR) << "Invalid JSON";
+            return false;
+        }
+
+        if (!document.HasMember("seq")) {
+            LOG(ERROR) << "Missing 'seq' field";
+            return false;
+        }
+        if (!document.HasMember("type")) {
+            LOG(ERROR) << "Missing 'type' field";
+            return false;
+        }
+        if (!document.HasMember("host")) {
+            LOG(ERROR) << "Missing 'host' field";
+            return false;
+        }
+        if (!document.HasMember("args")) {
+            LOG(ERROR) << "Missing 'args' field";
+            return false;
+        }
+
+        if (!host.Parse(document["host"].GetString()))
+            return false;
+
+        seq = document["seq"].GetInt();
+        type.assign(document["type"].GetString());
+        args.assign(document["args"].GetString());
+        return true;
+    }
+};
+
+class DirPayload {
+ private:
+    std::set<DirURL> metas;
+    std::map<std::string, std::string> properties;
+
+ public:
+    DirPayload() {}
+
+    DirPayload &operator=(const DirPayload &arg) {
+        metas.clear();
+        metas.insert(arg.metas.begin(), arg.metas.end());
+        return *this;
+    }
+
+    std::string &operator[](std::string key) { return properties[key]; }
 
     bool put_properties(std::string s) {
         std::string v = s;
         std::string u = "{}\"";
         for (const auto &p : u)  // strip  {}"
-        remove_p(v, p);
+            remove_p(v, p);
         std::stringstream ss(v);
 
         std::string tmpStr;
@@ -221,74 +262,10 @@ class _dir_param : public FileId {
 
         *s = ss.str();
         return true;
-     }
-
-#ifdef USE_JSON
-
- public:
-    bool put_meta(std::string p) {
-        metatype MetaType;
-        std::string v = p;
-        std::string u = "[]";
-        for (const auto &c : u)  // strip  {}"
-        remove_p(v, c);
-
-        _meta_data MetaData;
-        std::string tmpStr;
-        rapidjson::Document document;
-        if (document.Parse(v.c_str()).HasParseError()) {
-            LOG(ERROR) << "Invalid JSON";
-            return false;
-        }
-
-        if (!document.HasMember("seq")) {
-            LOG(ERROR) << "Missing 'seq' field";
-            return false;
-        } else {
-            MetaData.MetaHost.seq = document["seq"].GetInt();
-        }
-
-        if (!document.HasMember("type")) {
-            LOG(ERROR) << "Missing 'type' field";
-            return false;
-        } else {
-            tmpStr = document["type"].GetString();
-        }
-
-        size_t pos = tmpStr.find("meta2");
-        if (pos != std::string::npos) {
-            MetaType = META2;
-        } else {
-            if (!tmpStr.compare("meta1"))
-                MetaType = META1;
-            else
-                MetaType = META0;
-        }
-
-        if (!document.HasMember("host")) {
-            LOG(ERROR) << "Missing 'host' field";
-            return false;
-        } else {
-            tmpStr = document["host"].GetString();
-            std::stringstream ss(tmpStr);
-            read_any(ss, MetaData.MetaHost.host, ':');
-            read_num_with_del(ss, tmpStr, MetaData.MetaHost.port, ',');
-        }
-
-        if (!document.HasMember("args")) {
-            LOG(ERROR) << "Missing 'args' field";
-            return false;
-        } else {
-             MetaData.args = document["args"].GetString();
-        }
-
-        MetaData.MetaType = MetaType;
-        metas.insert(MetaData);
-
-        return true;
     }
 
-    bool put_metas(std::string p) {
+ public:
+    bool Parse(std::string p) {
         rapidjson::Document document;
         if (document.Parse(p.c_str()).HasParseError()) {
             LOG(ERROR) << "Invalid JSON";
@@ -299,95 +276,38 @@ class _dir_param : public FileId {
             LOG(ERROR) << "Missing 'properties' field";
             return false;
         } else {
-            const rapidjson::Value& obj = document["dir"];
+            const rapidjson::Value &obj = document["dir"];
             if (obj.IsArray()) {
-                for (auto& a : obj.GetArray()) {
+                for (auto &a : obj.GetArray()) {
                     if (a.IsObject()) {
                         rapidjson::StringBuffer buffer;
                         rapidjson::Writer<rapidjson::StringBuffer>
-                                                    writer(buffer);
+                                writer(buffer);
                         a.Accept(writer);
-                        put_meta(buffer.GetString());
+                        DirURL url;
+                        if (url.Parse(buffer.GetString()))
+                            metas.insert(url);
                     }
                 }
             }
         }
+
         if (!document.HasMember("srv")) {
             LOG(ERROR) << "Missing 'system' field";
             return false;
         } else {
-            const rapidjson::Value& obj = document["srv"];
+            const rapidjson::Value &obj = document["srv"];
             if (obj.IsObject()) {
-                for (auto& v : obj.GetObject())
-                     put_meta(v.value.GetString());
+                for (auto &v : obj.GetObject()) {
+                    DirURL url;
+                    if (url.Parse(v.value.GetString()))
+                        metas.insert(url);
+                }
             }
         }
-        return true;
-    }
-
-#else
-
- private:
-    bool put_meta(stringstream &ss, metatype MetaType) {
-        _meta_data MetaData;
-        string tmpStr;
-
-        read_and_validate(ss, tmpStr, "seq", ':');   // read seq keyword
-        read_num_with_del(ss, tmpStr, MetaData.MetaHost.seq, ',');
-
-        read_and_validate(ss, tmpStr, "type", ':');  // read type keyword
-        read_any(ss, tmpStr, ',');                  // read and discard type;
-
-        read_and_validate(ss, tmpStr, "host", ':');  // read host keyword
-        read_any(ss, MetaData.MetaHost.host, ':');
-        read_num_with_del(ss, tmpStr, MetaData.MetaHost.port, ',');
-
-        read_and_validate(ss, tmpStr, "args", ':');  // read args keywork
-        if (MetaType == META2)
-            ss >> MetaData.args;
-        else
-            read_any(ss, MetaData.args, ',');
-
-        MetaData.MetaType = MetaType;
-        metas.insert(MetaData);
 
         return true;
     }
-
- public:
-    bool put_meta(string s, metatype MetaType) {
-        string v = s;
-        string u = "{}[]\" ";
-        for (const auto &p : u)  // strip  {}[]"
-        remove_p(v, p);
-
-        stringstream ss(v);
-        put_meta(ss, MetaType);
-        return true;
-    }
-
-    bool put_metas(string s) {
-        string tmpStr;
-
-        size_t pos = 0;
-        string v = s;
-
-        int i = 0;
-        for ( ; i < 3; i++ ) {
-            pos = v.find("seq", pos);
-            if (pos != std::string::npos) {
-                v = v.substr(pos, v.size() - pos);
-                stringstream ss(v);
-                put_meta(v, (metatype) i);
-                pos += 5;
-            } else {
-                break;
-            }
-        }
-        return true;
-    }
-
-#endif
 };
 
 #endif  // SRC_OIO_DIRECTORY_COMMAND_H_

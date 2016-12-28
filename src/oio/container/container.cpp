@@ -32,28 +32,27 @@
 #include "oio/api/blob.h"
 #include "oio/container/container.h"
 
-using user_container::container;
+using user_container::ContainerClient;
 
-#define SELECTOR(str) std::string("/v3.0/") + ContainerParam.NameSpace()    +\
-                      std::string("/container/") + str                      +\
-                      std::string("?acct=") + ContainerParam.Account()      +\
-                      std::string("&ref=") +  ContainerParam.Container()    +\
-                      (ContainerParam.Type().size() ? std::string("&type=") +\
-                              ContainerParam.Type() :  "")
+#define SELECTOR(str) std::string("/v3.0/") + url.NS()        +\
+                      std::string("/container/") + str        +\
+                      std::string("?acct=") + url.Account()   +\
+                      std::string("&ref=") +  url.Container() +\
+                      (url.Type().size() ? std::string("&type=") + url.Type() : "")
 
-oio_err container::http_call_parse_body(http_param *http) {
+oio_err ContainerClient::http_call_parse_body(http_param *http) {
     http::Code rc = http->HTTP_call();
     oio_err err;
     if (!rc == http::Code::OK) {
         err.get_message(-1, "HTTP_exec exec error");
     } else {
-        if (!ContainerParam.put_properties(http->body_out))
+        if (!payload.DecodeProperties(http->body_out))
             err.put_message(http->body_out);
     }
     return err;
 }
 
-oio_err container::http_call(http_param *http) {
+oio_err ContainerClient::http_call(http_param *http) {
     http::Code rc = http->HTTP_call();
     oio_err err;
     if (!rc == http::Code::OK)
@@ -63,57 +62,67 @@ oio_err container::http_call(http_param *http) {
     return err;
 }
 
-oio_err container::GetProperties() {
-    http_param http(_socket, "POST", SELECTOR("get_properties"));
+oio_err ContainerClient::GetProperties() {
+    http_param http(_socket, "POST", SELECTOR("EncodeProperties"));
     return http_call_parse_body(&http);
 }
 
-oio_err container::Create() {
-    http_param http(_socket, "POST", (SELECTOR("create")));
-    ContainerParam.get_properties(&http.body_in);
+oio_err ContainerClient::Create() {
+    http_param http(_socket, "POST", SELECTOR("create"));
+    payload.EncodeProperties(&http.body_in);
     http.header_in["x-oio-action-mode"] = "autocreate";
     return http_call(&http);
 }
 
-oio_err container::SetProperties() {
-    http_param http(_socket, "POST", (SELECTOR("set_properties")));
-    ContainerParam.get_properties(&http.body_in);
+oio_err ContainerClient::SetProperties() {
+    http_param http(_socket, "POST", SELECTOR("set_properties"));
+    payload.EncodeProperties(&http.body_in);
     return http_call(&http);
 }
 
-oio_err container::DelProperties() {
-    http_param http(_socket, "POST", (SELECTOR("del_properties")));
-    ContainerParam.get_properties_key(&http.body_in, &del_properties);
+void get_properties_key(std::string *p, std::set <std::string> *props) {
+    rapidjson::StringBuffer buf;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
+
+    writer.StartArray();
+    for (const auto &e : *props)
+        writer.String(e.c_str());
+    p->assign(buf.GetString());
+}
+
+oio_err ContainerClient::DelProperties() {
+    http_param http(_socket, "POST", SELECTOR("del_properties"));
+    get_properties_key(&http.body_in, &del_properties);
     del_properties.clear();
     return http_call(&http);
 }
 
-oio_err container::Show()    {
-    http_param http(_socket, "GET", (SELECTOR("show")));
+oio_err ContainerClient::Show()    {
+    http_param http(_socket, "GET", SELECTOR("show"));
     http.header_out_filter = "x-oio-container-meta-sys-";
-    http.header_out = &ContainerParam.System();
+    http.header_out = &payload.System();
     return http_call(&http);
 }
 
-oio_err container::List()    {
-    http_param http(_socket, "GET", (SELECTOR("list")));
+oio_err ContainerClient::List()    {
+    http_param http(_socket, "GET", SELECTOR("list"));
     http.header_out_filter = "x-oio-container-meta-sys-";
-    http.header_out = &ContainerParam.System();
+    http.header_out = &payload.System();
     return http_call(&http);
 }
 
-oio_err container::Destroy() {
-    http_param http(_socket, "POST", (SELECTOR("destroy")));
+oio_err ContainerClient::Destroy() {
+    http_param http(_socket, "POST", SELECTOR("destroy"));
     return http_call(&http);
 }
 
-oio_err container::Touch()   {
-    http_param http(_socket, "POST", (SELECTOR("touch")));
+oio_err ContainerClient::Touch()   {
+    http_param http(_socket, "POST", SELECTOR("touch"));
     return http_call(&http);
 }
 
-oio_err container::Dedup()   {
-    http_param http(_socket, "POST", (SELECTOR("dedup")));
+oio_err ContainerClient::Dedup()   {
+    http_param http(_socket, "POST", SELECTOR("dedup"));
     return http_call(&http);
 }
 

@@ -34,18 +34,14 @@
 #include "oio/content/content.h"
 #include "oio/blob/rawx/blob.h"
 
-using user_container::container;
-using user_content::content;
+using user_container::ContainerClient;
+using user_content::Content;
 
 DEFINE_string(URL_PROXY, "127.0.0.1:6000", "URL of the oio-proxy");
 
 static void validate(oio_err err, std::string str) {
-    \
-    if (err.status)\
-
+    if (err.status)
         LOG(INFO) << str << err.status << ", message: " << err.message;
-            \
-
 }
 
 static void cycle(net::Socket *sptr, const char *url) {
@@ -54,13 +50,13 @@ static void cycle(net::Socket *sptr, const char *url) {
     assert(socket->setnodelay());
     assert(socket->setquickack());
 
-    FileId id(std::string("OPENIO"), std::string("DOVECOT"),
-                  std::string("ray36"), std::string(""),
-                  std::string("Myfile"));
+    OioUrl id(std::string("OPENIO"), std::string("DOVECOT"),
+              std::string("ray36"), std::string(""),
+              std::string("Myfile"));
 
-    directory dir(id);
-    container Superbucket(id);
-    content bucket(id);
+    DirectoryClient dir(id);
+    ContainerClient Superbucket(id);
+    Content bucket(id);
 
     Superbucket.SetSocket(socket);
     dir.SetSocket(socket);
@@ -84,7 +80,7 @@ static void cycle(net::Socket *sptr, const char *url) {
 
         std::map<std::string, std::string> &system = bucket.GetData().System();
 
-        builder.ContainerId(bucket.GetData().ContainerId());
+        builder.ContainerId(bucket.GetUrl().ContainerId());
         builder.ContentPath(system.find("name")->second);
         builder.ContentId(system.find("id")->second);
         int64_t v;
@@ -128,12 +124,12 @@ static void cycle(net::Socket *sptr, const char *url) {
     validate(bucket.Show(), "bucket.Show()");
 
     // Copy to new file & delete
-    FileId id2(std::string("OPENIO"), std::string("DOVECOT"),
-                   std::string("ray36"), std::string(""),
-                   std::string("Myfile2"));
+    OioUrl id2(std::string("OPENIO"), std::string("DOVECOT"),
+               std::string("ray36"), std::string(""),
+               std::string("Myfile2"));
 
     validate(bucket.Copy(id2.URL()), "bucket.Copy");
-    content bucket2(id2);
+    Content bucket2(id2);
     bucket2.SetSocket(socket);
     validate(bucket2.Delete(), "bucket2.Delete");
     validate(bucket.Delete(), "bucket.Delete");

@@ -35,37 +35,35 @@ namespace user_content {
 
 enum body_type { PROPERTIES, PREPARE, SHOW };
 
-class content {
+class Content {
  private :
-    ContentParam contentParam;
+    OioUrl url;
+    ContentInfo param;
     std::set<std::string> del_properties;
     std::shared_ptr<net::Socket> _socket;
 
+ private:
     oio_err http_call_parse_body(http_param *http, body_type type);
 
     oio_err http_call(http_param *http);
 
  public:
-    explicit content(FileId &file_id) : contentParam(file_id) {}
-
-    content(std::string _name_space, std::string _account,
-            std::string _container, std::string _type = "",
-            std::string _filename = "") :
-            contentParam(_name_space, _account, _container,
-                         _type, _filename) {}
+    explicit Content(const OioUrl &u) : url(u) {}
 
     void SetSocket(std::shared_ptr<net::Socket> socket) { _socket = socket; }
 
-    void ClearData() { contentParam.ClearData(); }
+    void ClearData() { param.ClearData(); }
 
-    void SetData(ContentParam *Param) { contentParam = *Param; }
+    void SetData(ContentInfo *Param) { param = *Param; }
 
-    ContentParam &GetData() { return contentParam; }
+    ContentInfo &GetData() { return param; }
+
+    OioUrl &GetUrl() { return url; }
 
     void RemoveProperty(std::string key) { del_properties.insert(key); }
 
     void AddProperty(std::string key, std::string value) {
-        contentParam[key] = value;
+        param[key] = value;
     }
 
     oio_err Create(int size);
@@ -86,5 +84,6 @@ class content {
 
     oio_err DelProperties();
 };
+
 }  // namespace user_content
 #endif  // SRC_OIO_CONTENT_CONTENT_H_

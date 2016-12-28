@@ -31,39 +31,36 @@
 
 enum body_type { META, METAS, PROPERTIES };
 
-class directory {
+class DirectoryClient {
  private :
-    _dir_param DirParam;
+    OioUrl url;
+    DirPayload output;
     std::shared_ptr<net::Socket> _socket;
 
     oio_err http_call_parse_body(http_param *http, body_type type);
     oio_err http_call(http_param *http);
 
  public:
-    explicit directory(FileId &file_id) : DirParam(file_id) { }
-    directory(std::string _name_space, std::string _account,
-              std::string _container, std::string _type = "",
-              std::string _filename = "") :
-              DirParam(_name_space, _account, _container,
-                       _type, _filename) { }
+    explicit DirectoryClient(const OioUrl &u) : url(u), output() {}
 
     void SetSocket(std::shared_ptr<net::Socket> socket ) {
         _socket = socket;
     }
 
-    void SetData(const _dir_param &Param) {
-        DirParam = Param;
+    void SetData(const DirPayload &Param) {
+        output = Param;
     }
 
     void AddProperties(std::string key, std::string value) {
-        DirParam[key] = value;
+        output[key] = value;
     }
 
-    _dir_param &GetData() {
-        return DirParam;
+    DirPayload &GetData() {
+        return output;
     }
 
     oio_err Create();
+
     oio_err Link();
     oio_err Unlink();
     oio_err Destroy();

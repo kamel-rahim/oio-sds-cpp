@@ -31,48 +31,46 @@
 #include "oio/directory/command.h"
 
 
-class _container_param : public FileId {
+class ContainerProperties {
+ public:
+    using PropSet = std::map<std::string, std::string>
+
  private:
-    std::map<std::string, std::string> properties;
-    std::map<std::string, std::string> system;
+    PropSet user;
+    PropSet system;
 
  public:
-    _container_param() { }
-    explicit _container_param(FileId &file_id) : FileId(file_id) { }
-    _container_param(std::string _name_space, std::string _account,
-                     std::string _container, std::string _type = "",
-                     std::string _filename = "") :
-                     FileId(_name_space, _account, _container, _type,
-                              _filename) { }
+    ContainerProperties() {}
 
-    _container_param& operator=(const _container_param& arg) {
-       FileId::operator =(arg);
-       properties   = arg.properties;
-       system       = arg.system;
-       return *this;
+    ContainerProperties &operator=(const ContainerProperties &arg) {
+        user = arg.user;
+        system = arg.system;
+        return *this;
     }
 
-    std::string& operator[](std::string key)      { return properties[key]; }
-    void erase_properties(std::string key)        { properties.erase(key);  }
-    std::map<std::string, std::string> &System () { return system;          }
+    std::string &operator[](std::string key) const { return user[key]; }
 
-    bool put_properties(std::string p) {
-        properties.clear();
+    void erase_properties(std::string key) { user.erase(key); }
+
+    PropSet &System() { return system; }
+
+    bool DecodeProperties(std::string p) {
+        user.clear();
         system.clear();
+
         rapidjson::Document document;
         if (document.Parse(p.c_str()).HasParseError()) {
             LOG(ERROR) << "Invalid JSON";
             return false;
         }
-
         if (!document.HasMember("properties")) {
             LOG(ERROR) << "Missing 'properties' field";
             return false;
         } else {
-            const rapidjson::Value& obj = document["properties"];
+            const rapidjson::Value &obj = document["properties"];
             if (obj.IsObject()) {
-                for (auto& v : obj.GetObject())
-                    properties[v.name.GetString()] = v.value.GetString();
+                for (auto &v : obj.GetObject())
+                    user[v.name.GetString()] = v.value.GetString();
             }
         }
 
@@ -80,45 +78,41 @@ class _container_param : public FileId {
             LOG(ERROR) << "Missing 'system' field";
             return false;
         } else {
-            const rapidjson::Value& obj = document["system"];
+            const rapidjson::Value &obj = document["system"];
             if (obj.IsObject()) {
-                for (auto& v : obj.GetObject())
+                for (auto &v : obj.GetObject())
                     system[v.name.GetString()] = v.value.GetString();
             }
         }
         return true;
     }
 
-    bool get_properties(std::string *p) {
-        // Pack the properties
+    void EncodeProperties(std::string *p) {
         rapidjson::StringBuffer buf;
         rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
         writer.StartObject();
-        for (const auto &e : properties) {
+
+        // Pack the properties
+        writer.Key("properties");
+        writer.StartObject();
+        for (const auto &e : user) {
+            // TODO(jfs): skip the prefix?
             writer.Key(e.first.c_str());
             writer.String(e.second.c_str());
         }
         writer.EndObject();
 
-        *p = "{\"properties\":" + std::string(buf.GetString(),
-              buf.GetSize()) + "}";
-        return true;
-    }
-
-    bool get_properties_key(std::string *p,
-                            std::set <std::string> *del_properties) {
-        *p = "[";
-
-        bool bfirst = false;
-        for (const auto &e : *del_properties) {
-            if (bfirst)
-                *p += ",";
-            *p += "\"" + e + "\"";
-            bfirst = true;
+        // Idem for the system properties
+        writer.Key("system");
+        writer.StartObject();
+        for (const auto &e : system) {
+            // TODO(jfs): skip the prefix?
+            writer.Key(e.first.c_str());
+            writer.String(e.second.c_str());
         }
+        writer.EndObject();
 
-        *p += "]";
-        return true;
+        p->assign(buf.GetString());
     }
 };
 

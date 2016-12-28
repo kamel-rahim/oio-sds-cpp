@@ -31,24 +31,25 @@
 #include "oio/directory/command.h"
 #include "oio/blob/rawx/command.h"
 
-struct ContentSet : public RawxUrl {
+struct ChunkInfo : public RawxUrl {
     int chunk_number;
     int pos;
     int score;
     int64_t size;
     std::string hash;
 
-    ContentSet() : chunk_number(0), pos(0), score(0), size(0), hash("") {}
+    ChunkInfo() : RawxUrl(),
+                  chunk_number(0), pos(0), score(0), size(0), hash("") {}
 
-    bool operator<(const ContentSet &a) const {
+    bool operator<(const ChunkInfo &a) const {
         return chunk_number < a.chunk_number;
     }
 
-    bool operator==(const ContentSet &a) const {
+    bool operator==(const ChunkInfo &a) const {
         return chunk_number == a.chunk_number;
     }
 
-    void SetContent(const ContentSet &arg) {
+    void SetContent(const ChunkInfo &arg) {
         RawxUrl::SetUrl(arg);
         chunk_number = arg.chunk_number;
         pos = arg.pos;
@@ -56,32 +57,19 @@ struct ContentSet : public RawxUrl {
         score = arg.score;
         hash = arg.hash;
     }
-
-    Range GetRange() { return Range(0, size); }
 };
 
-
-class ContentParam : public FileId {
+class ContentInfo {
  private:
     std::map<std::string, std::string> properties;
     std::map<std::string, std::string> system;
-    std::set<ContentSet> targets;
+    std::set<ChunkInfo> targets;
     int default_ask_size;
 
  public:
-    ContentParam() : default_ask_size(1) {}
+    ContentInfo() : default_ask_size(1) {}
 
-    explicit ContentParam(FileId &file_id) : FileId(file_id),
-                                                 default_ask_size(1) {}
-
-    ContentParam(std::string _name_space, std::string _account,
-            std::string _container, std::string _type = "",
-            std::string _filename = "")
-            : FileId(_name_space, _account, _container, _type,
-                       _filename), default_ask_size(1) {}
-
-    ContentParam &operator=(const ContentParam &arg) {
-        FileId::operator=(arg);
+    ContentInfo &operator=(const ContentInfo &arg) {
         properties = arg.properties;
         return *this;
     }
@@ -90,22 +78,22 @@ class ContentParam : public FileId {
 
     void erase_properties(std::string key) { properties.erase(key); }
 
-    void UpdateTarget(ContentSet *set) {
+    void UpdateTarget(ChunkInfo *set) {
         targets.erase(*set);
         targets.insert(*set);
     }
 
+    std::map<std::string, std::string> &System() { return system; }
+
     int GetTargetsSize() { return targets.size(); }
 
-    ContentSet GetTarget(int index) {
+    ChunkInfo GetTarget(int index) {
         for (auto &to : targets) {
             if (to.chunk_number == index)
                 return to;
         }
-        return ContentSet();
+        return ChunkInfo();
     }
-
-    std::map<std::string, std::string> &System() { return system; }
 
     void ClearData() {
         targets.clear();
@@ -146,7 +134,7 @@ class ContentParam : public FileId {
     }
 
     bool put_content(std::string v) {
-        ContentSet set;
+        ChunkInfo set;
         std::string tmpStr;
         rapidjson::Document document;
         if (document.Parse(v.c_str()).HasParseError()) {
@@ -200,7 +188,7 @@ class ContentParam : public FileId {
                 if (set.pos) {
                     set.chunk_number = set.pos;
                 } else {
-                    std::set<ContentSet>::iterator it = targets.begin();
+                    std::set<ChunkInfo>::iterator it = targets.begin();
                     if (targets.size() && it->pos)
                         set.chunk_number = set.pos;
                     else
@@ -214,7 +202,7 @@ class ContentParam : public FileId {
         return true;
     }
 
-    bool get_content(std::string *p, ContentSet *set) {
+    bool get_content(std::string *p, ChunkInfo *set) {
         rapidjson::StringBuffer buf;
         rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
         writer.StartObject();
@@ -240,7 +228,7 @@ class ContentParam : public FileId {
     bool get_contents(std::string *p) {
         *p = "[";
         bool bfirst = true;
-        for (ContentSet to : targets) {
+        for (ChunkInfo to : targets) {
             if (bfirst)
                 bfirst = false;
             else

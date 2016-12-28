@@ -38,7 +38,7 @@
 #include "oio/blob/rawx/blob.h"
 
 
-using user_content::content;
+using user_content::Content;
 
 oio_err oio_sds::upload(std::string filepath, bool autocreate) {
 // connect to proxy
@@ -47,7 +47,7 @@ oio_err oio_sds::upload(std::string filepath, bool autocreate) {
     assert(socket->setnodelay());
     assert(socket->setquickack());
 
-    content bucket(oio_sds_Param.GetFile());
+    Content bucket(oio_sds_Param.GetFile());
     bucket.SetSocket(socket);
 
     std::ifstream file(filepath, std::ifstream::binary);
@@ -58,7 +58,7 @@ oio_err oio_sds::upload(std::string filepath, bool autocreate) {
 
     //  prime bucket
     oio_err err = bucket.Prepare(autocreate);
-    ContentSet contentSet = bucket.GetData().GetTarget(0);
+    ChunkInfo contentSet = bucket.GetData().GetTarget(0);
     int size = contentSet.size;
     bool bfirst = true;
 
@@ -84,7 +84,7 @@ oio_err oio_sds::upload(std::string filepath, bool autocreate) {
                 bfirst = false;
             }
 
-            ContentSet contentSet;
+            ChunkInfo contentSet;
             contentSet.SetUrl(bucket.GetData().GetTarget(metachunk));
 
             RawxCommand rawx_param;
@@ -93,12 +93,12 @@ oio_err oio_sds::upload(std::string filepath, bool autocreate) {
 
             contentSet.size = ret;
             contentSet.pos = metachunk;
-// set HASH here
-//            ContentSet.hash =
+            // TODO(ray): set HASH here
+            // ChunkInfo.hash =
 
             bucket.GetData().UpdateTarget(&contentSet);
 
-// replace rawx call by router and implement xcopies, plain & EC
+            // replace rawx call by router and implement xcopies, plain & EC
             std::shared_ptr<net::Socket> rawx_socket;
             rawx_socket.reset(new net::MillSocket);
 
@@ -110,7 +110,7 @@ oio_err oio_sds::upload(std::string filepath, bool autocreate) {
                 std::map<std::string, std::string> &system =
                         bucket.GetData().System();
 
-                builder.ContainerId(bucket.GetData().ContainerId());
+                builder.ContainerId(bucket.GetUrl().ContainerId());
                 builder.ContentPath(system.find("name")->second);
                 builder.ContentId(system.find("id")->second);
                 int64_t v;
@@ -155,7 +155,7 @@ oio_err oio_sds::download(std::string filepath) {
     assert(socket->setnodelay());
     assert(socket->setquickack());
 
-    content bucket(oio_sds_Param.GetFile());
+    Content bucket(oio_sds_Param.GetFile());
     bucket.SetSocket(socket);
 
     std::ofstream file(filepath, std::ifstream::binary);
@@ -165,7 +165,7 @@ oio_err oio_sds::download(std::string filepath) {
         int maxchunk = bucket.GetData().GetTargetsSize();
 
         for (int i = 0; i < maxchunk; i++) {
-            ContentSet contentSet = bucket.GetData().GetTarget(i);
+            ChunkInfo contentSet = bucket.GetData().GetTarget(i);
 
             std::vector<uint8_t> buffer;
             int size = contentSet.size;

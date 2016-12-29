@@ -17,7 +17,6 @@
  */
 
 
-#include <cassert>
 #include <string>
 #include <functional>
 #include <sstream>
@@ -26,61 +25,62 @@
 #include <iomanip>
 #include <cstring>
 
-#include "utils/macros.h"
-#include "utils/net.h"
 #include "utils/Http.h"
 #include "oio/api/blob.h"
 #include "oio/container/container.h"
 
-using user_container::ContainerClient;
+using Parameters = ::http::Parameters;
+using Code = ::http::Code;
+using OioError = ::oio::api::OioError;
+using ::oio::container::Client;
 
 #define SELECTOR(str) std::string("/v3.0/") + url.NS()        +\
                       std::string("/container/") + str        +\
                       std::string("?acct=") + url.Account()   +\
                       std::string("&ref=") +  url.Container() +\
-                      (url.Type().size() ? std::string("&type=") + url.Type() : "")
+                      (url.Type().size() \
+                            ? std::string("&type=") + url.Type() : "")
 
-oio_err ContainerClient::http_call_parse_body(http_param *http) {
-    http::Code rc = http->HTTP_call();
-    oio_err err;
-    if (!rc == http::Code::OK) {
-        err.get_message(-1, "HTTP_exec exec error");
-    } else {
-        if (!payload.DecodeProperties(http->body_out))
-            err.put_message(http->body_out);
-    }
+OioError Client::http_call_parse_body(Parameters *params) {
+    Code rc = params->DoCall();
+    if (!rc == Code::OK)
+        return OioError(-1, "HTTP_exec exec error");
+
+    OioError err;
+    if (!payload.DecodeProperties(params->body_out))
+        err.Decode(params->body_out);
     return err;
 }
 
-oio_err ContainerClient::http_call(http_param *http) {
-    http::Code rc = http->HTTP_call();
-    oio_err err;
-    if (!rc == http::Code::OK)
-        err.get_message(-1, "HTTP_exec exec error");
+OioError Client::http_call(Parameters *params) {
+    Code rc = params->DoCall();
+    OioError err;
+    if (!rc == Code::OK)
+        err.Set(-1, "HTTP_exec exec error");
     else
-        err.put_message(http->body_out);
+        err.Decode(params->body_out);
     return err;
 }
 
-oio_err ContainerClient::GetProperties() {
-    http_param http(_socket, "POST", SELECTOR("EncodeProperties"));
+OioError Client::GetProperties() {
+    Parameters http(_socket, "POST", SELECTOR("EncodeProperties"));
     return http_call_parse_body(&http);
 }
 
-oio_err ContainerClient::Create() {
-    http_param http(_socket, "POST", SELECTOR("create"));
+OioError Client::Create() {
+    Parameters http(_socket, "POST", SELECTOR("create"));
     payload.EncodeProperties(&http.body_in);
     http.header_in["x-oio-action-mode"] = "autocreate";
     return http_call(&http);
 }
 
-oio_err ContainerClient::SetProperties() {
-    http_param http(_socket, "POST", SELECTOR("set_properties"));
-    payload.EncodeProperties(&http.body_in);
-    return http_call(&http);
+OioError Client::SetProperties() {
+    Parameters params(_socket, "POST", SELECTOR("set_properties"));
+    payload.EncodeProperties(&params.body_in);
+    return http_call(&params);
 }
 
-void get_properties_key(std::string *p, std::set <std::string> *props) {
+static void get_properties_key(std::string *p, std::set<std::string> *props) {
     rapidjson::StringBuffer buf;
     rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
 
@@ -90,39 +90,38 @@ void get_properties_key(std::string *p, std::set <std::string> *props) {
     p->assign(buf.GetString());
 }
 
-oio_err ContainerClient::DelProperties() {
-    http_param http(_socket, "POST", SELECTOR("del_properties"));
-    get_properties_key(&http.body_in, &del_properties);
+OioError Client::DelProperties() {
+    Parameters params(_socket, "POST", SELECTOR("del_properties"));
+    get_properties_key(&params.body_in, &del_properties);
     del_properties.clear();
-    return http_call(&http);
+    return http_call(&params);
 }
 
-oio_err ContainerClient::Show()    {
-    http_param http(_socket, "GET", SELECTOR("show"));
-    http.header_out_filter = "x-oio-container-meta-sys-";
-    http.header_out = &payload.System();
-    return http_call(&http);
+OioError Client::Show() {
+    Parameters params(_socket, "GET", SELECTOR("show"));
+    params.header_out_filter = "x-oio-container-meta-sys-";
+    params.header_out = &payload.System();
+    return http_call(&params);
 }
 
-oio_err ContainerClient::List()    {
-    http_param http(_socket, "GET", SELECTOR("list"));
-    http.header_out_filter = "x-oio-container-meta-sys-";
-    http.header_out = &payload.System();
-    return http_call(&http);
+OioError Client::List() {
+    Parameters params(_socket, "GET", SELECTOR("list"));
+    params.header_out_filter = "x-oio-container-meta-sys-";
+    params.header_out = &payload.System();
+    return http_call(&params);
 }
 
-oio_err ContainerClient::Destroy() {
-    http_param http(_socket, "POST", SELECTOR("destroy"));
-    return http_call(&http);
+OioError Client::Destroy() {
+    Parameters params(_socket, "POST", SELECTOR("destroy"));
+    return http_call(&params);
 }
 
-oio_err ContainerClient::Touch()   {
-    http_param http(_socket, "POST", SELECTOR("touch"));
-    return http_call(&http);
+OioError Client::Touch() {
+    Parameters params(_socket, "POST", SELECTOR("touch"));
+    return http_call(&params);
 }
 
-oio_err ContainerClient::Dedup()   {
-    http_param http(_socket, "POST", SELECTOR("dedup"));
-    return http_call(&http);
+OioError Client::Dedup() {
+    Parameters params(_socket, "POST", SELECTOR("dedup"));
+    return http_call(&params);
 }
-

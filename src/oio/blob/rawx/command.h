@@ -23,6 +23,9 @@
 #include <iostream>
 #include <sstream>
 
+namespace oio {
+namespace blob {
+namespace rawx {
 
 class Range {
  public:
@@ -190,5 +193,9 @@ class RawxCommand : public RawxUrl, public Range {
         return *this;
     }
 };
+
+}  // namespace rawx
+}  // namespace blob
+}  // namespace oio
 
 #endif  // SRC_OIO_BLOB_RAWX_COMMAND_H_

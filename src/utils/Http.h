@@ -30,6 +30,7 @@
 
 #include "./net.h"
 #include "./utils.h"
+#include "./serialize_def.h"
 
 namespace http {
 
@@ -374,6 +375,51 @@ class Call {
 std::ostream& operator<<(std::ostream &out, const Code code);
 
 std::ostream& operator<<(std::ostream &out, const Reply::Step step);
+
+class Parameters {
+ public:
+    std::shared_ptr<net::Socket> socket;
+    std::string method;
+    std::string selector;
+    std::string body_in;
+    std::string body_out;
+    std::map<std::string, std::string> header_in;
+    std::map<std::string, std::string> *header_out;
+    std::string header_out_filter;
+
+    Parameters(std::shared_ptr<net::Socket> _socket,
+            std::string _method, std::string _selector) :
+            socket(_socket), method(_method), selector(_selector),
+            header_out(NULL) {
+    }
+
+    Parameters(std::shared_ptr<net::Socket> _socket,
+            std::string _method, std::string _selector,
+            std::string _body_in) : socket(_socket), method(_method),
+                                    selector(_selector), body_in(_body_in),
+                                    header_out(NULL) {
+    }
+
+    Code DoCall() {
+        Call call;
+        call.Socket(socket)
+                .Method(method)
+                .Selector(selector)
+                .Field("Connection", "keep-alive");
+        if (header_in.size()) {
+            for (auto& a : header_in) {
+                call.Field(a.first, a.second);
+            }
+        }
+
+        LOG(INFO) << method << " " << selector;
+        Code rc = call.Run(body_in, &body_out);
+        LOG(INFO) << " rc=" << rc << " reply=" << body_out;
+        if (rc == Code::OK && header_out)
+            rc = call.GetReplyHeaders(header_out, header_out_filter);
+        return rc;
+    }
+};
 
 }  // namespace http
 

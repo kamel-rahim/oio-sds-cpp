@@ -34,9 +34,10 @@
 
 using oio::api::Cause;
 using oio::api::Status;
-using oio::rawx::blob::RemovalBuilder;
-using oio::rawx::blob::UploadBuilder;
-using oio::rawx::blob::DownloadBuilder;
+using oio::blob::rawx::RemovalBuilder;
+using oio::blob::rawx::UploadBuilder;
+using oio::blob::rawx::DownloadBuilder;
+using oio::blob::rawx::RawxCommand;
 using oio::api::blob::Removal;
 using oio::api::blob::Upload;
 using oio::api::blob::Download;

@@ -36,9 +36,11 @@
 using oio::api::Status;
 using oio::api::Errno;
 using oio::api::Cause;
-using oio::router::blob::DownloadBuilder;
-using oio::router::blob::RemovalBuilder;
-using oio::router::blob::UploadBuilder;
+using oio::blob::ec::EcCommand;
+using oio::blob::rawx::RawxCommand;
+using oio::blob::router::DownloadBuilder;
+using oio::blob::router::RemovalBuilder;
+using oio::blob::router::UploadBuilder;
 
 namespace blob = ::oio::api::blob;
 
@@ -70,7 +72,7 @@ class RouterDownload : public oio::api::blob::Download {
         bool bOk = false;
 
         if (type == ec) {
-            oio::ec::blob::DownloadBuilder builder;
+            oio::blob::ec::DownloadBuilder builder;
             builder.set_param(ec_param);
 
             auto dl = builder.Build();
@@ -86,7 +88,7 @@ class RouterDownload : public oio::api::blob::Download {
             std::shared_ptr<net::Socket> *socket = TheScoketMap.GetSocket(
                     rawx_param.Host_Port());
             if (socket) {
-                oio::rawx::blob::DownloadBuilder builder;
+                oio::blob::rawx::DownloadBuilder builder;
 
                 builder.set_param(rawx_param);
 
@@ -208,7 +210,7 @@ class RouterUpload : public oio::api::blob::Upload {
 
     Status Commit() override {
         if (type == ec) {
-            oio::ec::blob::UploadBuilder builder;
+            oio::blob::ec::UploadBuilder builder;
             builder.set_param(ec_param);
 
             auto ul = builder.Build();
@@ -226,7 +228,7 @@ class RouterUpload : public oio::api::blob::Upload {
             std::shared_ptr<net::Socket> *socket = TheScoketMap.GetSocket(
                     rawx_param.Host_Port());
             if (socket) {
-                oio::rawx::blob::UploadBuilder builder;
+                oio::blob::rawx::UploadBuilder builder;
 
                 builder.set_param(rawx_param);
 

@@ -110,7 +110,6 @@ class OioUrl {
            << '/' << type << '/' + path;
         return ss.str();
     }
-
 };
 
 class SrvID {

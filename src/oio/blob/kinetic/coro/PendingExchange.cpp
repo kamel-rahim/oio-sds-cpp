@@ -16,9 +16,9 @@
  * License along with this library.
  */
 
-#include "PendingExchange.h"
-
 #include <libmill.h>
+
+#include <oio/blob/kinetic/coro/PendingExchange.h>
 
 using oio::kinetic::client::PendingExchange;
 

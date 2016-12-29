@@ -16,7 +16,6 @@
  * License along with this library.
  */
 
-
 #include <cassert>
 #include <string>
 #include <functional>
@@ -28,7 +27,6 @@
 #include <iostream>
 #include <fstream>
 
-
 #include "utils/macros.h"
 #include "utils/net.h"
 #include "utils/Http.h"
@@ -37,11 +35,16 @@
 #include "oio/content/content.h"
 #include "oio/blob/rawx/blob.h"
 
+using oio::api::OioError;
+using oio::content::Content;
+using oio::blob::rawx::UploadBuilder;
+using oio::blob::rawx::DownloadBuilder;
+using oio::blob::rawx::RawxCommand;
+using oio::blob::rawx::RawxCommand;
+using oio::blob::rawx::Range;
 
-using user_content::Content;
-
-oio_err oio_sds::upload(std::string filepath, bool autocreate) {
-// connect to proxy
+OioError oio_sds::upload(std::string filepath, bool autocreate) {
+    // connect to proxy
     std::shared_ptr<net::Socket> socket(new net::MillSocket);
     assert(socket->connect("127.0.0.1:6000"));
     assert(socket->setnodelay());
@@ -57,7 +60,7 @@ oio_err oio_sds::upload(std::string filepath, bool autocreate) {
     uint32_t metachunk = 0;
 
     //  prime bucket
-    oio_err err = bucket.Prepare(autocreate);
+    OioError err = bucket.Prepare(autocreate);
     ChunkInfo contentSet = bucket.GetData().GetTarget(0);
     int size = contentSet.size;
     bool bfirst = true;
@@ -77,9 +80,8 @@ oio_err oio_sds::upload(std::string filepath, bool autocreate) {
         if (ret > 0) {
             if (!bfirst) {
                 err = bucket.Prepare(autocreate);
-                if (err.status)
-                    LOG(INFO) << "unable to prepare content:" << err.status <<
-                              ", message: " << err.message;
+                if (!err.Ok())
+                    LOG(INFO) << "unable to prepare content:" << err.Encode();
             } else {
                 bfirst = false;
             }
@@ -103,7 +105,7 @@ oio_err oio_sds::upload(std::string filepath, bool autocreate) {
             rawx_socket.reset(new net::MillSocket);
 
             if (rawx_socket->connect(rawx_param.Host_Port())) {
-                oio::rawx::blob::UploadBuilder builder;
+                UploadBuilder builder;
 
                 builder.set_param(rawx_param);
 
@@ -148,7 +150,7 @@ oio_err oio_sds::upload(std::string filepath, bool autocreate) {
 }
 
 
-oio_err oio_sds::download(std::string filepath) {
+OioError oio_sds::download(std::string filepath) {
     // connect to proxy
     std::shared_ptr<net::Socket> socket(new net::MillSocket);
     assert(socket->connect("127.0.0.1:6000"));
@@ -159,9 +161,9 @@ oio_err oio_sds::download(std::string filepath) {
     bucket.SetSocket(socket);
 
     std::ofstream file(filepath, std::ifstream::binary);
-    oio_err err = bucket.Show();
+    OioError err = bucket.Show();
 
-    if (!err.status) {
+    if (err.Ok()) {
         int maxchunk = bucket.GetData().GetTargetsSize();
 
         for (int i = 0; i < maxchunk; i++) {
@@ -181,7 +183,7 @@ oio_err oio_sds::download(std::string filepath) {
             rawx_socket.reset(new net::MillSocket);
 
             if (rawx_socket->connect(rawx_param.Host_Port())) {
-                oio::rawx::blob::DownloadBuilder builder;
+                DownloadBuilder builder;
 
                 builder.set_param(rawx_param);
 
@@ -203,5 +205,3 @@ oio_err oio_sds::download(std::string filepath) {
     }
     return err;
 }
-
-

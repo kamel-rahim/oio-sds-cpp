@@ -28,22 +28,23 @@
 #include "oio/blob/http/blob.h"
 #include "utils/serialize_def.h"
 #include "oio/container/command.h"
-#include "utils/command.h"
 
-namespace user_container {
+namespace oio {
+namespace container {
 
-class ContainerClient {
+class Client {
  private:
     OioUrl url;
     ContainerProperties payload;
     std::set<std::string> del_properties;
     std::shared_ptr<net::Socket> _socket;
 
-    oio_err http_call_parse_body(http_param *http);
-    oio_err http_call(http_param *http);
+    oio::api::OioError http_call_parse_body(::http::Parameters *params);
+
+    oio::api::OioError http_call(::http::Parameters *params);
 
  public:
-    explicit ContainerClient(OioUrl &file_id) : url(file_id) { }
+    explicit Client(OioUrl &file_id) : url(file_id) {}
 
     void SetSocket(std::shared_ptr<net::Socket> socket) { _socket = socket; }
 
@@ -52,7 +53,7 @@ class ContainerClient {
     }
 
     void AddProperty(std::string key, std::string value) {
-        payload[key] =  value;
+        payload[key] = value;
     }
 
     void RemoveProperty(std::string key) {
@@ -63,17 +64,26 @@ class ContainerClient {
         return payload;
     }
 
-    oio_err Create();
-    oio_err Show();
-    oio_err List();
-    oio_err Destroy();
-    oio_err Touch();
-    oio_err Dedup();
-    oio_err GetProperties();
-    oio_err SetProperties();
-    oio_err DelProperties();
+    oio::api::OioError Create();
+
+    oio::api::OioError Show();
+
+    oio::api::OioError List();
+
+    oio::api::OioError Destroy();
+
+    oio::api::OioError Touch();
+
+    oio::api::OioError Dedup();
+
+    oio::api::OioError GetProperties();
+
+    oio::api::OioError SetProperties();
+
+    oio::api::OioError DelProperties();
 };
 
-}  // namespace user_container
+}  // namespace container
+}  // namespace oio
 
 #endif  // SRC_OIO_CONTAINER_CONTAINER_H_

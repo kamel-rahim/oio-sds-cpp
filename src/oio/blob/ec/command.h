@@ -22,9 +22,13 @@
 #include <set>
 #include <string>
 
-class EcCommand : public Range {
+namespace oio {
+namespace blob {
+namespace ec {
+
+class EcCommand : public ::oio::blob::rawx::Range {
  public:
-    std::set<RawxUrlSet> targets;
+    std::set<::oio::blob::rawx::RawxUrlSet> targets;
     std::string req_id;
     int kVal, mVal, nbChunks, EncodingMethod;
     uint32_t ChunkSize;
@@ -37,17 +41,17 @@ class EcCommand : public Range {
         kVal = mVal = nbChunks = EncodingMethod = ChunkSize = 0;
     }
 
-    EcCommand& operator=(const EcCommand& arg) {
-        Range::operator =(arg);
+    EcCommand &operator=(const EcCommand &arg) {
+        Range::operator=(arg);
         for (const auto &to : arg.targets)
-          targets.insert(to);
+            targets.insert(to);
 
-        req_id            = arg.req_id;
-        kVal              = arg.kVal;
-        mVal              = arg.mVal;
-        nbChunks          = arg.nbChunks;
-        EncodingMethod    = arg.EncodingMethod;
-        ChunkSize         = arg.ChunkSize;
+        req_id = arg.req_id;
+        kVal = arg.kVal;
+        mVal = arg.mVal;
+        nbChunks = arg.nbChunks;
+        EncodingMethod = arg.EncodingMethod;
+        ChunkSize = arg.ChunkSize;
         return *this;
     }
 
@@ -55,5 +59,9 @@ class EcCommand : public Range {
         return Range(start, size);
     }
 };
+
+}  // namespace ec
+}  // namespace blob
+}  // namespace oio
 
 #endif  // SRC_OIO_BLOB_EC_COMMAND_H_

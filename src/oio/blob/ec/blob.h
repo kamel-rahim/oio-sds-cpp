@@ -33,8 +33,8 @@
 #include "oio/blob/ec/command.h"
 
 namespace oio {
-namespace ec {
 namespace blob {
+namespace ec {
 
 struct frag_array_set {
     unsigned int num_fragments;
@@ -93,13 +93,13 @@ class RemovalBuilder {
 
     inline void BlockSize(uint32_t s) { block_size = s; }
 
-    inline bool Target(const RawxUrlSet &to) {
+    inline bool Target(const ::oio::blob::rawx::RawxUrlSet &to) {
         targets.insert(to);
         return true;
     }
 
  private:
-    std::set<RawxUrlSet> targets;
+    std::set<::oio::blob::rawx::RawxUrlSet> targets;
     uint32_t block_size;
 };
 
@@ -111,18 +111,18 @@ class ListingBuilder {
 
     inline void BlockSize(uint32_t s) { block_size = s; }
 
-    inline bool Target(const RawxUrlSet &to) {
+    inline bool Target(const ::oio::blob::rawx::RawxUrlSet &to) {
         targets.insert(to);
         return true;
     }
 
  private:
-    std::set<RawxUrlSet> targets;
+    std::set<::oio::blob::rawx::RawxUrlSet> targets;
     uint32_t block_size;
 };
 
-}  // namespace blob
 }  // namespace ec
+}  // namespace blob
 }  // namespace oio
 
 #endif  // SRC_OIO_BLOB_EC_BLOB_H_

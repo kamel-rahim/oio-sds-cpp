@@ -16,7 +16,7 @@
  * License along with this library.
  */
 
-#include "CoroutineClient.h"
+#include <oio/blob/kinetic/coro/CoroutineClient.h>
 
 #include <netinet/in.h>
 

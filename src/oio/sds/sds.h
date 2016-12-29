@@ -26,11 +26,8 @@
 
 #include "oio/api/blob.h"
 #include "oio/blob/http/blob.h"
-#include "utils/serialize_def.h"
 #include "oio/directory/command.h"
 #include "oio/sds/command.h"
-#include "utils/command.h"
-
 
 class oio_sds {
  private :
@@ -44,13 +41,15 @@ class oio_sds {
             oio_sds_Param(_name_space, _account, _container,
                           _type, _filename) { }
 
-    oio_err upload(std::string filepath, bool autocreate);
-    oio_err upload(std::vector <uint8_t> buffer, bool autocreate);
+    oio::api::OioError upload(std::string filepath, bool autocreate);
 
-    oio_err download(std::string filepath);
-    oio_err download(std::vector <uint8_t> buffer);
+    oio::api::OioError upload(std::vector <uint8_t> buffer, bool autocreate);
 
-    oio_err destroy(std::string filepath);
+    oio::api::OioError download(std::string filepath);
+
+    oio::api::OioError download(std::vector <uint8_t> buffer);
+
+    oio::api::OioError destroy(std::string filepath);
 };
 
 #endif  //  SRC_OIO_SDS_SDS_H_

@@ -34,14 +34,20 @@
 #include "oio/content/content.h"
 #include "oio/blob/rawx/blob.h"
 
-using user_container::ContainerClient;
-using user_content::Content;
+using OioError = oio::api::OioError;
+using DirectoryClient = oio::directory::DirectoryClient;
+using ContainerClient = oio::container::Client;
+using Content = oio::content::Content;
+using oio::blob::rawx::RawxCommand;
+using oio::blob::rawx::Range;
+using oio::blob::rawx::RawxUrl;
+using oio::blob::rawx::RawxUrlSet;
 
 DEFINE_string(URL_PROXY, "127.0.0.1:6000", "URL of the oio-proxy");
 
-static void validate(oio_err err, std::string str) {
-    if (err.status)
-        LOG(INFO) << str << err.status << ", message: " << err.message;
+static void validate(OioError err, std::string str) {
+    if (!err.Ok())
+        LOG(INFO) << str << err.Encode();
 }
 
 static void cycle(net::Socket *sptr, const char *url) {
@@ -74,7 +80,7 @@ static void cycle(net::Socket *sptr, const char *url) {
     rawx_param.SetRange(Range(0, 0));
 
     if (rawx_socket->connect(rawx_param.Host_Port())) {
-        oio::rawx::blob::UploadBuilder builder;
+        oio::blob::rawx::UploadBuilder builder;
 
         builder.set_param(rawx_param);
 

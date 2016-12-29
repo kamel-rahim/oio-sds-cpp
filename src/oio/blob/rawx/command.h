@@ -194,8 +194,8 @@ class RawxCommand : public RawxUrl, public Range {
     }
 };
 
-}  // namespace oio
-}  // namespace blob
 }  // namespace rawx
+}  // namespace blob
+}  // namespace oio
 
 #endif  // SRC_OIO_BLOB_RAWX_COMMAND_H_

@@ -37,7 +37,8 @@ using ::http::Code;
                       std::string("/content/") + str             +\
                       std::string("?acct=") + url.Account()      +\
                       std::string("&ref=") +  url.Container()    +\
-                      (url.Type().size() ? std::string("&type=") + url.Type() : "")                         +\
+                      (url.Type().size() ? std::string("&type=") + url.Type() \
+                                         : "")                         +\
                       std::string("&path=") + url.Filename()
 
 OioError Content::http_call_parse_body(Parameters *params, body_type type) {

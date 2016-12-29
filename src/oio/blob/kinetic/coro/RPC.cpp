@@ -16,19 +16,15 @@
  * License along with this library.
  */
 
-#include "RPC.h"
+#include <oio/blob/kinetic/coro/RPC.h>
 
 #include <sys/uio.h>
 #include <netinet/in.h>
 
-#include <src/kinetic.pb.h>
 #include <libmill/libmill.h>
 
 #include <algorithm>
-#include <memory>
 
-#include "utils/macros.h"
-#include "utils/utils.h"
 #include "ClientInterface.h"
 
 namespace proto = ::com::seagate::kinetic::proto;
@@ -46,13 +42,13 @@ using oio::kinetic::client::Put;
 
 
 DEFINE_bool(dump_frames, false,
-"Dump sent/received kinetic frames");
+            "Dump sent/received kinetic frames");
 
 DEFINE_bool(dump_requests, false,
-"Dump sent/received kinetic messages");
+            "Dump sent/received kinetic messages");
 
-DEFINE_uint64(max_frame_size, 1024*1024,
-"Maximum frame size accepted from a Kinetic drive");
+DEFINE_uint64(max_frame_size, 1024 * 1024,
+              "Maximum frame size accepted from a Kinetic drive");
 
 
 void Context::Reset() {
@@ -60,20 +56,18 @@ void Context::Reset() {
     sequence_id_ = 1;
 }
 
-Context::Context() : cluster_version_{0}, identity_{1}, sha_salt_{"asdfasdf"} {
-    Reset();
-}
+Context::Context() : cluster_version_{0}, identity_{1},
+                     sha_salt_{"asdfasdf"} { Reset(); }
 
 
-Exchange::Exchange() : cmd(), payload_(), status_{false} {
-}
+Exchange::Exchange() : cmd(), payload_(), status_{false} {}
 
 void Exchange::SetSequence(int64_t s) {
     cmd.mutable_header()->set_sequence(s);
 }
 
-void Exchange::checkStatus(const oio::kinetic::client::Request *rep) {
-    assert(rep!= nullptr);
+void Exchange::checkStatus(const Request *rep) {
+    assert(rep != nullptr);
     status_ = (rep->cmd.status().code() == proto::Command_Status::SUCCESS);
 }
 
@@ -108,8 +102,8 @@ int Exchange::Write(net::Channel *chan, const Context &ctx, int64_t dl) {
                                        << " M=" << cmd.ShortDebugString();
 
     uint8_t hdr[9] = {'F', 0, 0, 0, 0, 0, 0, 0, 0};
-    *(reinterpret_cast<uint32_t*>(hdr + 1)) = ::htonl(tmp.size());
-    *(reinterpret_cast<uint32_t*>(hdr + 5)) = ::htonl(payload_.len);
+    *(reinterpret_cast<uint32_t *>(hdr + 1)) = ::htonl(tmp.size());
+    *(reinterpret_cast<uint32_t *>(hdr + 5)) = ::htonl(payload_.len);
 
     struct iovec iov[] = {
             BUFLEN_IOV(hdr, 9),
@@ -135,8 +129,8 @@ int Frame::Read(net::Channel *chan, int64_t dl) {
     if (hdr[0] != 'F')
         return EBADMSG;
 
-    lenmsg = ::ntohl(*reinterpret_cast<uint32_t*>(hdr + 1));
-    lenval = ::ntohl(*reinterpret_cast<uint32_t*>(hdr + 5));
+    lenmsg = ::ntohl(*reinterpret_cast<uint32_t *>(hdr + 1));
+    lenval = ::ntohl(*reinterpret_cast<uint32_t *>(hdr + 5));
     if (lenval > FLAGS_max_frame_size || lenmsg > FLAGS_max_frame_size)
         return E2BIG;
 
@@ -172,11 +166,11 @@ bool Request::Parse(Frame *f) {
     }
 
     DLOG_IF(INFO, FLAGS_dump_requests)
-            << "Req< "
-            << " V.size=" << value.size()
-            << " Auth=" << msg.authtype()
-            << " HMAC=" << msg.hmacauth().ShortDebugString()
-            << " " << cmd.ShortDebugString();
+    << "Req< "
+    << " V.size=" << value.size()
+    << " Auth=" << msg.authtype()
+    << " HMAC=" << msg.hmacauth().ShortDebugString()
+    << " " << cmd.ShortDebugString();
     return true;
 }
 
@@ -201,9 +195,7 @@ Delete::Delete() : Exchange() {
 
 Delete::~Delete() {}
 
-void Delete::ManageReply(Request *rep) {
-    checkStatus(rep);
-}
+void Delete::ManageReply(Request *rep) { checkStatus(rep); }
 
 void Delete::Key(const char *k) {
     assert(k != nullptr);
@@ -241,7 +233,7 @@ void Get::Key(const std::string &k) {
 }
 
 
-GetKeyRange::GetKeyRange(): Exchange() {
+GetKeyRange::GetKeyRange() : Exchange() {
     auto h = cmd.mutable_header();
     h->set_messagetype(proto::Command_MessageType_GETKEYRANGE);
     auto r = cmd.mutable_body()->mutable_range();
@@ -305,7 +297,7 @@ GetLog::GetLog() : Exchange(), cpu{0}, temp{0}, space{0}, io{0} {
 
 GetLog::~GetLog() {}
 
-void GetLog::ManageReply(oio::kinetic::client::Request *rep) {
+void GetLog::ManageReply(Request *rep) {
     checkStatus(rep);
     const auto &gl = rep->cmd.body().getlog();
 
@@ -356,7 +348,7 @@ double GetLog::getSpace() const { return space; }
 double GetLog::getIo() const { return io; }
 
 
-GetNext::GetNext(): Exchange(), out_() {
+GetNext::GetNext() : Exchange(), out_() {
     auto h = cmd.mutable_header();
     h->set_messagetype(proto::Command_MessageType_GETNEXT);
     auto kv = cmd.mutable_body()->mutable_keyvalue();
@@ -378,8 +370,7 @@ void GetNext::Steal(std::string *v) {
     v->swap(out_);
 }
 
-void GetNext::ManageReply(oio::kinetic::client::Request *rep) { checkStatus(rep); }
-
+void GetNext::ManageReply(Request *rep) { checkStatus(rep); }
 
 Put::Put() : Exchange() {
     auto h = cmd.mutable_header();

@@ -16,8 +16,8 @@
  * License along with this library.
  */
 
-#include "CoroutineClientFactory.h"
-#include "CoroutineClient.h"
+#include <oio/blob/kinetic/coro/CoroutineClientFactory.h>
+#include <oio/blob/kinetic/coro/CoroutineClient.h>
 
 using oio::kinetic::client::ClientInterface;
 using oio::kinetic::client::CoroutineClient;
@@ -34,3 +34,4 @@ CoroutineClientFactory::Get(const std::string &url) {
     cnx[url] = shared;
     return shared;
 }
+

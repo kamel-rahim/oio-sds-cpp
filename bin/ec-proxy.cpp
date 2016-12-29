@@ -32,9 +32,14 @@
 #include "bin/MillDaemon.h"
 #include "bin/ec-proxy-headers.h"
 
-using oio::router::blob::RemovalBuilder;
-using oio::router::blob::DownloadBuilder;
-using oio::router::blob::UploadBuilder;
+using oio::blob::router::RemovalBuilder;
+using oio::blob::router::DownloadBuilder;
+using oio::blob::router::UploadBuilder;
+using oio::blob::ec::EcCommand;
+using oio::blob::rawx::RawxCommand;
+using oio::blob::rawx::Range;
+using oio::blob::rawx::RawxUrl;
+using oio::blob::rawx::RawxUrlSet;
 
 static volatile bool flag_running{true};
 

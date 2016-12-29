@@ -41,9 +41,13 @@ DEFINE_string(
         "127.0.0.1:6008",
         "URL of the test rawx");
 
-using oio::rawx::blob::UploadBuilder;
-using oio::rawx::blob::DownloadBuilder;
-using oio::rawx::blob::RemovalBuilder;
+using oio::blob::rawx::UploadBuilder;
+using oio::blob::rawx::DownloadBuilder;
+using oio::blob::rawx::RemovalBuilder;
+using oio::blob::rawx::RawxCommand;
+using oio::blob::rawx::Range;
+using oio::blob::rawx::RawxUrl;
+using oio::blob::rawx::RawxUrlSet;
 
 class RawxBlobOpsFactory : public BlobOpsFactory {
     friend class RawxBlobTestSuite;

@@ -16,7 +16,6 @@
  * License along with this library.
  */
 
-
 #include <cassert>
 #include <string>
 #include <functional>
@@ -28,7 +27,6 @@
 #include <iostream>
 #include <fstream>
 
-
 #include "utils/macros.h"
 #include "utils/net.h"
 #include "utils/Http.h"
@@ -38,10 +36,15 @@
 #include "oio/blob/rawx/blob.h"
 
 using oio::api::OioError;
-using user_content::Content;
+using oio::content::Content;
+using oio::blob::rawx::UploadBuilder;
+using oio::blob::rawx::DownloadBuilder;
+using oio::blob::rawx::RawxCommand;
+using oio::blob::rawx::RawxCommand;
+using oio::blob::rawx::Range;
 
 OioError oio_sds::upload(std::string filepath, bool autocreate) {
-// connect to proxy
+    // connect to proxy
     std::shared_ptr<net::Socket> socket(new net::MillSocket);
     assert(socket->connect("127.0.0.1:6000"));
     assert(socket->setnodelay());
@@ -102,7 +105,7 @@ OioError oio_sds::upload(std::string filepath, bool autocreate) {
             rawx_socket.reset(new net::MillSocket);
 
             if (rawx_socket->connect(rawx_param.Host_Port())) {
-                oio::rawx::blob::UploadBuilder builder;
+                UploadBuilder builder;
 
                 builder.set_param(rawx_param);
 
@@ -180,7 +183,7 @@ OioError oio_sds::download(std::string filepath) {
             rawx_socket.reset(new net::MillSocket);
 
             if (rawx_socket->connect(rawx_param.Host_Port())) {
-                oio::rawx::blob::DownloadBuilder builder;
+                DownloadBuilder builder;
 
                 builder.set_param(rawx_param);
 

@@ -31,7 +31,7 @@
 #include "oio/directory/command.h"
 #include "oio/blob/rawx/command.h"
 
-struct ChunkInfo : public RawxUrl {
+struct ChunkInfo : public ::oio::blob::rawx::RawxUrl {
     int chunk_number;
     int pos;
     int score;
@@ -50,7 +50,7 @@ struct ChunkInfo : public RawxUrl {
     }
 
     void SetContent(const ChunkInfo &arg) {
-        RawxUrl::SetUrl(arg);
+        ::oio::blob::rawx::RawxUrl::SetUrl(arg);
         chunk_number = arg.chunk_number;
         pos = arg.pos;
         size = arg.size;
@@ -136,45 +136,45 @@ class ContentInfo {
     bool put_content(std::string v) {
         ChunkInfo set;
         std::string tmpStr;
-        rapidjson::Document document;
-        if (document.Parse(v.c_str()).HasParseError()) {
+        rapidjson::Document doc;
+        if (doc.Parse(v.c_str()).HasParseError()) {
             LOG(ERROR) << "Invalid JSON";
             return false;
         }
 
-        if (!document.HasMember("url")) {
+        if (!doc.HasMember("url")) {
             LOG(ERROR) << "Missing 'url' field";
             return false;
         } else {
-            set.SetUrl(RawxUrl(document["url"].GetString()));
+            set.SetUrl(::oio::blob::rawx::RawxUrl(doc["url"].GetString()));
         }
 
-        if (!document.HasMember("hash")) {
+        if (!doc.HasMember("hash")) {
             LOG(ERROR) << "Missing 'hash' field";
             return false;
         } else {
-            set.hash = document["hash"].GetString();
+            set.hash = doc["hash"].GetString();
         }
 
-        if (!document.HasMember("size")) {
+        if (!doc.HasMember("size")) {
             LOG(ERROR) << "Missing 'size' field";
             return false;
         } else {
-            set.size = document["size"].GetInt();
+            set.size = doc["size"].GetInt();
         }
 
-        if (!document.HasMember("score")) {
+        if (!doc.HasMember("score")) {
             LOG(ERROR) << "Missing 'score' field";
             return false;
         } else {
-            set.score = document["score"].GetInt();
+            set.score = doc["score"].GetInt();
         }
 
-        if (!document.HasMember("pos")) {
+        if (!doc.HasMember("pos")) {
             LOG(ERROR) << "Missing 'pos' field";
             return false;
         } else {
-            tmpStr = document["pos"].GetString();
+            tmpStr = doc["pos"].GetString();
             std::size_t pos = tmpStr.find(".");
 
             if (pos != std::string::npos) {  // get pos + chunk_number

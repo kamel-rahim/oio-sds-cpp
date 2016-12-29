@@ -16,7 +16,6 @@
  * License along with this library.
  */
 
-
 #include <string>
 #include <functional>
 #include <sstream>
@@ -37,86 +36,85 @@
                             ? (std::string("&type=") + url.Type()) \
                             : "&type=meta2")
 
+using ::http::Parameters;
+using ::http::Code;
 using oio::api::OioError;
+using oio::directory::DirectoryClient;
 
 OioError
-DirectoryClient::http_call_parse_body(http_param *http, body_type type) {
-    http::Code rc = http->HTTP_call();
+DirectoryClient::http_call_parse_body(Parameters *params, body_type type) {
+    Code rc = params->DoCall();
+    if (!rc == Code::OK)
+        return OioError(-1, "HTTP_exec exec error");
+
     OioError err;
-    if (!rc == http::Code::OK) {
-        err.Set(-1, "HTTP_exec exec error");
-    } else {
-        bool ret = 0;
-        switch (type) {
-            case body_type::META:
-                ret = output.Parse(http->body_out);
-                break;
-            case body_type::METAS:
-                ret = output.Parse(http->body_out);
-                break;
-            case body_type::PROPERTIES:
-                ret = output.put_properties(http->body_out);
-                break;
-        }
-        if (!ret)
-            err.Decode(http->body_out);
+    bool ret = 0;
+    switch (type) {
+        case body_type::META:
+        case body_type::METAS:
+            ret = output.Parse(params->body_out);
+            break;
+        case body_type::PROPERTIES:
+            ret = output.put_properties(params->body_out);
+            break;
     }
+    if (!ret)
+        err.Decode(params->body_out);
     return err;
 }
 
-OioError DirectoryClient::http_call(http_param *http) {
-    http::Code rc = http->HTTP_call();
+OioError DirectoryClient::http_call(Parameters *params) {
+    auto rc = params->DoCall();
+    if (rc != Code::OK)
+        return OioError(-1, "HTTP_exec exec error");
     OioError err;
-    if (!rc == http::Code::OK)
-        err.Set(-1, "HTTP_exec exec error");
-    else
-        err.Decode(http->body_out);
+    err.Decode(params->body_out);
     return err;
 }
 
 OioError DirectoryClient::Create() {
-    http_param http(_socket, "POST", (SELECTOR("create")));
-    return http_call(&http);
+    Parameters params(_socket, "POST", (SELECTOR("create")));
+    return http_call(&params);
 }
 
 OioError DirectoryClient::Unlink() {
-    http_param http(_socket, "POST", (SELECTOR("unlink")));
-    return http_call(&http);
+    Parameters params(_socket, "POST", (SELECTOR("unlink")));
+    return http_call(&params);
 }
 
 OioError DirectoryClient::Destroy() {
-    http_param http(_socket, "POST", (SELECTOR("destroy")));
-    return http_call(&http);
+    Parameters params(_socket, "POST", (SELECTOR("destroy")));
+    return http_call(&params);
 }
 
 OioError DirectoryClient::DelProperties() {
-    http_param http(_socket, "POST", SELECTOR("del_properties"));
-    return http_call(&http);
+    Parameters params(_socket, "POST", SELECTOR("del_properties"));
+    return http_call(&params);
 }
 
 OioError DirectoryClient::Renew() {
-    http_param http(_socket, "POST", SELECTOR("Renew"));
-    return http_call(&http);
+    Parameters params(_socket, "POST", SELECTOR("Renew"));
+    return http_call(&params);
 }
 
 OioError DirectoryClient::Show() {
-    http_param http(_socket, "GET", SELECTOR("show"));
-    return http_call_parse_body(&http, body_type::METAS);
+    Parameters params(_socket, "GET", SELECTOR("show"));
+    return http_call_parse_body(&params, body_type::METAS);
 }
 
 OioError DirectoryClient::GetProperties() {
-    http_param http(_socket, "POST", SELECTOR("EncodeProperties"));
-    return http_call_parse_body(&http, body_type::PROPERTIES);
+    Parameters params(_socket, "POST", SELECTOR("EncodeProperties"));
+    return http_call_parse_body(&params, body_type::PROPERTIES);
 }
 
 OioError DirectoryClient::Link() {
-    http_param http(_socket, "POST", SELECTOR("link"));
-    return http_call_parse_body(&http, body_type::META);
+    Parameters params(_socket, "POST", SELECTOR("link"));
+    return http_call_parse_body(&params, body_type::META);
 }
 
 OioError DirectoryClient::SetProperties() {
     std::string body_in;
     output.get_properties(&body_in);
-    http_param http(_socket, "POST", SELECTOR("set_properties"), body_in);
-    return http_call(&http);
+    Parameters params(_socket, "POST", SELECTOR("set_properties"), body_in);
+    return http_call(&params);
 }

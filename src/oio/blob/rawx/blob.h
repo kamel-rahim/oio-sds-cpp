@@ -29,8 +29,8 @@
 #include "oio/blob/rawx/command.h"
 
 namespace oio {
-namespace rawx {
 namespace blob {
+namespace rawx {
 
 class DownloadBuilder {
  public:
@@ -96,9 +96,8 @@ class RemovalBuilder {
     RawxCommand rawx_param;
 };
 
-
-}  // namespace blob
 }  // namespace rawx
+}  // namespace blob
 }  // namespace oio
 
 #endif  // SRC_OIO_BLOB_RAWX_BLOB_H_

@@ -28,7 +28,6 @@
 #include "oio/blob/http/blob.h"
 #include "oio/directory/command.h"
 #include "oio/sds/command.h"
-#include "utils/command.h"
 
 class oio_sds {
  private :

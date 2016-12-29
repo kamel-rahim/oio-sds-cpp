@@ -40,9 +40,12 @@
 using oio::api::Cause;
 using oio::api::Status;
 using oio::api::Errno;
-using oio::ec::blob::DownloadBuilder;
-using oio::ec::blob::RemovalBuilder;
-using oio::ec::blob::UploadBuilder;
+using oio::blob::rawx::RawxCommand;
+using oio::blob::ec::EcCommand;
+using oio::blob::rawx::RawxUrl;
+using oio::blob::ec::DownloadBuilder;
+using oio::blob::ec::RemovalBuilder;
+using oio::blob::ec::UploadBuilder;
 
 namespace blob = ::oio::api::blob;
 
@@ -70,7 +73,7 @@ class EcDownload : public oio::api::blob::Download {
         return mask | f;
     }
 
-    static int create_frags_array_set(struct oio::ec::blob::frag_array_set *set,
+    static int create_frags_array_set(struct oio::blob::ec::frag_array_set *set,
             char **data,
             unsigned int num_data_frags,
             char **parity,
@@ -126,7 +129,7 @@ out:
         uint64_t out_data_len = 0;
         int rc_decode = 1;
 
-        struct oio::ec::blob::frag_array_set frags;
+        struct oio::blob::ec::frag_array_set frags;
 
         done = false;
 
@@ -169,7 +172,7 @@ out:
                     to.Host_Port());
             char *p = NULL;
             if (socket) {
-                oio::rawx::blob::DownloadBuilder builder;
+                ::oio::blob::rawx::DownloadBuilder builder;
 
                 RawxCommand rawx_param;
                 rawx_param = to;
@@ -402,7 +405,7 @@ class EcUpload : public oio::api::blob::Upload {
             std::shared_ptr<net::Socket> *socket = TheScoketMap.GetSocket(
                     to.Host_Port());
             if (socket) {
-                oio::rawx::blob::UploadBuilder builder;
+                ::oio::blob::rawx::UploadBuilder builder;
 
                 RawxCommand rawx_param;
                 rawx_param = to;
@@ -476,7 +479,7 @@ class EcUpload : public oio::api::blob::Upload {
             std::shared_ptr<net::Socket> *socket = TheScoketMap.GetSocket(
                     to.Host_Port());
             if (socket) {
-                oio::rawx::blob::RemovalBuilder builder;
+                oio::blob::rawx::RemovalBuilder builder;
 
                 RawxCommand rawx_param;
                 rawx_param = to;

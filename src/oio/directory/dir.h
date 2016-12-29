@@ -21,15 +21,16 @@
 
 #include <string>
 #include <memory>
-#include <map>
 
-#include "utils/serialize_def.h"
-#include "utils/command.h"
+#include "utils/Http.h"
 #include "oio/api/blob.h"
 #include "oio/blob/http/blob.h"
 #include "oio/directory/command.h"
 
 enum body_type { META, METAS, PROPERTIES };
+
+namespace oio {
+namespace directory {
 
 class DirectoryClient {
  private :
@@ -37,13 +38,15 @@ class DirectoryClient {
     DirPayload output;
     std::shared_ptr<net::Socket> _socket;
 
-    oio::api::OioError http_call_parse_body(http_param *http, body_type type);
-    oio::api::OioError http_call(http_param *http);
+    oio::api::OioError
+    http_call_parse_body(::http::Parameters *params, body_type type);
+
+    oio::api::OioError http_call(::http::Parameters *params);
 
  public:
     explicit DirectoryClient(const OioUrl &u) : url(u), output() {}
 
-    void SetSocket(std::shared_ptr<net::Socket> socket ) {
+    void SetSocket(std::shared_ptr<net::Socket> socket) {
         _socket = socket;
     }
 
@@ -60,14 +63,25 @@ class DirectoryClient {
     }
 
     oio::api::OioError Create();
+
     oio::api::OioError Link();
+
     oio::api::OioError Unlink();
+
     oio::api::OioError Destroy();
+
     oio::api::OioError SetProperties();
+
     oio::api::OioError GetProperties();
+
     oio::api::OioError DelProperties();
+
     oio::api::OioError Renew();
+
     oio::api::OioError Show();
 };
+
+}  // namespace directory
+}  // namespace oio
 
 #endif  //  SRC_OIO_DIRECTORY_DIR_H_

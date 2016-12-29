@@ -152,6 +152,8 @@ class OioError : public Status {
 
     explicit OioError(unsigned int code);
 
+    OioError(unsigned int c, const std::string &m) : Status() { Set(c, m); }
+
     void Set(unsigned int code, const std::string &message) {
         code_ = code;
         msg_.assign(message);

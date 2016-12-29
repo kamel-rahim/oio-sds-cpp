@@ -38,8 +38,8 @@
 enum ENCODING_TYPE { ec, rawx };
 
 namespace oio {
-namespace router {
 namespace blob {
+namespace router {
 
 class UploadBuilder {
  public:
@@ -47,14 +47,14 @@ class UploadBuilder {
 
     ~UploadBuilder();
 
-    void set_ec_param(const EcCommand &_param) {
+    void set_ec_param(const ::oio::blob::ec::EcCommand &_param) {
         ec_param = _param;
-        type = ec;
+        type = ENCODING_TYPE::ec;
     }
 
-    void set_rawx_param(const RawxCommand &_param) {
+    void set_rawx_param(const ::oio::blob::rawx::RawxCommand &_param) {
         rawx_param = _param;
-        type = rawx;
+        type = ENCODING_TYPE::rawx;
     }
 
     void SetXattr(const std::string &k, const std::string &v) {
@@ -65,8 +65,8 @@ class UploadBuilder {
 
  private:
     std::map<std::string, std::string> xattrs;
-    EcCommand   ec_param;
-    RawxCommand rawx_param;
+    ::oio::blob::ec::EcCommand ec_param;
+    ::oio::blob::rawx::RawxCommand rawx_param;
     ENCODING_TYPE type;
 };
 
@@ -77,14 +77,14 @@ class DownloadBuilder {
     ~DownloadBuilder();
 
 
-    void set_ec_param(const EcCommand &_param) {
+    void set_ec_param(const ::oio::blob::ec::EcCommand &_param) {
         ec_param = _param;
-        type = ec;
+        type = ENCODING_TYPE::ec;
     }
 
-    void set_rawx_param(const RawxCommand &_param) {
+    void set_rawx_param(const ::oio::blob::rawx::RawxCommand &_param) {
         rawx_param = _param;
-        type = rawx;
+        type = ENCODING_TYPE::rawx;
     }
 
     void SetXattr(const std::string &k, const std::string &v) {
@@ -95,8 +95,8 @@ class DownloadBuilder {
 
  private:
     std::map<std::string, std::string> xattrs;
-    EcCommand   ec_param;
-    RawxCommand rawx_param;
+    ::oio::blob::ec::EcCommand ec_param;
+    ::oio::blob::rawx::RawxCommand rawx_param;
     ENCODING_TYPE type;
 };
 
@@ -108,13 +108,13 @@ class RemovalBuilder {
 
     inline void BlockSize(uint32_t s) { block_size = s; }
 
-    inline bool Target(const RawxUrlSet &to) {
+    inline bool Target(const ::oio::blob::rawx::RawxUrlSet &to) {
         targets.insert(to);
         return true;
     }
 
  private:
-    std::set<RawxUrlSet> targets;
+    std::set<::oio::blob::rawx::RawxUrlSet> targets;
     uint32_t block_size;
 };
 
@@ -126,18 +126,18 @@ class ListingBuilder {
 
     inline void BlockSize(uint32_t s) { block_size = s; }
 
-    inline bool Target(const RawxUrlSet &to) {
+    inline bool Target(const ::oio::blob::rawx::RawxUrlSet &to) {
         targets.insert(to);
         return true;
     }
 
  private:
-    std::set<RawxUrlSet> targets;
+    std::set<::oio::blob::rawx::RawxUrlSet> targets;
     uint32_t block_size;
 };
 
-}  // namespace blob
 }  // namespace router
+}  // namespace blob
 }  // namespace oio
 
 #endif  // SRC_OIO_BLOB_ROUTER_BLOB_H_

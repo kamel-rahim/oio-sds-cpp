@@ -46,16 +46,17 @@ std::ostream &operator<<(std::ostream &out, const Cause c);
 class Status {
  protected:
     Cause rc_;
+    unsigned int code_;
     std::string msg_;
 
  public:
     ~Status() {}
 
     /** Success constructor */
-    Status() : rc_{Cause::OK} {}
+    Status() : rc_{Cause::OK}, code_{0} {}
 
     /** Build a Status with a cause and a generic message */
-    explicit Status(Cause rc) : rc_{rc} {}
+    explicit Status(Cause rc) : rc_{rc}, code_{0} {}
 
     /**
      * Tells if the Status depicts a success (true) or an failure (false)
@@ -76,15 +77,32 @@ class Status {
      */
     inline const char *Message() const { return msg_.c_str(); }
 
+
+    inline unsigned int SoftCode() const { return code_; }
+
     /**
      * Handy method to translate the underlying error cause into a pretty
      * string.
      * @return the textual representation of the underlying Cause
      */
     const char *Name() const;
+
+    std::string Encode() const;
 };
 
 std::ostream &operator<<(std::ostream &out, const Status s);
+
+/**
+ * Simple wrapper to initiate a Status depicting a success.
+ * Usage:
+ *
+ * Status successful_method () {
+ *   return Ok();
+ */
+class Ok : public Status {
+ public:
+    Ok() : Status(Cause::OK) {}
+};
 
 /**
  * Simple wrapper to initiate a Status based on the current errno value.
@@ -115,6 +133,43 @@ class Errno : public Status {
      * Destructor
      */
     ~Errno() {}
+};
+
+/**
+ * Simple wrapper to initiate a Status based on the current errno value.
+ * Usage:
+ *
+ * Status failing_method () {
+ *   int rc = SomeCall();
+ *   if (rc == CODE_CONTAINER_NOT_FOUND || rc == CODE_CONTENT_NOT_FOUND)
+ *      return OioError(rc);
+ *   return Ok();
+ * }
+ */
+class OioError : public Status {
+ public:
+    OioError() : Status(Cause::OK) {}
+
+    explicit OioError(unsigned int code);
+
+    void Set(unsigned int code, const std::string &message) {
+        code_ = code;
+        msg_.assign(message);
+        mapCode();
+    }
+
+    /**
+     * JSON is used to encode/decode the error structures.
+     * Here do we decode.
+     * @param encoded a std::string containing a valid JSON
+     */
+    bool Decode(const std::string &encoded);
+
+ private:
+    /**
+     * Convert the current integer code into a general Cause.
+     */
+    void mapCode();
 };
 
 }  // namespace api

@@ -39,8 +39,8 @@ class ContainerClient {
     std::set<std::string> del_properties;
     std::shared_ptr<net::Socket> _socket;
 
-    oio_err http_call_parse_body(http_param *http);
-    oio_err http_call(http_param *http);
+    oio::api::OioError http_call_parse_body(http_param *http);
+    oio::api::OioError http_call(http_param *http);
 
  public:
     explicit ContainerClient(OioUrl &file_id) : url(file_id) { }
@@ -63,15 +63,15 @@ class ContainerClient {
         return payload;
     }
 
-    oio_err Create();
-    oio_err Show();
-    oio_err List();
-    oio_err Destroy();
-    oio_err Touch();
-    oio_err Dedup();
-    oio_err GetProperties();
-    oio_err SetProperties();
-    oio_err DelProperties();
+    oio::api::OioError Create();
+    oio::api::OioError Show();
+    oio::api::OioError List();
+    oio::api::OioError Destroy();
+    oio::api::OioError Touch();
+    oio::api::OioError Dedup();
+    oio::api::OioError GetProperties();
+    oio::api::OioError SetProperties();
+    oio::api::OioError DelProperties();
 };
 
 }  // namespace user_container

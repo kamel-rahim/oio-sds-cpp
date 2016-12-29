@@ -37,8 +37,8 @@ class DirectoryClient {
     DirPayload output;
     std::shared_ptr<net::Socket> _socket;
 
-    oio_err http_call_parse_body(http_param *http, body_type type);
-    oio_err http_call(http_param *http);
+    oio::api::OioError http_call_parse_body(http_param *http, body_type type);
+    oio::api::OioError http_call(http_param *http);
 
  public:
     explicit DirectoryClient(const OioUrl &u) : url(u), output() {}
@@ -59,16 +59,15 @@ class DirectoryClient {
         return output;
     }
 
-    oio_err Create();
-
-    oio_err Link();
-    oio_err Unlink();
-    oio_err Destroy();
-    oio_err SetProperties();
-    oio_err GetProperties();
-    oio_err DelProperties();
-    oio_err Renew();
-    oio_err Show();
+    oio::api::OioError Create();
+    oio::api::OioError Link();
+    oio::api::OioError Unlink();
+    oio::api::OioError Destroy();
+    oio::api::OioError SetProperties();
+    oio::api::OioError GetProperties();
+    oio::api::OioError DelProperties();
+    oio::api::OioError Renew();
+    oio::api::OioError Show();
 };
 
 #endif  //  SRC_OIO_DIRECTORY_DIR_H_

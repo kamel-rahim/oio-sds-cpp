@@ -28,6 +28,7 @@
 #include "utils/Http.h"
 #include "oio/content/content.h"
 
+using oio::api::OioError;
 using user_content::Content;
 
 #define SELECTOR(str) std::string("/v3.0/") + url.NS()           +\
@@ -37,11 +38,11 @@ using user_content::Content;
                       (url.Type().size() ? std::string("&type=") + url.Type() : "")                         +\
                       std::string("&path=") + url.Filename()
 
-oio_err Content::http_call_parse_body(http_param *http, body_type type) {
+OioError Content::http_call_parse_body(http_param *http, body_type type) {
     http::Code rc = http->HTTP_call();
-    oio_err err;
+    OioError err;
     if (!rc == http::Code::OK) {
-        err.get_message(-1, "HTTP_exec exec error");
+        err.Set(-1, "HTTP_exec exec error");
     } else {
         bool ret = 0;
         switch (type) {
@@ -54,22 +55,22 @@ oio_err Content::http_call_parse_body(http_param *http, body_type type) {
                 break;
         }
         if (!ret)
-            err.put_message(http->body_out);
+            err.Decode(http->body_out);
     }
     return err;
 }
 
-oio_err Content::http_call(http_param *http) {
+OioError Content::http_call(http_param *http) {
     http::Code rc = http->HTTP_call();
-    oio_err err;
+    OioError err;
     if (!rc == http::Code::OK)
-        err.get_message(-1, "HTTP_exec exec error");
+        err.Set(-1, "HTTP_exec exec error");
     else
-        err.put_message(http->body_out);
+        http->body_out.assign(err.Encode());
     return err;
 }
 
-oio_err Content::Create(int size) {
+OioError Content::Create(int size) {
     std::string body_in;
     param.get_contents(&body_in);
     http_param http(_socket, "POST", (SELECTOR("create")), body_in);
@@ -81,21 +82,21 @@ oio_err Content::Create(int size) {
     return http_call(&http);
 }
 
-oio_err Content::Copy(std::string u) {
+OioError Content::Copy(std::string u) {
     http_param http(_socket, "POST", SELECTOR("copy"));
     http.header_in["destination"] = u;
     return http_call(&http);
 }
 
 
-oio_err Content::SetProperties() {
+OioError Content::SetProperties() {
     std::string body_in;
     param.get_properties(&body_in);
     http_param http(_socket, "POST", SELECTOR("set_properties"), body_in);
     return http_call(&http);
 }
 
-oio_err Content::DelProperties() {
+OioError Content::DelProperties() {
     std::string body_in;
     param.get_properties_key(&body_in, &del_properties);
     http_param http(_socket, "POST", SELECTOR("del_properties"), body_in);
@@ -103,26 +104,26 @@ oio_err Content::DelProperties() {
     return http_call(&http);
 }
 
-oio_err Content::Delete() {
+OioError Content::Delete() {
     http_param http(_socket, "POST", (SELECTOR("delete")));
     return http_call(&http);
 }
 
-oio_err Content::Show() {
+OioError Content::Show() {
     http_param http(_socket, "GET", SELECTOR("show"));
     http.header_out_filter = "x-oio-content-meta-";
     http.header_out = &param.System();
     return http_call_parse_body(&http, body_type::SHOW);
 }
 
-oio_err Content::GetProperties() {
+OioError Content::GetProperties() {
     http_param http(_socket, "POST", SELECTOR("EncodeProperties"));
     http.header_out_filter = "x-oio-content-meta-";
     http.header_out = &param.System();
     return http_call_parse_body(&http, body_type::PROPERTIES);
 }
 
-oio_err Content::Prepare(bool autocreate) {
+OioError Content::Prepare(bool autocreate) {
     std::string body_in;
     param.get_size(&body_in);
     http_param http(_socket, "POST", SELECTOR("prepare"), body_in);

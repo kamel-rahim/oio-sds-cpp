@@ -16,6 +16,9 @@
  * License along with this library.
  */
 
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+#include <rapidjson/document.h>
 #include "utils/macros.h"
 
 #include "oio/api/common.h"
@@ -23,6 +26,7 @@
 using oio::api::Status;
 using oio::api::Cause;
 using oio::api::Errno;
+using oio::api::OioError;
 
 static inline const char *Status2Str(Cause s) {
     switch (s) {
@@ -58,6 +62,45 @@ std::ostream& oio::api::operator<<(std::ostream &out, const Status s) {
 }
 
 const char *Status::Name() const { return Status2Str(rc_); }
+
+std::string Status::Encode() const {
+    rapidjson::StringBuffer buf;
+    rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
+    writer.StartObject();
+    writer.Key("status");
+    writer.Int(code_);
+    writer.Key("message");
+    writer.String(msg_.c_str());
+    writer.EndObject();
+    return std::move(buf.GetString());
+}
+
+bool OioError::Decode(const std::string &encoded) {
+    rapidjson::Document doc;
+
+    if (doc.Parse(encoded.c_str()).HasParseError())
+        return false;
+    if (!doc.HasMember("status") || !doc["status"].IsInt())
+        return false;
+    if (!doc.HasMember("message") || !doc["message"].IsString())
+        return false;
+
+    code_ = doc["status"].GetInt();
+    msg_.assign(doc["message"].GetString());
+    return true;
+}
+
+void OioError::mapCode() {
+    switch (code_) {
+        case 420:
+        case 431:
+            rc_ = Cause::NotFound;
+            return;
+        default:
+            rc_ = Cause::InternalError;
+            return;
+    }
+}
 
 Cause _map(int err) {
     switch (err) {

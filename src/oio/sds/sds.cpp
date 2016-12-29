@@ -37,10 +37,10 @@
 #include "oio/content/content.h"
 #include "oio/blob/rawx/blob.h"
 
-
+using oio::api::OioError;
 using user_content::Content;
 
-oio_err oio_sds::upload(std::string filepath, bool autocreate) {
+OioError oio_sds::upload(std::string filepath, bool autocreate) {
 // connect to proxy
     std::shared_ptr<net::Socket> socket(new net::MillSocket);
     assert(socket->connect("127.0.0.1:6000"));
@@ -57,7 +57,7 @@ oio_err oio_sds::upload(std::string filepath, bool autocreate) {
     uint32_t metachunk = 0;
 
     //  prime bucket
-    oio_err err = bucket.Prepare(autocreate);
+    OioError err = bucket.Prepare(autocreate);
     ChunkInfo contentSet = bucket.GetData().GetTarget(0);
     int size = contentSet.size;
     bool bfirst = true;
@@ -77,9 +77,8 @@ oio_err oio_sds::upload(std::string filepath, bool autocreate) {
         if (ret > 0) {
             if (!bfirst) {
                 err = bucket.Prepare(autocreate);
-                if (err.status)
-                    LOG(INFO) << "unable to prepare content:" << err.status <<
-                              ", message: " << err.message;
+                if (!err.Ok())
+                    LOG(INFO) << "unable to prepare content:" << err.Encode();
             } else {
                 bfirst = false;
             }
@@ -148,7 +147,7 @@ oio_err oio_sds::upload(std::string filepath, bool autocreate) {
 }
 
 
-oio_err oio_sds::download(std::string filepath) {
+OioError oio_sds::download(std::string filepath) {
     // connect to proxy
     std::shared_ptr<net::Socket> socket(new net::MillSocket);
     assert(socket->connect("127.0.0.1:6000"));
@@ -159,9 +158,9 @@ oio_err oio_sds::download(std::string filepath) {
     bucket.SetSocket(socket);
 
     std::ofstream file(filepath, std::ifstream::binary);
-    oio_err err = bucket.Show();
+    OioError err = bucket.Show();
 
-    if (!err.status) {
+    if (err.Ok()) {
         int maxchunk = bucket.GetData().GetTargetsSize();
 
         for (int i = 0; i < maxchunk; i++) {
@@ -203,5 +202,3 @@ oio_err oio_sds::download(std::string filepath) {
     }
     return err;
 }
-
-

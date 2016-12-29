@@ -72,30 +72,4 @@ class http_param {
     }
 };
 
-class oio_err {
- public:
-    int status;
-    std::string message;
-
- public:
-    oio_err() { status = 0 ; }
-
-    void put_message(std::string s) {
-        rapidjson::StringBuffer buf;
-        rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
-        writer.StartObject();
-        writer.Key("status");
-        writer.Int(status);
-        writer.Key("message");
-        writer.String(message.c_str());
-        writer.EndObject();
-        s.assign(buf.GetString());
-    }
-
-    void get_message(int st, std::string msg) {
-        status = st;
-        message = msg;
-    }
-};
-
 #endif  //  SRC_UTILS_COMMAND_H_

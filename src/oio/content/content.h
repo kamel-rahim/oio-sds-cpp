@@ -43,9 +43,9 @@ class Content {
     std::shared_ptr<net::Socket> _socket;
 
  private:
-    oio_err http_call_parse_body(http_param *http, body_type type);
+    oio::api::OioError http_call_parse_body(http_param *http, body_type type);
 
-    oio_err http_call(http_param *http);
+    oio::api::OioError http_call(http_param *http);
 
  public:
     explicit Content(const OioUrl &u) : url(u) {}
@@ -66,23 +66,23 @@ class Content {
         param[key] = value;
     }
 
-    oio_err Create(int size);
+    oio::api::OioError Create(int size);
 
-    oio_err Prepare(bool autocreate);
+    oio::api::OioError Prepare(bool autocreate);
 
-    oio_err Show();
+    oio::api::OioError Show();
 
-    oio_err List();
+    oio::api::OioError List();
 
-    oio_err Delete();
+    oio::api::OioError Delete();
 
-    oio_err Copy(std::string url);
+    oio::api::OioError Copy(std::string url);
 
-    oio_err GetProperties();
+    oio::api::OioError GetProperties();
 
-    oio_err SetProperties();
+    oio::api::OioError SetProperties();
 
-    oio_err DelProperties();
+    oio::api::OioError DelProperties();
 };
 
 }  // namespace user_content

@@ -49,6 +49,14 @@ using oio::blob::ec::UploadBuilder;
 
 namespace blob = ::oio::api::blob;
 
+struct SetOfFragments {
+    unsigned int num_fragments;
+    char **array;
+
+    SetOfFragments() : num_fragments{0}, array{nullptr} {}
+};
+
+
 SocketMap TheScoketMap;
 
 class EcDownload : public oio::api::blob::Download {
@@ -73,7 +81,7 @@ class EcDownload : public oio::api::blob::Download {
         return mask | f;
     }
 
-    static int create_frags_array_set(struct oio::blob::ec::SetOfFragments *set,
+    static int create_frags_array_set(struct SetOfFragments *set,
             char **data,
             unsigned int num_data_frags,
             char **parity,
@@ -129,7 +137,7 @@ out:
         uint64_t out_data_len = 0;
         int rc_decode = 1;
 
-        struct oio::blob::ec::SetOfFragments frags;
+        struct SetOfFragments frags;
 
         done = false;
 

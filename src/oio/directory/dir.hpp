@@ -19,17 +19,18 @@
 #ifndef  SRC_OIO_DIRECTORY_DIR_HPP_
 #define  SRC_OIO_DIRECTORY_DIR_HPP_
 
+#include <string>
+#include <memory>
+#include <map>
+#include <set>
+
 #include <rapidjson/schema.h>
 #include <rapidjson/stringbuffer.h>
 #include <rapidjson/writer.h>
 
-#include <string>
-#include <memory>
-#include <set>
-#include <map>
-
 #include "utils/http.hpp"
 #include "oio/api/blob.hpp"
+#include "oio/api/resolver.hpp"
 #include "oio/blob/http/blob.hpp"
 #include "oio/directory/dir.hpp"
 
@@ -101,44 +102,13 @@ class OioUrl {
     }
 };
 
-class SrvID {
- protected:
-    std::string host;
-    int port;
-
- public:
-    ~SrvID() {}
-
-    SrvID() {}
-
-    SrvID(const std::string _host, int _port) : host(_host), port(_port) {}
-
-    SrvID(const SrvID &o) : host(o.host), port{o.port} {}
-
-    SrvID(SrvID &&o) : host(), port{o.port} { host.swap(o.host); }
-
-    void Set(const SrvID &o) {
-        host.assign(o.host);
-        port = o.port;
-    }
-
-    bool Parse(const std::string packed) {
-        auto colon = packed.rfind(':');
-        if (colon == packed.npos)
-            return false;
-        host.assign(packed, 0, colon);
-        auto strport = std::string(packed, colon + 1);
-        port = ::atoi(strport.c_str());
-        return true;
-    }
-};
 
 class DirURL {
  protected:
     int seq;
     std::string type;
     std::string args;
-    SrvID host;
+    ::oio::api::SrvID host;
 
  public:
     ~DirURL() {}

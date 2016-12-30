@@ -108,13 +108,6 @@ class EcCommand {
     uint32_t chunkSize;
 };
 
-struct SetOfFragments {
-    unsigned int num_fragments;
-    char **array;
-
-    SetOfFragments() : num_fragments{0}, array{nullptr} {}
-};
-
 class UploadBuilder {
  public:
     UploadBuilder();

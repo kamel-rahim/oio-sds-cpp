@@ -27,8 +27,8 @@
 
 #include <sstream>
 #include "utils/macros.h"
-#include "utils/utils.h"
-#include "utils/net.h"
+#include "utils/utils.hpp"
+#include "utils/net.hpp"
 
 using net::MillSocket;
 using oio::kinetic::client::Request;

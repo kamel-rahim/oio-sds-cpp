@@ -16,8 +16,8 @@
  * License along with this library.
  */
 
-#ifndef SRC_UTILS_HTTP_H_
-#define SRC_UTILS_HTTP_H_
+#ifndef SRC_UTILS_HTTP_HPP_
+#define SRC_UTILS_HTTP_HPP_
 
 #include <http-parser/http_parser.h>
 
@@ -28,9 +28,8 @@
 #include <queue>
 #include <memory>
 
-#include "./net.h"
-#include "./utils.h"
-#include "./serialize_def.h"
+#include "net.hpp"
+#include "utils.hpp"
 
 namespace http {
 
@@ -301,6 +300,9 @@ class Reply {
     http_parser_settings settings;
 };
 
+/**
+ * Simplifies the Request/Reply mechanisms for small requests and small replies.
+ */
 class Call {
  public:
     /**
@@ -423,4 +425,4 @@ class Parameters {
 
 }  // namespace http
 
-#endif  // SRC_UTILS_HTTP_H_
+#endif  // SRC_UTILS_HTTP_HPP_

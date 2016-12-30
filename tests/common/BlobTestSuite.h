@@ -25,7 +25,7 @@
 #include <string>
 #include <vector>
 
-#include "oio/api/blob.h"
+#include "oio/api/blob.hpp"
 
 const char *random_hex = "0123456789ABCDEF";
 

@@ -16,21 +16,20 @@
  * License along with this library.
  */
 
-#ifndef SRC_OIO_BLOB_RAWX_BLOB_H_
-#define SRC_OIO_BLOB_RAWX_BLOB_H_
+#ifndef SRC_OIO_BLOB_HTTP_BLOB_HPP__
+#define SRC_OIO_BLOB_HTTP_BLOB_HPP__
 
 #include <string>
 #include <memory>
 #include <map>
+#include <set>
 
-#include "utils/serialize_def.h"
-#include "oio/api/blob.h"
-#include "oio/blob/http/blob.h"
-#include "oio/blob/rawx/command.h"
+#include "utils/net.hpp"
+#include "oio/api/blob.hpp"
 
 namespace oio {
-namespace blob {
-namespace rawx {
+namespace http {
+namespace imperative {
 
 class DownloadBuilder {
  public:
@@ -38,14 +37,19 @@ class DownloadBuilder {
 
     ~DownloadBuilder();
 
-    void set_param(const RawxCommand &_param);
+    void Host(const std::string &s);
+
+    void Name(const std::string &s);
+
+    void Field(const std::string &k, const std::string &v);
 
     std::unique_ptr<oio::api::blob::Download> Build(
             std::shared_ptr<net::Socket> socket);
 
- private:
-    oio::http::imperative::DownloadBuilder inner;
-    RawxCommand rawx_param;
+ protected:
+    std::string host;
+    std::string name;
+    std::map<std::string, std::string> fields;
 };
 
 class UploadBuilder {
@@ -54,30 +58,22 @@ class UploadBuilder {
 
     ~UploadBuilder();
 
-    void set_param(const RawxCommand &_param);
+    void Host(const std::string &s);
 
-    void ContainerId(const std::string &s);
+    void Name(const std::string &s);
 
-    void ContentPath(const std::string &s);
+    void Field(const std::string &k, const std::string &v);
 
-    void ContentId(const std::string &s);
-
-    void MimeType(const std::string &s);
-
-    void ContentVersion(int64_t v);
-
-    void StoragePolicy(const std::string &s);
-
-    void ChunkMethod(const std::string &s);
-
-    void Property(const std::string &k, const std::string &v);
+    void Trailer(const std::string &k);
 
     std::unique_ptr<oio::api::blob::Upload> Build(
             std::shared_ptr<net::Socket> socket);
 
  private:
-    oio::http::imperative::UploadBuilder inner;
-    RawxCommand rawx_param;
+    std::string host;
+    std::string name;
+    std::map<std::string, std::string> fields;
+    std::set<std::string> trailers;
 };
 
 class RemovalBuilder {
@@ -86,18 +82,26 @@ class RemovalBuilder {
 
     ~RemovalBuilder();
 
-    void set_param(const RawxCommand &_param);
+    void Host(const std::string &s);
+
+    void Name(const std::string &s);
+
+    void Field(const std::string &k, const std::string &v);
+
+    void Trailer(const std::string &k);
 
     std::unique_ptr<oio::api::blob::Removal> Build(
             std::shared_ptr<net::Socket> socket);
 
  private:
-    oio::http::imperative::RemovalBuilder inner;
-    RawxCommand rawx_param;
+    std::string host;
+    std::string name;
+    std::map<std::string, std::string> fields;
+    std::set<std::string> trailers;
 };
 
-}  // namespace rawx
-}  // namespace blob
+}  // namespace imperative
+}  // namespace http
 }  // namespace oio
 
-#endif  // SRC_OIO_BLOB_RAWX_BLOB_H_
+#endif  // SRC_OIO_BLOB_HTTP_BLOB_HPP__

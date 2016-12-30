@@ -30,9 +30,9 @@ add_custom_command(OUTPUT
 
 
 add_library(oio-utils SHARED
-        utils/utils.h utils/utils.cpp
-        utils/net.h utils/net.cpp
-        utils/Http.h utils/Http.cpp)
+		utils/utils.hpp utils/utils.cpp
+		utils/net.hpp utils/net.cpp
+		utils/http.hpp utils/http.cpp)
 target_link_libraries(oio-utils
         oio-http-parser
         ${MILL_LIBRARIES} ${CRYPTO_LIBRARIES}
@@ -41,32 +41,32 @@ target_link_libraries(oio-utils
 
 add_library(oio-data SHARED
 		oio/api/common.cpp
-		oio/api/common.h
+		oio/api/common.hpp
         oio/api/blob.cpp
-        oio/api/blob.h)
+		oio/api/blob.hpp)
 target_link_libraries(oio-data oio-utils)
 
 
 add_library(oio-data-mem SHARED
 		oio/blob/mem/blob.cpp
-		oio/blob/mem/blob.h)
+		oio/blob/mem/blob.hpp)
 target_link_libraries(oio-data-mem oio-data)
 
 add_library(oio-data-local SHARED
 		oio/blob/local/blob.cpp
-		oio/blob/local/blob.h)
+		oio/blob/local/blob.hpp)
 target_link_libraries(oio-data-local oio-data)
 
 add_library(oio-data-ec SHARED
 		oio/blob/ec/blob.cpp
-		oio/blob/ec/blob.h)
+		oio/blob/ec/blob.hpp)
 target_link_libraries(oio-data-ec
         oio-data oio-data-local
         ${EC_LIBRARIES})
 
 add_library(oio-data-router SHARED
 		oio/blob/router/blob.cpp
-		oio/blob/router/blob.h)
+		oio/blob/router/blob.hpp)
 target_link_libraries(oio-data-router
         oio-data oio-data-local oio-data-ec oio-data-rawx
         ${EC_LIBRARIES})
@@ -74,19 +74,19 @@ target_link_libraries(oio-data-router
 
 add_library(oio-data-http SHARED
 		oio/blob/http/blob.cpp
-		oio/blob/http/blob.h)
+		oio/blob/http/blob.hpp)
 target_link_libraries(oio-data-http
         oio-data oio-http-parser)
 
 
 add_library(oio-data-rawx SHARED
 		oio/blob/rawx/blob.cpp
-		oio/blob/rawx/blob.h)
+		oio/blob/rawx/blob.hpp)
 target_link_libraries(oio-data-rawx oio-data-http)
 
 
 add_library(oio-data-kinetic SHARED
-		oio/blob/kinetic/coro/blob.h
+		oio/blob/kinetic/coro/blob.hpp
 		oio/blob/kinetic/coro/blob.cpp
         ${CMAKE_CURRENT_BINARY_DIR}/kinetic.pb.cc
         ${CMAKE_CURRENT_BINARY_DIR}/kinetic.pb.h
@@ -106,24 +106,20 @@ target_link_libraries(oio-data-kinetic
 
 add_library(oio-directory SHARED
         oio/directory/dir.cpp
-        oio/directory/dir.h
-        oio/directory/command.h)
+		oio/directory/dir.hpp)
 target_link_libraries(oio-directory)
 
 add_library(oio-sds SHARED
         oio/sds/sds.cpp
-        oio/sds/sds.h
-        oio/sds/command.h)
+		oio/sds/sds.hpp)
 target_link_libraries(oio-sds)
 
 add_library(oio-container SHARED
         oio/container/container.cpp
-        oio/container/container.h
-        oio/container/command.h)
+		oio/container/container.hpp)
 target_link_libraries(oio-container)
 
 add_library(oio-content SHARED
         oio/content/content.cpp
-        oio/content/content.h
-        oio/content/command.h)
+		oio/content/content.hpp)
 target_link_libraries(oio-content)

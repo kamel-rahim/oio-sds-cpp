@@ -16,7 +16,7 @@
  * License along with this library.
  */
 
-#include "oio/blob/kinetic/coro/blob.h"
+#include "oio/blob/kinetic/coro/blob.hpp"
 
 #include <libmill.h>
 #include <rapidjson/filereadstream.h>
@@ -31,7 +31,7 @@
 #include <queue>
 
 #include "utils/macros.h"
-#include "oio/api/blob.h"
+#include "oio/api/blob.hpp"
 #include "RPC.h"
 
 using oio::api::Cause;

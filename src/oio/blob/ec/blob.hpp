@@ -16,11 +16,19 @@
  * License along with this library.
  */
 
-#ifndef SRC_OIO_BLOB_EC_COMMAND_H_
-#define SRC_OIO_BLOB_EC_COMMAND_H_
+#ifndef SRC_OIO_BLOB_EC_BLOB_HPP_
+#define SRC_OIO_BLOB_EC_BLOB_HPP_
 
-#include <set>
+#include <oio/api/blob.hpp>
+
 #include <string>
+#include <memory>
+#include <map>
+#include <set>
+#include <iostream>
+#include <sstream>
+
+#include "utils/net.hpp"
 
 namespace oio {
 namespace blob {
@@ -100,8 +108,85 @@ class EcCommand {
     uint32_t chunkSize;
 };
 
+struct SetOfFragments {
+    unsigned int num_fragments;
+    char **array;
+
+    SetOfFragments() : num_fragments{0}, array{nullptr} {}
+};
+
+class UploadBuilder {
+ public:
+    UploadBuilder();
+
+    ~UploadBuilder();
+
+    void set_param(const EcCommand &_param) { param = _param; }
+
+    void SetXattr(const std::string &k, const std::string &v) { xattrs[k] = v; }
+
+    std::unique_ptr<oio::api::blob::Upload> Build();
+
+ private:
+    std::map<std::string, std::string> xattrs;
+    EcCommand param;
+};
+
+class DownloadBuilder {
+ public:
+    DownloadBuilder();
+
+    ~DownloadBuilder();
+
+    void set_param(const EcCommand &_param) { param = _param; }
+
+    void SetXattr(const std::string &k, const std::string &v) { xattrs[k] = v; }
+
+    std::unique_ptr<oio::api::blob::Download> Build();
+
+ private:
+    std::map<std::string, std::string> xattrs;
+    EcCommand param;
+};
+
+class RemovalBuilder {
+ public:
+    RemovalBuilder();
+
+    ~RemovalBuilder();
+
+    inline void BlockSize(uint32_t s) { block_size = s; }
+
+    inline bool Target(const ::oio::blob::rawx::RawxUrlSet &to) {
+        targets.insert(to);
+        return true;
+    }
+
+ private:
+    std::set<::oio::blob::rawx::RawxUrlSet> targets;
+    uint32_t block_size;
+};
+
+class ListingBuilder {
+ public:
+    ListingBuilder();
+
+    ~ListingBuilder();
+
+    inline void BlockSize(uint32_t s) { block_size = s; }
+
+    inline bool Target(const ::oio::blob::rawx::RawxUrlSet &to) {
+        targets.insert(to);
+        return true;
+    }
+
+ private:
+    std::set<::oio::blob::rawx::RawxUrlSet> targets;
+    uint32_t block_size;
+};
+
 }  // namespace ec
 }  // namespace blob
 }  // namespace oio
 
-#endif  // SRC_OIO_BLOB_EC_COMMAND_H_
+#endif  // SRC_OIO_BLOB_EC_BLOB_HPP_

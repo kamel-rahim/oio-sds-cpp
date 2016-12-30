@@ -16,14 +16,14 @@
  * License along with this library.
  */
 
-#ifndef SRC_OIO_API_BLOB_H_
-#define SRC_OIO_API_BLOB_H_
+#ifndef SRC_OIO_API_BLOB_HPP_
+#define SRC_OIO_API_BLOB_HPP_
 
 #include <cstdint>
 #include <string>
 #include <vector>
 
-#include "oio/api/common.h"
+#include "oio/api/common.hpp"
 
 namespace oio {
 namespace api {
@@ -186,4 +186,4 @@ class Download {
 }  // namespace api
 }  // namespace oio
 
-#endif  // SRC_OIO_API_BLOB_H_
+#endif  // SRC_OIO_API_BLOB_HPP_

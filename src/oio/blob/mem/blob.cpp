@@ -16,7 +16,7 @@
  * License along with this library.
  */
 
-#include "oio/blob/mem/blob.h"
+#include "oio/blob/mem/blob.hpp"
 
 #include <cassert>
 

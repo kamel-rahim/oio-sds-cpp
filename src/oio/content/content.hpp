@@ -16,20 +16,21 @@
  * License along with this library.
  */
 
-#ifndef SRC_OIO_CONTENT_COMMAND_H_
-#define SRC_OIO_CONTENT_COMMAND_H_
+#ifndef SRC_OIO_CONTENT_CONTENT_HPP_
+#define SRC_OIO_CONTENT_CONTENT_HPP_
 
-#include <string.h>
-#include <algorithm>
-#include <set>
-#include <map>
 #include <string>
+#include <memory>
+#include <map>
+#include <set>
 
-#include "utils/serialize_def.h"
-#include "rapidjson/document.h"
-#include "rapidjson/writer.h"
-#include "oio/directory/command.h"
-#include "oio/blob/rawx/command.h"
+#include "oio/api/blob.hpp"
+#include "oio/blob/http/blob.hpp"
+#include "oio/blob/rawx/blob.hpp"
+#include "oio/directory/dir.hpp"
+
+namespace oio {
+namespace content {
 
 struct ChunkInfo : public ::oio::blob::rawx::RawxUrl {
     int chunk_number;
@@ -295,4 +296,61 @@ class ContentInfo {
     }
 };
 
-#endif  // SRC_OIO_CONTENT_COMMAND_H_
+
+enum body_type { PROPERTIES, PREPARE, SHOW };
+
+class Content {
+ private :
+    using OioUrl = ::oio::directory::OioUrl;
+
+    OioUrl url;
+    ContentInfo param;
+    std::set<std::string> del_properties;
+    std::shared_ptr<net::Socket> _socket;
+
+ private:
+    oio::api::OioError
+    http_call_parse_body(::http::Parameters *params, body_type type);
+
+    oio::api::OioError http_call(::http::Parameters *http);
+
+ public:
+    explicit Content(const OioUrl &u) : url(u) {}
+
+    void SetSocket(std::shared_ptr<net::Socket> socket) { _socket = socket; }
+
+    void ClearData() { param.ClearData(); }
+
+    void SetData(ContentInfo *Param) { param = *Param; }
+
+    ContentInfo &GetData() { return param; }
+
+    OioUrl &GetUrl() { return url; }
+
+    void RemoveProperty(std::string key) { del_properties.insert(key); }
+
+    void AddProperty(std::string key, std::string v) { param[key] = v; }
+
+    oio::api::OioError Create(int size);
+
+    oio::api::OioError Prepare(bool autocreate);
+
+    oio::api::OioError Show();
+
+    oio::api::OioError List();
+
+    oio::api::OioError Delete();
+
+    oio::api::OioError Copy(std::string url);
+
+    oio::api::OioError GetProperties();
+
+    oio::api::OioError SetProperties();
+
+    oio::api::OioError DelProperties();
+};
+
+}  // namespace content
+}  // namespace oio
+
+#endif  // SRC_OIO_CONTENT_CONTENT_HPP_

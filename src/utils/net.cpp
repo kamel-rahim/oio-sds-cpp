@@ -16,7 +16,7 @@
  * License along with this library.
  */
 
-#include "utils/net.h"
+#include "utils/net.hpp"
 
 #include <poll.h>
 #include <sys/socket.h>

@@ -16,8 +16,8 @@
  * License along with this library.
  */
 
-#ifndef SRC_OIO_API_COMMON_H_
-#define SRC_OIO_API_COMMON_H_
+#ifndef SRC_OIO_API_COMMON_HPP_
+#define SRC_OIO_API_COMMON_HPP_
 
 #include <string>
 
@@ -177,4 +177,4 @@ class OioError : public Status {
 }  // namespace api
 }  // namespace oio
 
-#endif  // SRC_OIO_API_COMMON_H_
+#endif  // SRC_OIO_API_COMMON_HPP_

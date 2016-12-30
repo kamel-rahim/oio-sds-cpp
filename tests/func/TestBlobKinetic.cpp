@@ -23,11 +23,11 @@
 #include <array>
 
 #include "utils/macros.h"
-#include "utils/utils.h"
-#include "oio/api/blob.h"
+#include "utils/utils.hpp"
+#include "oio/api/blob.hpp"
 #include "oio/blob/kinetic/coro/ClientInterface.h"
 #include "oio/blob/kinetic/coro/CoroutineClientFactory.h"
-#include "oio/blob/kinetic/coro/blob.h"
+#include "oio/blob/kinetic/coro/blob.hpp"
 #include "tests/common/BlobTestSuite.h"
 
 using oio::api::Cause;

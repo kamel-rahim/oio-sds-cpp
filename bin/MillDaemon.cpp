@@ -22,7 +22,7 @@
 
 #include <fstream>
 
-#include "utils/utils.h"
+#include "utils/utils.hpp"
 
 #include "bin/MillDaemon.h"
 

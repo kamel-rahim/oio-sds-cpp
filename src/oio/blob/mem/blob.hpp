@@ -16,8 +16,8 @@
  * License along with this library.
  */
 
-#ifndef SRC_OIO_BLOB_MEM_BLOB_H_
-#define SRC_OIO_BLOB_MEM_BLOB_H_
+#ifndef SRC_OIO_BLOB_MEM_BLOB_HPP_
+#define SRC_OIO_BLOB_MEM_BLOB_HPP_
 
 #include <memory>
 #include <vector>
@@ -25,7 +25,7 @@
 #include <string>
 
 #include "utils/macros.h"
-#include "oio/api/blob.h"
+#include "oio/api/blob.hpp"
 
 /**
  * This implementation is for currently for testing purposes only!
@@ -206,4 +206,4 @@ class ListingBuilder {
 }  // namespace oio
 
 
-#endif  // SRC_OIO_BLOB_MEM_BLOB_H_
+#endif  // SRC_OIO_BLOB_MEM_BLOB_HPP_

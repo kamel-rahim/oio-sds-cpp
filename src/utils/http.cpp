@@ -16,7 +16,7 @@
  * License along with this library.
  */
 
-#include "utils/Http.h"
+#include "utils/http.hpp"
 
 #include <sys/uio.h>
 

@@ -16,8 +16,8 @@
  * License along with this library.
  */
 
-#ifndef SRC_UTILS_NET_H_
-#define SRC_UTILS_NET_H_
+#ifndef SRC_UTILS_NET_HPP_
+#define SRC_UTILS_NET_HPP_
 
 #include <cstdint>
 #include <string>
@@ -322,4 +322,4 @@ class MillSocket : public Socket {
 
 };  // namespace net
 
-#endif  // SRC_UTILS_NET_H_
+#endif  // SRC_UTILS_NET_HPP_

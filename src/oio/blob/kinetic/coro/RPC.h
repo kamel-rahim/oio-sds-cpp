@@ -26,8 +26,8 @@
 #include <memory>
 #include <vector>
 
-#include "utils/utils.h"
-#include "utils/net.h"
+#include "utils/utils.hpp"
+#include "utils/net.hpp"
 
 namespace oio {
 namespace kinetic {

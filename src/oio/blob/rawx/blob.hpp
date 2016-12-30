@@ -16,12 +16,15 @@
  * License along with this library.
  */
 
-#ifndef SRC_OIO_BLOB_RAWX_COMMAND_H_
-#define SRC_OIO_BLOB_RAWX_COMMAND_H_
+#ifndef SRC_OIO_BLOB_RAWX_BLOB_HPP_
+#define SRC_OIO_BLOB_RAWX_BLOB_HPP_
 
 #include <string>
-#include <iostream>
-#include <sstream>
+#include <memory>
+#include <map>
+
+#include "oio/api/blob.hpp"
+#include "oio/blob/http/blob.hpp"
 
 namespace oio {
 namespace blob {
@@ -189,8 +192,72 @@ class RawxCommand {
     void SetRange(const Range &arg) { range.Set(arg); }
 };
 
+class DownloadBuilder {
+ public:
+    DownloadBuilder();
+
+    ~DownloadBuilder();
+
+    void set_param(const RawxCommand &_param);
+
+    std::unique_ptr<oio::api::blob::Download> Build(
+            std::shared_ptr<net::Socket> socket);
+
+ private:
+    oio::http::imperative::DownloadBuilder inner;
+    RawxCommand rawx_param;
+};
+
+class UploadBuilder {
+ public:
+    UploadBuilder();
+
+    ~UploadBuilder();
+
+    void set_param(const RawxCommand &_param);
+
+    void ContainerId(const std::string &s);
+
+    void ContentPath(const std::string &s);
+
+    void ContentId(const std::string &s);
+
+    void MimeType(const std::string &s);
+
+    void ContentVersion(int64_t v);
+
+    void StoragePolicy(const std::string &s);
+
+    void ChunkMethod(const std::string &s);
+
+    void Property(const std::string &k, const std::string &v);
+
+    std::unique_ptr<oio::api::blob::Upload> Build(
+            std::shared_ptr<net::Socket> socket);
+
+ private:
+    oio::http::imperative::UploadBuilder inner;
+    RawxCommand rawx_param;
+};
+
+class RemovalBuilder {
+ public:
+    RemovalBuilder();
+
+    ~RemovalBuilder();
+
+    void set_param(const RawxCommand &_param);
+
+    std::unique_ptr<oio::api::blob::Removal> Build(
+            std::shared_ptr<net::Socket> socket);
+
+ private:
+    oio::http::imperative::RemovalBuilder inner;
+    RawxCommand rawx_param;
+};
+
 }  // namespace rawx
 }  // namespace blob
 }  // namespace oio
 
-#endif  // SRC_OIO_BLOB_RAWX_COMMAND_H_
+#endif  // SRC_OIO_BLOB_RAWX_BLOB_HPP_

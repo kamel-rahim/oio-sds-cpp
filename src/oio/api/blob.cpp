@@ -16,7 +16,7 @@
  * License along with this library.
  */
 
-#include "oio/api/blob.h"
+#include "oio/api/blob.hpp"
 #include "utils/macros.h"
 
 using oio::api::blob::Download;

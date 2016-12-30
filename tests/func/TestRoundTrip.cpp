@@ -16,12 +16,14 @@
  * License along with this library.
  */
 
-
 #include <cassert>
 #include "gtest/gtest.h"
 #include "gflags/gflags.h"
-#include "oio/sds/sds.h"
 
+#include "oio/sds/sds.hpp"
+
+using oio::sds::SdsClient;
+using oio::directory::OioUrl;
 
 static void _load_env(std::string *dst, const char *key) {
     assert(dst != nullptr);
@@ -54,7 +56,8 @@ int main(int argc, char **argv) {
     std::string::size_type const p(filename.find_last_of('.'));
     std::string file_without_extension = filename.substr(0, p);
 
-    oio_sds oiosds(ns, account, container, type, file_without_extension);
+    SdsClient oiosds(
+            OioUrl(ns, account, container, type, file_without_extension));
     oiosds.upload(filepath, true /*autocreate*/);
 
     std::string tmpfilename = "/tmp/" + filename;

@@ -16,6 +16,8 @@
  * License along with this library.
  */
 
+#include <openssl/sha.h>
+
 #include <string>
 #include <functional>
 #include <sstream>
@@ -24,9 +26,9 @@
 #include <iomanip>
 #include <cstring>
 
-#include "utils/Http.h"
-#include "oio/api/blob.h"
-#include "oio/directory/dir.h"
+#include "utils/http.hpp"
+#include "oio/api/blob.hpp"
+#include "oio/directory/dir.hpp"
 
 #define SELECTOR(str) std::string("/v3.0/") + url.NS()       +\
                      std::string("/reference/") + str        +\
@@ -40,6 +42,7 @@ using ::http::Parameters;
 using ::http::Code;
 using oio::api::OioError;
 using oio::directory::DirectoryClient;
+using oio::directory::OioUrl;
 
 OioError
 DirectoryClient::http_call_parse_body(Parameters *params, body_type type) {
@@ -55,7 +58,7 @@ DirectoryClient::http_call_parse_body(Parameters *params, body_type type) {
             ret = output.Parse(params->body_out);
             break;
         case body_type::PROPERTIES:
-            ret = output.put_properties(params->body_out);
+            ret = output.Parse(params->body_out);
             break;
     }
     if (!ret)
@@ -114,7 +117,28 @@ OioError DirectoryClient::Link() {
 
 OioError DirectoryClient::SetProperties() {
     std::string body_in;
-    output.get_properties(&body_in);
+    output.EncodeProperties(&body_in);
     Parameters params(_socket, "POST", SELECTOR("set_properties"), body_in);
     return http_call(&params);
+}
+
+void OioUrl::compute_container_id() {
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256_CTX sha256;
+    SHA256_Init(&sha256);
+
+    static const char zero = 0;
+
+    SHA256_Update(&sha256, account.c_str(), account.size());
+    SHA256_Update(&sha256, &zero, 1);
+    SHA256_Update(&sha256, container.c_str(), container.size());
+
+    SHA256_Final(hash, &sha256);
+    std::stringstream ss;
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+        ss << std::uppercase << std::hex << std::setw(2)
+           << std::setfill('0') << static_cast<int> (hash[i]);
+    }
+
+    cid.assign(ss.str());
 }

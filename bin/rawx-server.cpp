@@ -22,8 +22,8 @@
 #include <string>
 #include <memory>
 
-#include "utils/utils.h"
-#include "oio/blob/local/blob.h"
+#include "utils/utils.hpp"
+#include "oio/blob/local/blob.hpp"
 
 #include "bin/rawx-server-headers.h"
 #include "bin/MillDaemon.h"

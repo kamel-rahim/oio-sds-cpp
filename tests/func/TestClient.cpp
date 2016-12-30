@@ -26,16 +26,17 @@
 #include <gtest/gtest.h>
 
 #include "utils/macros.h"
-#include "utils/net.h"
-#include "utils/Http.h"
+#include "utils/net.hpp"
+#include "utils/http.hpp"
 
-#include "oio/directory/dir.h"
-#include "oio/container/container.h"
-#include "oio/content/content.h"
-#include "oio/blob/rawx/blob.h"
+#include "oio/directory/dir.hpp"
+#include "oio/container/container.hpp"
+#include "oio/content/content.hpp"
+#include "oio/blob/rawx/blob.hpp"
 
 using OioError = oio::api::OioError;
 using DirectoryClient = oio::directory::DirectoryClient;
+using OioUrl = oio::directory::OioUrl;
 using ContainerClient = oio::container::Client;
 using Content = oio::content::Content;
 using oio::blob::rawx::RawxCommand;

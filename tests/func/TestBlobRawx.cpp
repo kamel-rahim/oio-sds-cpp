@@ -28,9 +28,9 @@
 #include <memory>
 
 #include "utils/macros.h"
-#include "utils/net.h"
-#include "utils/Http.h"
-#include "oio/blob/rawx/blob.h"
+#include "utils/net.hpp"
+#include "utils/http.hpp"
+#include "oio/blob/rawx/blob.hpp"
 #include "bin/rawx-server-headers.h"
 #include "tests/common/BlobTestSuite.h"
 

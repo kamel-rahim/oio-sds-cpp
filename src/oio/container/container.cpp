@@ -25,9 +25,9 @@
 #include <iomanip>
 #include <cstring>
 
-#include "utils/Http.h"
-#include "oio/api/blob.h"
-#include "oio/container/container.h"
+#include "utils/http.hpp"
+#include "oio/api/blob.hpp"
+#include "oio/container/container.hpp"
 
 using Parameters = ::http::Parameters;
 using Code = ::http::Code;

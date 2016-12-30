@@ -16,19 +16,27 @@
  * License along with this library.
  */
 
-#ifndef SRC_OIO_DIRECTORY_COMMAND_H_
-#define SRC_OIO_DIRECTORY_COMMAND_H_
+#ifndef  SRC_OIO_DIRECTORY_DIR_HPP_
+#define  SRC_OIO_DIRECTORY_DIR_HPP_
 
+#include <rapidjson/schema.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+
+#include <string>
+#include <memory>
 #include <set>
 #include <map>
-#include <string>
-#include <algorithm>
-#include <iomanip>
 
-#include "openssl/sha.h"
-#include "utils/serialize_def.h"
-#include "rapidjson/document.h"
-#include "rapidjson/writer.h"
+#include "utils/http.hpp"
+#include "oio/api/blob.hpp"
+#include "oio/blob/http/blob.hpp"
+#include "oio/directory/dir.hpp"
+
+namespace oio {
+namespace directory {
+
+enum body_type { META, METAS, PROPERTIES };
 
 class OioUrl {
  private:
@@ -40,26 +48,7 @@ class OioUrl {
     std::string cid;
 
  private:
-    void compute_container_id() {
-        unsigned char hash[SHA256_DIGEST_LENGTH];
-        SHA256_CTX sha256;
-        SHA256_Init(&sha256);
-
-        static const char zero = 0;
-
-        SHA256_Update(&sha256, account.c_str(), account.size());
-        SHA256_Update(&sha256, &zero, 1);
-        SHA256_Update(&sha256, container.c_str(), container.size());
-
-        SHA256_Final(hash, &sha256);
-        std::stringstream ss;
-        for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-            ss << std::uppercase << std::hex << std::setw(2)
-               << std::setfill('0') << static_cast<int> (hash[i]);
-        }
-
-        cid.assign(ss.str());
-    }
+    void compute_container_id();
 
  public:
     OioUrl() : ns(), account(), container(), type(), path(), cid() {}
@@ -219,48 +208,19 @@ class DirPayload {
 
     std::string &operator[](std::string key) { return properties[key]; }
 
-    bool put_properties(std::string s) {
-        std::string v = s;
-        std::string u = "{}\"";
-        for (const auto &p : u)  // strip  {}"
-            remove_p(v, p);
-        std::stringstream ss(v);
-
-        std::string tmpStr;
-        // read properties keyword
-        read_and_validate(ss, tmpStr, "properties", ':');
-
-        std::string key;
-        std::string value;
-        properties.clear();
-        for (;;) {
-            read_any(ss, key, ':');
-            read_any(ss, value, ',');
-            if (!key.size())
-                break;
-            properties[key] = value;
-            key.clear();
-            value.clear();
-        }
-        return true;
-    }
-
-    bool get_properties(std::string *s) {
-        std::stringstream ss;
-        ss << "{\"properties\":{\"";
-
-        bool bfirst = true;
+    void EncodeProperties(std::string *s) {
+        rapidjson::StringBuffer buf;
+        rapidjson::Writer<rapidjson::StringBuffer> writer(buf);
+        writer.StartObject();
+        writer.Key("properties");
+        writer.StartObject();
         for (const auto &e : properties) {
-            if (!bfirst)
-                ss << ",\"";
-            ss << e.first << "\":\"" << e.second << "\"";
-            bfirst = false;
+            writer.Key(e.first.c_str());
+            writer.String(e.second.c_str());
         }
-
-        ss << "}}";
-
-        *s = ss.str();
-        return true;
+        writer.EndObject();
+        writer.EndObject();
+        s->assign(buf.GetString());
     }
 
  public:
@@ -305,8 +265,70 @@ class DirPayload {
             }
         }
 
+        if (document.HasMember("properties")) {
+            const rapidjson::Value &obj = document["properties"];
+            if (obj.IsObject()) {
+                for (auto &v : obj.GetObject()) {
+                    if (v.value.IsString())
+                        properties[v.name.GetString()] = v.value.GetString();
+                }
+            }
+        }
+
         return true;
     }
 };
 
-#endif  // SRC_OIO_DIRECTORY_COMMAND_H_
+class DirectoryClient {
+ private :
+    OioUrl url;
+    DirPayload output;
+    std::shared_ptr<net::Socket> _socket;
+
+    oio::api::OioError
+    http_call_parse_body(::http::Parameters *params, body_type type);
+
+    oio::api::OioError http_call(::http::Parameters *params);
+
+ public:
+    explicit DirectoryClient(const OioUrl &u) : url(u), output() {}
+
+    void SetSocket(std::shared_ptr<net::Socket> socket) {
+        _socket = socket;
+    }
+
+    void SetData(const DirPayload &Param) {
+        output = Param;
+    }
+
+    void AddProperties(std::string key, std::string value) {
+        output[key] = value;
+    }
+
+    DirPayload &GetData() {
+        return output;
+    }
+
+    oio::api::OioError Create();
+
+    oio::api::OioError Link();
+
+    oio::api::OioError Unlink();
+
+    oio::api::OioError Destroy();
+
+    oio::api::OioError SetProperties();
+
+    oio::api::OioError GetProperties();
+
+    oio::api::OioError DelProperties();
+
+    oio::api::OioError Renew();
+
+    oio::api::OioError Show();
+};
+
+}  // namespace directory
+}  // namespace oio
+
+#endif  //  SRC_OIO_DIRECTORY_DIR_HPP_

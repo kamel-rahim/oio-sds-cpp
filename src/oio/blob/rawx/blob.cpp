@@ -88,8 +88,8 @@ RemovalBuilder::~RemovalBuilder() {}
 
 void RemovalBuilder::set_param(const RawxCommand &_param) {
     rawx_param = _param;
-    inner.Host(rawx_param.Host_Port());
-    inner.Name("/rawx/" + rawx_param.ChunkId());
+    inner.Host(rawx_param.Url().Host_Port());
+    inner.Name("/rawx/" + rawx_param.Url().ChunkId());
 }
 
 std::unique_ptr<Removal> RemovalBuilder::Build(
@@ -156,13 +156,11 @@ UploadBuilder::~UploadBuilder() {}
 void UploadBuilder::set_param(const RawxCommand &_param) {
     rawx_param = _param;
     std::stringstream ss;
-    ss << rawx_param.size << '.' << 0;
+    ss << rawx_param.GetRange().Size() << '.' << 0;
+    inner.Host(rawx_param.Url().Host_Port());
     inner.Field("X-oio-chunk-meta-chunk-pos", ss.str());
-
-    inner.Host(rawx_param.Host_Port());
-
-    inner.Field("X-oio-chunk-meta-chunk-id", rawx_param.ChunkId());
-    inner.Name("/rawx/" + rawx_param.ChunkId());
+    inner.Field("X-oio-chunk-meta-chunk-id", rawx_param.Url().ChunkId());
+    inner.Name("/rawx/" + rawx_param.Url().ChunkId());
 }
 
 void UploadBuilder::ContainerId(const std::string &s) {
@@ -249,9 +247,10 @@ class RawxDownload : public Download {
             inner->Read(&temp_buf);
         }
 
-        if (temp_buf.size() > rawx_param.size) {
-            buf->resize(rawx_param.size);
-            memcpy(buf->data(), &temp_buf[rawx_param.start], rawx_param.size);
+        auto range = rawx_param.GetRange();
+        if (temp_buf.size() > range.Size()) {
+            buf->resize(range.Size());
+            memcpy(buf->data(), temp_buf.data() + range.Start(), range.Size());
         } else {
             buf->swap(temp_buf);
         }
@@ -266,8 +265,8 @@ DownloadBuilder::~DownloadBuilder() {}
 
 void DownloadBuilder::set_param(const RawxCommand &_param) {
     rawx_param = _param;
-    inner.Host(rawx_param.Host_Port());
-    inner.Name("/rawx/" + rawx_param.ChunkId());
+    inner.Host(rawx_param.Url().Host_Port());
+    inner.Name("/rawx/" + rawx_param.Url().ChunkId());
 }
 
 std::unique_ptr<Download> DownloadBuilder::Build(

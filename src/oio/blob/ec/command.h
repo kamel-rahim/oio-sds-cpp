@@ -26,23 +26,60 @@ namespace oio {
 namespace blob {
 namespace ec {
 
-class EcCommand : public ::oio::blob::rawx::Range {
+class EcCommand {
  public:
-    std::set<::oio::blob::rawx::RawxUrlSet> targets;
-    std::string req_id;
-    int kVal, mVal, nbChunks, EncodingMethod;
-    uint32_t ChunkSize;
+    using SetOfTargets = std::set<::oio::blob::rawx::RawxUrlSet>;
+ public:
+    ~EcCommand() {}
 
- public:
+    EcCommand() : range(), targets(), req_id(), kVal{0}, mVal{0},
+                  encodingMethod{0}, chunkSize{0} {}
+
     void Clear() {
-        Range::Clear();
+        range.Clear();
         targets.clear();
-        req_id = "";
-        kVal = mVal = nbChunks = EncodingMethod = ChunkSize = 0;
+        req_id.clear();
+        kVal = mVal = nbChunks = encodingMethod = 0;
+        chunkSize = 0;
     }
 
-    EcCommand &operator=(const EcCommand &arg) {
-        Range::operator=(arg);
+    // Getters
+
+    int K() const { return kVal; }
+
+    int M() const { return mVal; }
+
+    int Encoding() const { return encodingMethod; }
+
+    uint32_t ChunkSize() const { return chunkSize; }
+
+    const ::oio::blob::rawx::Range& GetRange() const { return range; }
+
+    ::oio::blob::rawx::Range& GetRange() { return range; }
+
+    const SetOfTargets &Targets() const { return targets; }
+
+    // Setters
+
+    void SetK(int val) { kVal = val; }
+
+    void SetM(int val) { mVal = val; }
+
+    void SetNbChunks(int val) { nbChunks = val; }
+
+    void SetChunkSize(uint32_t val) { chunkSize = val; }
+
+    void SetReqId(std::string v) { req_id.assign(v); }
+
+    void SetEncoding(int m) { encodingMethod = m; }
+
+    void AddTarget(::oio::blob::rawx::RawxUrlSet us) { targets.insert(us); }
+
+    void Set(const EcCommand &arg) {
+        range.Clear();
+        range.Set(arg.range);
+
+        targets.clear();
         for (const auto &to : arg.targets)
             targets.insert(to);
 
@@ -50,14 +87,16 @@ class EcCommand : public ::oio::blob::rawx::Range {
         kVal = arg.kVal;
         mVal = arg.mVal;
         nbChunks = arg.nbChunks;
-        EncodingMethod = arg.EncodingMethod;
-        ChunkSize = arg.ChunkSize;
-        return *this;
+        encodingMethod = arg.encodingMethod;
+        chunkSize = arg.chunkSize;
     }
 
-    Range GetRange() {
-        return Range(start, size);
-    }
+ private:
+    ::oio::blob::rawx::Range range;
+    SetOfTargets targets;
+    std::string req_id;
+    int kVal, mVal, nbChunks, encodingMethod;
+    uint32_t chunkSize;
 };
 
 }  // namespace ec

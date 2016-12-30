@@ -87,7 +87,7 @@ OioError oio_sds::upload(std::string filepath, bool autocreate) {
             }
 
             ChunkInfo contentSet;
-            contentSet.SetUrl(bucket.GetData().GetTarget(metachunk));
+            contentSet.Set(bucket.GetData().GetTarget(metachunk));
 
             RawxCommand rawx_param;
             rawx_param.SetUrl(contentSet.GetUrl());
@@ -104,7 +104,7 @@ OioError oio_sds::upload(std::string filepath, bool autocreate) {
             std::shared_ptr<net::Socket> rawx_socket;
             rawx_socket.reset(new net::MillSocket);
 
-            if (rawx_socket->connect(rawx_param.Host_Port())) {
+            if (rawx_socket->connect(rawx_param.Url().Host_Port())) {
                 UploadBuilder builder;
 
                 builder.set_param(rawx_param);
@@ -132,7 +132,7 @@ OioError oio_sds::upload(std::string filepath, bool autocreate) {
                 rawx_socket->close();
             } else {
                 LOG(ERROR) << "failed to connect to rawx port: "
-                           << rawx_param.Port();
+                           << rawx_param.Url().Port();
             }
 
             if (ret > 0) {
@@ -182,7 +182,7 @@ OioError oio_sds::download(std::string filepath) {
             std::shared_ptr<net::Socket> rawx_socket;
             rawx_socket.reset(new net::MillSocket);
 
-            if (rawx_socket->connect(rawx_param.Host_Port())) {
+            if (rawx_socket->connect(rawx_param.Url().Host_Port())) {
                 DownloadBuilder builder;
 
                 builder.set_param(rawx_param);
@@ -197,7 +197,7 @@ OioError oio_sds::download(std::string filepath) {
                 }
             } else {
                 LOG(ERROR) << "failed to connect to rawx port: "
-                           << rawx_param.Port();
+                           << rawx_param.Url().Port();
             }
             if (file.is_open())
                 file.write((const char *) buffer.data(), size);

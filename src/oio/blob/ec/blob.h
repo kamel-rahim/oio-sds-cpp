@@ -36,11 +36,11 @@ namespace oio {
 namespace blob {
 namespace ec {
 
-struct frag_array_set {
+struct SetOfFragments {
     unsigned int num_fragments;
     char **array;
 
-    frag_array_set() : num_fragments{0}, array{nullptr} {}
+    SetOfFragments() : num_fragments{0}, array{nullptr} {}
 };
 
 class UploadBuilder {
@@ -49,13 +49,9 @@ class UploadBuilder {
 
     ~UploadBuilder();
 
-    void set_param(const EcCommand &_param) {
-        param = _param;
-    }
+    void set_param(const EcCommand &_param) { param = _param; }
 
-    void SetXattr(const std::string &k, const std::string &v) {
-        xattrs[k] = v;
-    }
+    void SetXattr(const std::string &k, const std::string &v) { xattrs[k] = v; }
 
     std::unique_ptr<oio::api::blob::Upload> Build();
 
@@ -70,13 +66,9 @@ class DownloadBuilder {
 
     ~DownloadBuilder();
 
-    void set_param(const EcCommand &_param) {
-        param = _param;
-    }
+    void set_param(const EcCommand &_param) { param = _param; }
 
-    void SetXattr(const std::string &k, const std::string &v) {
-        xattrs[k] = v;
-    }
+    void SetXattr(const std::string &k, const std::string &v) { xattrs[k] = v; }
 
     std::unique_ptr<oio::api::blob::Download> Build();
 

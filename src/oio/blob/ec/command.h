@@ -29,6 +29,7 @@ namespace ec {
 class EcCommand {
  public:
     using SetOfTargets = std::set<::oio::blob::rawx::RawxUrlSet>;
+
  public:
     ~EcCommand() {}
 

@@ -242,7 +242,8 @@ out:
                         memcpy(&buffer[0], out_data, out_data_len);
                     } else {
                         buffer.resize(range.Size());
-                        memcpy(&buffer[0], &out_data[range.Start()], range.Size());
+                        memcpy(&buffer[0], out_data + range.Start(),
+                               range.Size());
                     }
                     break;
                 }

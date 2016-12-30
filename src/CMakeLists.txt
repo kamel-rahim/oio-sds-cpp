@@ -43,7 +43,8 @@ add_library(oio-data SHARED
 		oio/api/common.cpp
 		oio/api/common.hpp
         oio/api/blob.cpp
-		oio/api/blob.hpp)
+		oio/api/blob.hpp
+		oio/api/resolver.hpp)
 target_link_libraries(oio-data oio-utils)
 
 

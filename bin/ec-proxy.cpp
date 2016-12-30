@@ -89,8 +89,9 @@ class RouterHandler : public BlobHandler {
     RawxCommand rawx_param;
 
  public:
-    RouterHandler() { ec_param.Clear();
-                      rawx_param.Clear();
+    RouterHandler() {
+        ec_param.Clear();
+        rawx_param.Clear();
     }
 
     ~RouterHandler() {}
@@ -98,10 +99,10 @@ class RouterHandler : public BlobHandler {
     std::unique_ptr<oio::api::blob::Upload> GetUpload() override {
         auto builder = UploadBuilder();
 
-          ec_param.ChunkSize = 1024 * 1024;
-        rawx_param.ChunkSize = 1024 * 1024;
+        ec_param.SetChunkSize(1024 * 1024);
+        rawx_param.SetChunkSize(1024 * 1024);
 
-        if (rawx_param.ChunkId().size() > 1)
+        if (rawx_param.Url().ChunkId().size() > 1)
             builder.set_rawx_param(rawx_param);
         else
             builder.set_ec_param(ec_param);
@@ -115,7 +116,7 @@ class RouterHandler : public BlobHandler {
     std::unique_ptr<oio::api::blob::Download> GetDownload() override {
         auto builder = DownloadBuilder();
 
-        if (rawx_param.ChunkId().size() > 1)
+        if (rawx_param.Url().ChunkId().size() > 1)
             builder.set_rawx_param(rawx_param);
         else
             builder.set_ec_param(ec_param);
@@ -132,12 +133,13 @@ class RouterHandler : public BlobHandler {
         // Get the name, this is common to al the requests
         http_parser_url url;
         if (0 == http_parser_parse_url(u.data(), u.size(), false, &url) &&
-                _http_url_has(url, UF_PATH)) {
+            _http_url_has(url, UF_PATH)) {
             // Get the chunk-id, the last part of the URL path
             auto path = _http_url_field(url, UF_PATH, u.data(), u.size());
             auto sep = path.rfind('/');
             if (sep != std::string::npos && sep != path.size() - 1)
-                rawx_param.ChunkId().assign(path, sep + 1, std::string::npos);
+                rawx_param.Url().ChunkId().assign(path, sep + 1,
+                                                std::string::npos);
         }
         return {200, 200, "OK"};
     }
@@ -148,7 +150,7 @@ class RouterHandler : public BlobHandler {
         if (header.Matched()) {
             switch (header.Get()) {
                 case EcHeader::Value::Host: {
-                    rawx_param = RawxUrl(v);
+                    rawx_param.SetUrl(RawxUrl(v));
                 }
                     break;
                 case EcHeader::Value::ChunkDest: {
@@ -160,27 +162,27 @@ class RouterHandler : public BlobHandler {
                     std::stringstream ss(str);
                     ss >> rawx_p.chunk_number;
 
-                    rawx_p = RawxUrl(v);
+                    rawx_p.Set(RawxUrl(v));
 
 //                    LOG(ERROR) << k << ": " << v;
 
 #ifdef test_rawx
                     if (!rawx_p.chunk_number)
-                        rawx_param = rawx_p;
+                        rawx_param.SetUrl(rawx_p);
 #endif
-                    ec_param.targets.insert(rawx_p);
+                    ec_param.AddTarget(rawx_p);
                 }
                     break;
                 case EcHeader::Value::ChunkMethod: {
-                    ec_param.EncodingMethod = EC_BACKEND_NULL;
+                    ec_param.SetEncoding(EC_BACKEND_NULL);
                     for (const auto &e : TheEncodingMethods) {
                         std::size_t pos = v.find(e.first);
                         if (pos != std::string::npos) {
-                            ec_param.EncodingMethod = e.second;
+                            ec_param.SetEncoding(e.second);
                             break;
                         }
                     }
-                    if (ec_param.EncodingMethod == EC_BACKEND_NULL) {
+                    if (ec_param.Encoding() == EC_BACKEND_NULL) {
                         LOG(ERROR) << "LIBERASURECODE: "
                                    << "Could not detect encoding method";
                     }
@@ -188,48 +190,39 @@ class RouterHandler : public BlobHandler {
                     std::string all_numbers(v);
                     transform_nondigit_to_space(all_numbers);
                     std::stringstream ss(all_numbers);
-                    ss >> ec_param.kVal;
-                    ss >> ec_param.mVal;
+                    int k, m;
+                    ss >> k >> m;
+                    ec_param.SetK(k);
+                    ec_param.SetM(m);
                 }
                     break;
-                case EcHeader::Value::Chunks: {
-                    std::string all_numbers(v);
-                    std::stringstream ss(all_numbers);
-                    ss >> ec_param.nbChunks;
-                }
+
+                case EcHeader::Value::Chunks:
+                    ec_param.SetNbChunks(::atoi(v.c_str()));
                     break;
-                case EcHeader::Value::ChunkPos: {
-//                    std::string all_numbers(v);
-//                    std::stringstream ss(all_numbers);
-//                    ss >> offset_pos;
-//                    LOG(ERROR) << k << ": " << v;
-                }
+
+                case EcHeader::Value::ChunkPos:
+                    // Not applicable here
                     break;
                 case EcHeader::Value::ChunkSize: {
-                    std::string all_numbers(v);
-                    std::stringstream ss(all_numbers);
-                    ss >> ec_param.ChunkSize;
-#ifdef test_rawx
-                    rawx_param.ChunkSize = ec_param.ChunkSize;
-#endif
+                    int chunkSize = ::atoi(v.c_str());
+                    ec_param.SetChunkSize(chunkSize);
+                    rawx_param.SetChunkSize(chunkSize);
                 }
                     break;
-                case EcHeader::Value::ReqId: {
-                    std::string all_numbers(v);
-                    std::stringstream ss(all_numbers);
-                    ss >> ec_param.req_id;
-                }
+                case EcHeader::Value::ReqId:
+                    ec_param.SetReqId(v);
                     break;
                 case EcHeader::Value::Range: {
                     std::string all_numbers(v);
                     transform_nondigit_to_space(all_numbers);
                     std::stringstream ss(all_numbers);
-                    ss >> ec_param.start;
-                    ss >> ec_param.size;
-                    ec_param.size = ec_param.size + 1 - ec_param.start;
-#ifdef test_rawx
-                    rawx_param = ec_param.GetRange();
-#endif
+                    auto range = ec_param.GetRange();
+                    int start, size;
+                    ss >> start;
+                    ss >> size;
+                    ec_param.GetRange().Set(Range(start, size+1-start));
+                    rawx_param.SetRange(ec_param.GetRange());
                 }
                     break;
                 default: {

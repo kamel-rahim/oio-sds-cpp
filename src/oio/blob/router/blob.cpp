@@ -86,7 +86,7 @@ class RouterDownload : public oio::api::blob::Download {
         } else {
             // read from rawx
             std::shared_ptr<net::Socket> *socket = TheScoketMap.GetSocket(
-                    rawx_param.Host_Port());
+                    rawx_param.Url().Host_Port());
             if (socket) {
                 oio::blob::rawx::DownloadBuilder builder;
 
@@ -103,7 +103,7 @@ class RouterDownload : public oio::api::blob::Download {
                 }
             } else {
                 LOG(ERROR) << "Router: failed to connect to rawx port: "
-                           << rawx_param.Port();
+                           << rawx_param.Url().Port();
             }
         }
 
@@ -189,13 +189,13 @@ class RouterUpload : public oio::api::blob::Upload {
  public:
     void set_ec_param(const EcCommand &_param) {
         ec_param = _param;
-        ChunkSize = ec_param.ChunkSize;
+        chunkSize = ec_param.ChunkSize();
         type = ec;
     }
 
     void set_rawx_param(const RawxCommand &_param) {
         rawx_param = _param;
-        ChunkSize = rawx_param.ChunkSize;
+        chunkSize = rawx_param.ChunkSize();
         type = rawx;
     }
 
@@ -226,7 +226,7 @@ class RouterUpload : public oio::api::blob::Upload {
         } else {
             // write to Rawx
             std::shared_ptr<net::Socket> *socket = TheScoketMap.GetSocket(
-                    rawx_param.Host_Port());
+                    rawx_param.Url().Host_Port());
             if (socket) {
                 oio::blob::rawx::UploadBuilder builder;
 
@@ -251,7 +251,7 @@ class RouterUpload : public oio::api::blob::Upload {
                 }
             } else {
                 LOG(ERROR) << "Router: failed to connect to rawx port: "
-                           << rawx_param.Port();
+                           << rawx_param.Url().Port();
             }
         }
 
@@ -270,7 +270,7 @@ class RouterUpload : public oio::api::blob::Upload {
     void Write(const uint8_t *buf, uint32_t len) override {
         while (len > 0) {
             const auto oldsize = buffer.size();
-            const uint32_t avail = ChunkSize - oldsize;
+            const uint32_t avail = chunkSize - oldsize;
             const uint32_t local = std::min(avail, len);
             if (local > 0) {
                 buffer.resize(oldsize + local);
@@ -296,7 +296,7 @@ class RouterUpload : public oio::api::blob::Upload {
     std::map<std::string, std::string> xattrs;
     EcCommand   ec_param;
     RawxCommand rawx_param;
-    uint32_t ChunkSize;
+    uint32_t chunkSize;
     ENCODING_TYPE type;
 };
 

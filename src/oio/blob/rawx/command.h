@@ -28,7 +28,7 @@ namespace blob {
 namespace rawx {
 
 class Range {
- public:
+ private:
     uint64_t start;
     uint64_t size;
 
@@ -41,12 +41,13 @@ class Range {
 
     Range(const Range &r) : start{r.start}, size{r.size} {}
 
-    void SetRange(const Range &arg) {
-        start = arg.start;
-        size = arg.size;
-    }
+    void Set(const Range &arg) { start = arg.start, size = arg.size; }
 
     void Clear() { start = 0, size = 0; }
+
+    uint64_t Start() const { return start; }
+
+    uint64_t Size() const { return size; }
 };
 
 class RawxUrl {
@@ -69,7 +70,7 @@ class RawxUrl {
     RawxUrl(const RawxUrl &o) : chunk_id(o.chunk_id), host{o.host},
                                 port{o.port} {}
 
-    void SetUrl(const RawxUrl &u) {
+    void Set(const RawxUrl &u) {
         chunk_id.assign(u.chunk_id);
         host.assign(u.host);
         port = u.port;
@@ -148,50 +149,44 @@ struct RawxUrlSet : public RawxUrl {
         return chunk_number < a.chunk_number;
     }
 
-    bool operator==(const RawxUrlSet &a) const {
-        return chunk_number == a.chunk_number;
+    void Set(const RawxUrlSet &arg) {
+        RawxUrl::Set(arg);
+        chunk_number = arg.chunk_number;
     }
 
-    RawxUrlSet &operator=(const RawxUrl &arg) {
-        RawxUrl::operator=(arg);
-        return *this;
-    }
+    void Set(const RawxUrl &arg) { RawxUrl::Set(arg); }
 };
 
-class RawxCommand : public RawxUrl, public Range {
- public:
-    uint32_t ChunkSize;
+class RawxCommand {
+ private:
+    RawxUrl url;
+    Range range;
+    uint32_t chunkSize;
 
  public:
     void Clear() {
-        RawxUrl::Clear();
-        Range::Clear();
-        ChunkSize = 0;
+        url.Clear();
+        range.Clear();
+        chunkSize = 0;
     }
 
-    RawxCommand() : RawxUrl(), Range(), ChunkSize{0} {}
+    RawxCommand() : url(), range(), chunkSize{0} {}
 
-    RawxCommand &operator=(const RawxCommand &arg) {
-        RawxUrl::operator=(arg);
-        Range::operator=(arg);
-        ChunkSize = arg.ChunkSize;
-        return *this;
-    }
+    // Getters
 
-    RawxCommand &operator=(const RawxUrl &arg) {
-        RawxUrl::operator=(arg);
-        return *this;
-    }
+    uint32_t ChunkSize() const { return chunkSize; }
 
-    RawxCommand &operator=(const RawxUrlSet &arg) {
-        RawxUrl::operator=(arg);
-        return *this;
-    }
+    const RawxUrl &Url() const { return url; }
 
-    RawxCommand &operator=(const Range &arg) {
-        Range::operator=(arg);
-        return *this;
-    }
+    const Range &GetRange() const { return range; }
+
+    // Setters
+
+    void SetChunkSize(uint32_t v) { chunkSize = v; }
+
+    void SetUrl(const RawxUrl &arg) { url.Set(arg); }
+
+    void SetRange(const Range &arg) { range.Set(arg); }
 };
 
 }  // namespace rawx

@@ -50,7 +50,7 @@ struct ChunkInfo : public ::oio::blob::rawx::RawxUrl {
     }
 
     void SetContent(const ChunkInfo &arg) {
-        ::oio::blob::rawx::RawxUrl::SetUrl(arg);
+        ::oio::blob::rawx::RawxUrl::Set(arg);
         chunk_number = arg.chunk_number;
         pos = arg.pos;
         size = arg.size;
@@ -146,7 +146,7 @@ class ContentInfo {
             LOG(ERROR) << "Missing 'url' field";
             return false;
         } else {
-            set.SetUrl(::oio::blob::rawx::RawxUrl(doc["url"].GetString()));
+            set.Set(::oio::blob::rawx::RawxUrl(doc["url"].GetString()));
         }
 
         if (!doc.HasMember("hash")) {

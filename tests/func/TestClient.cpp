@@ -79,7 +79,7 @@ static void cycle(net::Socket *sptr, const char *url) {
     rawx_param.SetUrl(bucket.GetData().GetTarget(0));
     rawx_param.SetRange(Range(0, 0));
 
-    if (rawx_socket->connect(rawx_param.Host_Port())) {
+    if (rawx_socket->connect(rawx_param.Url().Host_Port())) {
         oio::blob::rawx::UploadBuilder builder;
 
         builder.set_param(rawx_param);
@@ -106,7 +106,7 @@ static void cycle(net::Socket *sptr, const char *url) {
         rawx_socket->close();
     } else {
         LOG(ERROR) << "Router: failed to connect to rawx port: "
-                   << rawx_param.Port();
+                   << rawx_param.Url().Port();
     }
 
     validate(bucket.Create(buffer.size()), "bucket.Create");

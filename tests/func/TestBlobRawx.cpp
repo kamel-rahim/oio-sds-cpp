@@ -60,6 +60,10 @@ class RawxBlobOpsFactory : public BlobOpsFactory {
 
     std::shared_ptr<net::Socket> socket;
 
+    RawxUrl GetUrl() const {
+        return RawxUrl("http://" + srvid + "/" + chunkid);
+    }
+
  public:
     ~RawxBlobOpsFactory() override {}
 
@@ -69,12 +73,13 @@ class RawxBlobOpsFactory : public BlobOpsFactory {
         socket.reset(new net::MillSocket);
         ASSERT_TRUE(socket->connect(url));
     }
+
     std::unique_ptr<oio::api::blob::Upload> Upload() override {
         UploadBuilder op;
 
         RawxCommand rawx_param;
-        rawx_param = RawxUrl(std::string("http://") + srvid + "/" + chunkid);
-        rawx_param = Range(0, 0);
+        rawx_param.SetUrl(GetUrl());
+        rawx_param.SetRange(Range(0, 0));
         op.set_param(rawx_param);
 
         op.ContainerId(cid);
@@ -91,7 +96,7 @@ class RawxBlobOpsFactory : public BlobOpsFactory {
         DownloadBuilder op;
 
         RawxCommand rawx_param;
-        rawx_param = RawxUrl(std::string("http://") + srvid + "/" + chunkid);
+        rawx_param.SetUrl(GetUrl());
         op.set_param(rawx_param);
 
         return op.Build(socket);
@@ -101,7 +106,7 @@ class RawxBlobOpsFactory : public BlobOpsFactory {
         RemovalBuilder op;
 
         RawxCommand rawx_param;
-        rawx_param = RawxUrl(std::string("http://") + srvid + "/" + chunkid);
+        rawx_param.SetUrl(GetUrl());
         op.set_param(rawx_param);
 
         return op.Build(socket);

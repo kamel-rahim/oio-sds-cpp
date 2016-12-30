@@ -25,8 +25,8 @@
 #include <iomanip>
 #include <cstring>
 
-#include "utils/Http.h"
-#include "oio/content/content.h"
+#include "utils/http.hpp"
+#include "oio/content/content.hpp"
 
 using OioError = oio::api::OioError;
 using oio::content::Content;

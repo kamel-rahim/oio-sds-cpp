@@ -21,7 +21,7 @@
 #include <rapidjson/document.h>
 #include "utils/macros.h"
 
-#include "oio/api/common.h"
+#include "oio/api/common.hpp"
 
 using oio::api::Status;
 using oio::api::Cause;

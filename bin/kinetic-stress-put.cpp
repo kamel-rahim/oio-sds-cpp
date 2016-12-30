@@ -29,7 +29,7 @@
 #include "oio/blob/kinetic/coro/ClientInterface.h"
 #include "oio/blob/kinetic/coro/CoroutineClientFactory.h"
 #include "oio/blob/kinetic/coro/RPC.h"
-#include "oio/blob/kinetic/coro/blob.h"
+#include "oio/blob/kinetic/coro/blob.hpp"
 
 using oio::kinetic::client::CoroutineClientFactory;
 using oio::kinetic::client::ClientInterface;

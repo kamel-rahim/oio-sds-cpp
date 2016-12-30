@@ -27,8 +27,8 @@
 #include <queue>
 #include <cassert>
 
-#include "utils/utils.h"
-#include "utils/net.h"
+#include "utils/utils.hpp"
+#include "utils/net.hpp"
 
 #include "oio/blob/kinetic/coro/RPC.h"
 #include "ClientInterface.h"

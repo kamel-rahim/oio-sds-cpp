@@ -16,8 +16,8 @@
  * License along with this library.
  */
 
-#ifndef SRC_UTILS_UTILS_H_
-#define SRC_UTILS_UTILS_H_
+#ifndef SRC_UTILS_UTILS_HPP_
+#define SRC_UTILS_UTILS_HPP_
 
 #include <vector>
 #include <string>
@@ -71,4 +71,4 @@ std::string generate_string_random(unsigned int len,
                                    const std::string &chars);
 
 
-#endif  // SRC_UTILS_UTILS_H_
+#endif  // SRC_UTILS_UTILS_HPP_

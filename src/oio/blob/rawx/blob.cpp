@@ -16,7 +16,7 @@
  * License along with this library.
  */
 
-#include "oio/blob/rawx/blob.h"
+#include "oio/blob/rawx/blob.hpp"
 
 #include <cassert>
 #include <string>
@@ -28,9 +28,9 @@
 #include <cstring>
 
 #include "utils/macros.h"
-#include "utils/net.h"
-#include "utils/Http.h"
-#include "oio/api/blob.h"
+#include "utils/net.hpp"
+#include "utils/http.hpp"
+#include "oio/api/blob.hpp"
 
 using oio::api::Cause;
 using oio::api::Status;

@@ -23,8 +23,8 @@
 #include <string>
 
 #include "utils/macros.h"
-#include "utils/utils.h"
-#include "oio/blob/mem/blob.h"
+#include "utils/utils.hpp"
+#include "oio/blob/mem/blob.hpp"
 #include "tests/common/BlobTestSuite.h"
 
 using oio::api::Status;

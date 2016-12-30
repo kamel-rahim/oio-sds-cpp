@@ -21,8 +21,8 @@
 #include <array>
 
 #include "utils/macros.h"
-#include "utils/utils.h"
-#include "oio/api/blob.h"
+#include "utils/utils.hpp"
+#include "oio/api/blob.hpp"
 
 using oio::api::Status;
 using oio::api::Cause;

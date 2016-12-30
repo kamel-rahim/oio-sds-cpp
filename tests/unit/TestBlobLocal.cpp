@@ -21,8 +21,8 @@
 #include <gtest/gtest.h>
 
 #include "utils/macros.h"
-#include "utils/utils.h"
-#include "oio/blob/local/blob.h"
+#include "utils/utils.hpp"
+#include "oio/blob/local/blob.hpp"
 #include "tests/common/BlobTestSuite.h"
 
 using oio::local::blob::UploadBuilder;

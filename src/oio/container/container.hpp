@@ -16,20 +16,24 @@
  * License along with this library.
  */
 
-#ifndef SRC_OIO_CONTAINER_COMMAND_H_
-#define SRC_OIO_CONTAINER_COMMAND_H_
+#ifndef SRC_OIO_CONTAINER_CONTAINER_HPP_
+#define SRC_OIO_CONTAINER_CONTAINER_HPP_
 
-#include <string.h>
-#include <algorithm>
-#include <map>
+#include <rapidjson/document.h>
+#include <rapidjson/stringbuffer.h>
+#include <rapidjson/writer.h>
+
 #include <string>
+#include <memory>
+#include <map>
 #include <set>
 
-#include "utils/serialize_def.h"
-#include "rapidjson/document.h"
-#include "rapidjson/writer.h"
-#include "oio/directory/command.h"
+#include "oio/api/blob.hpp"
+#include "oio/directory/dir.hpp"
+#include "oio/blob/http/blob.hpp"
 
+namespace oio {
+namespace container {
 
 class ContainerProperties {
  public:
@@ -116,4 +120,60 @@ class ContainerProperties {
     }
 };
 
-#endif  // SRC_OIO_CONTAINER_COMMAND_H_
+class Client {
+ private:
+    using OioUrl = ::oio::directory::OioUrl;
+
+    OioUrl url;
+    ContainerProperties payload;
+    std::set<std::string> del_properties;
+    std::shared_ptr<net::Socket> _socket;
+
+    oio::api::OioError http_call_parse_body(::http::Parameters *params);
+
+    oio::api::OioError http_call(::http::Parameters *params);
+
+ public:
+    explicit Client(OioUrl &file_id) : url(file_id) {}
+
+    void SetSocket(std::shared_ptr<net::Socket> socket) { _socket = socket; }
+
+    void SetData(const ContainerProperties &Param) {
+        payload = Param;
+    }
+
+    void AddProperty(std::string key, std::string value) {
+        payload[key] = value;
+    }
+
+    void RemoveProperty(std::string key) {
+        del_properties.insert(key);
+    }
+
+    ContainerProperties &GetData() {
+        return payload;
+    }
+
+    oio::api::OioError Create();
+
+    oio::api::OioError Show();
+
+    oio::api::OioError List();
+
+    oio::api::OioError Destroy();
+
+    oio::api::OioError Touch();
+
+    oio::api::OioError Dedup();
+
+    oio::api::OioError GetProperties();
+
+    oio::api::OioError SetProperties();
+
+    oio::api::OioError DelProperties();
+};
+
+}  // namespace container
+}  // namespace oio
+
+#endif  // SRC_OIO_CONTAINER_CONTAINER_HPP_

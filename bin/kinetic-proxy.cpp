@@ -21,9 +21,9 @@
 #include <libmill.h>
 #include <cstdlib>
 
-#include "utils/utils.h"
-#include "oio/api/blob.h"
-#include "oio/blob/kinetic/coro/blob.h"
+#include "utils/utils.hpp"
+#include "oio/api/blob.hpp"
+#include "oio/blob/kinetic/coro/blob.hpp"
 #include "oio/blob/kinetic/coro/CoroutineClientFactory.h"
 
 #include "bin/MillDaemon.h"

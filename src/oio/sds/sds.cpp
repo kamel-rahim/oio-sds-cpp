@@ -28,12 +28,12 @@
 #include <fstream>
 
 #include "utils/macros.h"
-#include "utils/net.h"
-#include "utils/Http.h"
-#include "oio/api/blob.h"
-#include "oio/sds/sds.h"
-#include "oio/content/content.h"
-#include "oio/blob/rawx/blob.h"
+#include "utils/net.hpp"
+#include "utils/http.hpp"
+#include "oio/api/blob.hpp"
+#include "oio/sds/sds.hpp"
+#include "oio/content/content.hpp"
+#include "oio/blob/rawx/blob.hpp"
 
 using oio::api::OioError;
 using oio::content::Content;
@@ -42,15 +42,17 @@ using oio::blob::rawx::DownloadBuilder;
 using oio::blob::rawx::RawxCommand;
 using oio::blob::rawx::RawxCommand;
 using oio::blob::rawx::Range;
+using oio::content::ChunkInfo;
+using oio::sds::SdsClient;
 
-OioError oio_sds::upload(std::string filepath, bool autocreate) {
+OioError SdsClient::upload(std::string filepath, bool autocreate) {
     // connect to proxy
     std::shared_ptr<net::Socket> socket(new net::MillSocket);
     assert(socket->connect("127.0.0.1:6000"));
     assert(socket->setnodelay());
     assert(socket->setquickack());
 
-    Content bucket(oio_sds_Param.GetFile());
+    Content bucket(url.GetFile());
     bucket.SetSocket(socket);
 
     std::ifstream file(filepath, std::ifstream::binary);
@@ -150,14 +152,14 @@ OioError oio_sds::upload(std::string filepath, bool autocreate) {
 }
 
 
-OioError oio_sds::download(std::string filepath) {
+OioError SdsClient::download(std::string filepath) {
     // connect to proxy
     std::shared_ptr<net::Socket> socket(new net::MillSocket);
     assert(socket->connect("127.0.0.1:6000"));
     assert(socket->setnodelay());
     assert(socket->setquickack());
 
-    Content bucket(oio_sds_Param.GetFile());
+    Content bucket(url.GetFile());
     bucket.SetSocket(socket);
 
     std::ofstream file(filepath, std::ifstream::binary);

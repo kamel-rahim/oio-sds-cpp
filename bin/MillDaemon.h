@@ -32,8 +32,8 @@
 #include <string>
 
 #include "utils/macros.h"
-#include "utils/net.h"
-#include "oio/api/blob.h"
+#include "utils/net.hpp"
+#include "oio/api/blob.hpp"
 #include "./common-header-parser.h"
 #include "./common-server-headers.h"
 

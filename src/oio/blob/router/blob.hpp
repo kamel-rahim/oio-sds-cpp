@@ -16,32 +16,27 @@
  * License along with this library.
  */
 
-#ifndef SRC_OIO_BLOB_EC_BLOB_H_
-#define SRC_OIO_BLOB_EC_BLOB_H_
+#ifndef SRC_OIO_BLOB_ROUTER_BLOB_HPP_
+#define SRC_OIO_BLOB_ROUTER_BLOB_HPP_
 
-#include <oio/api/blob.h>
+#include <oio/api/blob.hpp>
 
 #include <string>
-#include <map>
 #include <memory>
-#include <iostream>
+#include <map>
 #include <set>
+#include <iostream>
 #include <sstream>
 
-#include "utils/net.h"
-#include "utils/serialize_def.h"
-#include "oio/blob/ec/command.h"
+#include "oio/blob/rawx/blob.hpp"
+#include "oio/blob/ec/blob.hpp"
+#include "utils/net.hpp"
+
+enum ENCODING_TYPE { ec, rawx };
 
 namespace oio {
 namespace blob {
-namespace ec {
-
-struct SetOfFragments {
-    unsigned int num_fragments;
-    char **array;
-
-    SetOfFragments() : num_fragments{0}, array{nullptr} {}
-};
+namespace router {
 
 class UploadBuilder {
  public:
@@ -49,15 +44,27 @@ class UploadBuilder {
 
     ~UploadBuilder();
 
-    void set_param(const EcCommand &_param) { param = _param; }
+    void set_ec_param(const ::oio::blob::ec::EcCommand &_param) {
+        ec_param = _param;
+        type = ENCODING_TYPE::ec;
+    }
 
-    void SetXattr(const std::string &k, const std::string &v) { xattrs[k] = v; }
+    void set_rawx_param(const ::oio::blob::rawx::RawxCommand &_param) {
+        rawx_param = _param;
+        type = ENCODING_TYPE::rawx;
+    }
+
+    void SetXattr(const std::string &k, const std::string &v) {
+        xattrs[k] = v;
+    }
 
     std::unique_ptr<oio::api::blob::Upload> Build();
 
  private:
     std::map<std::string, std::string> xattrs;
-    EcCommand param;
+    ::oio::blob::ec::EcCommand ec_param;
+    ::oio::blob::rawx::RawxCommand rawx_param;
+    ENCODING_TYPE type;
 };
 
 class DownloadBuilder {
@@ -66,15 +73,28 @@ class DownloadBuilder {
 
     ~DownloadBuilder();
 
-    void set_param(const EcCommand &_param) { param = _param; }
 
-    void SetXattr(const std::string &k, const std::string &v) { xattrs[k] = v; }
+    void set_ec_param(const ::oio::blob::ec::EcCommand &_param) {
+        ec_param = _param;
+        type = ENCODING_TYPE::ec;
+    }
+
+    void set_rawx_param(const ::oio::blob::rawx::RawxCommand &_param) {
+        rawx_param = _param;
+        type = ENCODING_TYPE::rawx;
+    }
+
+    void SetXattr(const std::string &k, const std::string &v) {
+        xattrs[k] = v;
+    }
 
     std::unique_ptr<oio::api::blob::Download> Build();
 
  private:
     std::map<std::string, std::string> xattrs;
-    EcCommand param;
+    ::oio::blob::ec::EcCommand ec_param;
+    ::oio::blob::rawx::RawxCommand rawx_param;
+    ENCODING_TYPE type;
 };
 
 class RemovalBuilder {
@@ -113,8 +133,8 @@ class ListingBuilder {
     uint32_t block_size;
 };
 
-}  // namespace ec
+}  // namespace router
 }  // namespace blob
 }  // namespace oio
 
-#endif  // SRC_OIO_BLOB_EC_BLOB_H_
+#endif  // SRC_OIO_BLOB_ROUTER_BLOB_HPP_

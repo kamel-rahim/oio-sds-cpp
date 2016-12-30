@@ -28,8 +28,8 @@
 #include <cassert>
 
 #include "utils/macros.h"
-#include "utils/net.h"
-#include "utils/Http.h"
+#include "utils/net.hpp"
+#include "utils/http.hpp"
 
 DEFINE_string(URL_PROXY, "127.0.0.1:6000", "URL of the oio-proxy");
 

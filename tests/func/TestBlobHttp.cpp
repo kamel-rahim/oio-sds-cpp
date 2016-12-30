@@ -21,9 +21,9 @@
 #include <cassert>
 
 #include "utils/macros.h"
-#include "utils/utils.h"
-#include "utils/net.h"
-#include "oio/blob/http/blob.h"
+#include "utils/utils.hpp"
+#include "utils/net.hpp"
+#include "oio/blob/http/blob.hpp"
 
 using oio::api::Cause;
 using oio::http::imperative::UploadBuilder;

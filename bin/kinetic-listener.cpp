@@ -26,9 +26,9 @@
 
 #include <queue>
 
-#include "utils/utils.h"
-#include "utils/net.h"
-#include "utils/Http.h"
+#include "utils/utils.hpp"
+#include "utils/net.hpp"
+#include "utils/http.hpp"
 #include "oio/blob/kinetic/coro/RPC.h"
 #include "oio/blob/kinetic/coro/CoroutineClient.h"
 #include "oio/blob/kinetic/coro/CoroutineClientFactory.h"

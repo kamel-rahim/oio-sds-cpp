@@ -22,8 +22,8 @@
 #include <cstring>
 #include <vector>
 
-#include "utils/Http.h"
-#include "oio/blob/http/blob.h"
+#include "utils/http.hpp"
+#include "oio/blob/http/blob.hpp"
 
 using oio::api::Status;
 using oio::api::Errno;

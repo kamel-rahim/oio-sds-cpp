@@ -25,9 +25,9 @@
 #include <iostream>
 #include <algorithm>
 
-#include "utils/utils.h"
-#include "oio/api/blob.h"
-#include "oio/blob/router/blob.h"
+#include "utils/utils.hpp"
+#include "oio/api/blob.hpp"
+#include "oio/blob/router/blob.hpp"
 
 #include "bin/MillDaemon.h"
 #include "bin/ec-proxy-headers.h"

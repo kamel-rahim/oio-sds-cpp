@@ -23,3 +23,6 @@
 [submodule "3rd/kinetic-java"]
 	path = 3rd/kinetic-java
 	url = https://github.com/Kinetic/kinetic-java.git
+[submodule "3rd/proxygen"]
+	path = 3rd/proxygen
+	url = https://github.com/facebook/proxygen.git

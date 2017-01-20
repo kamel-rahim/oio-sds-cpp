@@ -32,7 +32,8 @@ add_custom_command(OUTPUT
 add_library(oio-utils SHARED
 		utils/utils.hpp utils/utils.cpp
 		utils/net.hpp utils/net.cpp
-		utils/http.hpp utils/http.cpp)
+		utils/http.hpp utils/http.cpp
+		utils/proxygen.hpp utils/proxygen.cpp)
 target_link_libraries(oio-utils
         oio-http-parser
         ${MILL_LIBRARIES} ${CRYPTO_LIBRARIES}

@@ -34,7 +34,7 @@
 namespace http {
 
 enum Code {
-    OK, ClientError, ServerError, NetworkError, Done
+  OK, ClientError, ServerError, NetworkError, Done ,Timeout
 };
 
 /**

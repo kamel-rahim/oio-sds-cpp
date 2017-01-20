@@ -234,7 +234,7 @@ set(HTTPPARSER_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/3rd)
 
 ################################################################################
 ### Kinetic's Protocol
-### No need to build anything here, we excpect protobuf to come from the system,
+### No need to build anything here, we expect protobuf to come from the system,
 ### at least for the moment.
 
 find_program(PROTOBUF_EXE protoc)
@@ -299,6 +299,22 @@ else ()
 endif ()
 dump_dependency_components("RAPIDJSON")
 
+
+################################################################################
+### Proxygen 
+### No need to build anything here, we expect proxygen to come from the system,
+### at least for the moment.
+
+find_library(PROXYGENCURL_LIBRARIES
+        NAMES proxygencurl
+        HINTS /usr/lib /usr/lib64 /usr/local/lib)
+find_library(PROXYGENHTTPSERVER_LIBRARIES
+        NAMES proxygenhttpserver
+        HINTS /usr/lib /usr/lib64 /usr/local/lib)
+find_path(PROXYGEN_INCLUDE_DIRS
+	NAMES proxygen
+	HINTS /usr/lib /usr/lib64 /usr/local/lib)	
+
 ################################################################################
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
@@ -307,7 +323,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Werror")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wclobbered")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_GNU_SOURCE")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS} -std=c++14")
 
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -fno-inline")
 set(CMAKE_CXX_FLAGS_MINSIZEREL "-Os")

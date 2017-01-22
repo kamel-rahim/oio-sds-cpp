@@ -129,7 +129,7 @@ else ()
             CMAKE_ARGS
             -DBUILD_SHARED_LIBS=ON
             -DBUILD_GTEST=ON
-            -DBUILD_GMOCK=OFF
+            -DBUILD_GMOCK=ON
             -DCMAKE_CXX_FLAGS=${MSVC_COMPILER_DEFS}
             PREFIX "${CMAKE_CURRENT_BINARY_DIR}"
             INSTALL_COMMAND "")
@@ -140,6 +140,49 @@ else ()
     set(GTEST_LIBRARIES gtest)
 endif ()
 dump_dependency_components("GTEST")
+
+################################################################################
+### Google Mock
+
+option(GMOCK_SYSTEM "Use system's googlemock" ON)
+option(GMOCK_GUESS "Try to find googlemock in standard places" OFF)
+if (DEFINED GMOCK_INCDIR AND DEFINED GMOCK_LIBDIR)
+    find_library(GMOCK_LIBRARIES
+            NAMES gmock
+            PATHS ${GMOCK_LIBDIR})
+    find_path(GMOCK_INCLUDE_DIRS
+            NAMES gmock/gmock.h
+            PATHS ${GMOCK_INCDIR})
+elseif (SYS AND GMOCK_SYSTEM)
+    pkg_check_modules(GMOCK google-mock REQUIRED)
+elseif (GUESS AND GMOCK_GUESS)
+    find_library(GMOCK_LIBRARIES
+            NAMES gmock
+            HINTS /usr/lib /usr/lib64 /usr/local/lib)
+    find_path(GMOCK_INCLUDE_DIRS
+            NAMES gmock/gmock.h
+            PATHS /usr/include /usr/local/include)
+else ()
+    ExternalProject_Add(googlemock
+            DOWNLOAD_COMMAND ""
+            SOURCE_DIR ${CMAKE_SOURCE_DIR}/3rd/gtest
+            BINARY_DIR ${CMAKE_BINARY_DIR}/3rd/gtest-bin
+            TMP_DIR    ${CMAKE_BINARY_DIR}/3rd/gtest-tmp
+            STAMP_DIR  ${CMAKE_BINARY_DIR}/3rd/gtest-stamp
+            CMAKE_ARGS
+            -DBUILD_SHARED_LIBS=ON
+            -DBUILD_GTEST=OFF
+            -DBUILD_GMOCK=ON
+            -DCMAKE_CXX_FLAGS=${MSVC_COMPILER_DEFS}
+            PREFIX "${CMAKE_CURRENT_BINARY_DIR}"
+            INSTALL_COMMAND "")
+    ExternalProject_Get_Property(googlemock source_dir)
+    ExternalProject_Get_Property(googlemock binary_dir)
+    set(GMOCK_INCLUDE_DIRS ${source_dir}/googlemock/include)
+    set(GMOCK_LIBRARY_DIRS ${binary_dir}/googlemock)
+    set(GMOCK_LIBRARIES gmock)
+endif ()
+dump_dependency_components("GMOCK")
 
 ################################################################################
 ### Google Log
@@ -313,6 +356,26 @@ find_library(PROXYGENHTTPSERVER_LIBRARIES
         HINTS /usr/lib /usr/lib64 /usr/local/lib)
 find_path(PROXYGEN_INCLUDE_DIRS
 	NAMES proxygen
+	HINTS /usr/lib /usr/lib64 /usr/local/lib)	
+
+################################################################################
+### Folly 
+
+find_library(FOLLY_LIBRARIES
+        NAMES folly
+        HINTS /usr/lib /usr/lib64 /usr/local/lib)      
+find_path(FOLLY_INCLUDE_DIRS
+	NAMES folly
+	HINTS /usr/lib /usr/lib64 /usr/local/lib)	
+
+################################################################################
+### Wrangle
+
+find_library(WANGLE_LIBRARIES
+        NAMES wangle
+        HINTS /usr/lib /usr/lib64 /usr/local/lib)
+find_path(WANGLE_INCLUDE_DIRS
+	NAMES wangle
 	HINTS /usr/lib /usr/lib64 /usr/local/lib)	
 
 ################################################################################

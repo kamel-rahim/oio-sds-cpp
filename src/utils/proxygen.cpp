@@ -52,7 +52,7 @@ void ProxygenHTTP<Slice>::connectSuccess(HTTPUpstreamSession* session){
   addFieldsOnHeader(message.getHeaders());
 
   transaction->sendHeaders(message);
-  codePromise.set_value(Code::OK);
+ ReturnCode(Code::OK);
 }
 template<class Slice>
 void ProxygenHTTP<Slice>::addFieldsOnHeader(proxygen::HTTPHeaders &headers){
@@ -91,11 +91,11 @@ void ProxygenHTTP<Slice>::Write(const std::shared_ptr<Slice> slice) noexcept{
   }else{
     transaction->sendBody(folly::IOBuf::wrapBuffer(slice.get()->data(),slice.get()->size()));
   }
-  codePromise.set_value(Code::OK);
+ ReturnCode(Code::OK);
 }
 template<class Slice>
 void ProxygenHTTP<Slice>::connectError(const folly::AsyncSocketException& exception){
-  codePromise.set_value(Code::NetworkError);
+ ReturnCode(Code::NetworkError);
   this->exception = exception.getType();
 }
 template<class Slice>
@@ -136,7 +136,7 @@ template<class Slice>
 void ProxygenHTTP<Slice>::CoalesceAndSetValue(){
   readBuffer.get()->coalesce();
   readSlice->append(std::move(readBuffer.get()->writableData()),readBuffer.get()->length());
-  codePromise.set_value(Code::OK);
+ ReturnCode(Code::OK);
   readSlice = nullptr;
   readBuffer = nullptr;
 }
@@ -161,38 +161,11 @@ bool ProxygenHTTP<Slice>::isEof() noexcept{
 }
 template<class Slice>
 void ProxygenHTTP<Slice>::onError(const proxygen::HTTPException& error) noexcept{
-  codePromise.set_value(Code::NetworkError);
+ ReturnCode(Code::NetworkError);
   this->error= new proxygen::HTTPException(error);
 }
 template<class Slice>
 ProxygenHTTP<Slice>::~ProxygenHTTP(){
-  if(connector)
-    delete connector;
+
 }
-template<class Slice>
-std::shared_ptr<Slice> ProxygenHTTP<Slice>::getReturnSlice(){
-  auto sliceFuture =  slicePromise.get_future();
-  std::future_status status = sliceFuture.wait_for(promiseTimeout);
-  slicePromise = std::promise<std::shared_ptr<Slice>>();
-  if(status == std::future_status::ready)
-    return sliceFuture.get();
-  return nullptr;
-}
-template<class Slice>
-Code ProxygenHTTP<Slice>::getReturnCode(){
-  auto codeFuture = codePromise.get_future();
-  std::future_status status = codeFuture.wait_for(promiseTimeout);
-  codePromise= std::promise<Code>();
-  if(status == std::future_status::ready)
-    return codeFuture.get();
-  return Code::Timeout;
-}
-template<class Slice>
-std::shared_ptr<proxygen::HTTPMessage> ProxygenHTTP<Slice>::getReturnHeader(){
-  auto headerFuture = headerPromise.get_future();
-  std::future_status status = headerFuture.wait_for(promiseTimeout);
-  headerPromise =  std::promise<std::shared_ptr<proxygen::HTTPMessage>>();
-  if(status == std::future_status::ready)
-    return headerFuture.get();
-  return nullptr;
-}
+

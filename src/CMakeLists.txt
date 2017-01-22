@@ -80,6 +80,11 @@ add_library(oio-data-http SHARED
 target_link_libraries(oio-data-http
         oio-data oio-http-parser)
 
+add_library(oio-data-http-proxygen SHARED
+	oio/blob/http/proxygen.cpp
+	oio/blob/http/proxygen.hpp)
+
+      
 
 add_library(oio-data-rawx SHARED
 		oio/blob/rawx/blob.cpp

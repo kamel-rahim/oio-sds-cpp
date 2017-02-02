@@ -84,8 +84,8 @@ namespace http {
 
     void Method(const proxygen::HTTPMethod method) noexcept{
       this->method = method;
-
     }
+
     // The functions that permit to control ProxygenHTTP
     /**
      * 
@@ -105,18 +105,25 @@ namespace http {
      * if there is no Slice to send the Read will not answer
      * it is up to the caller to add a timeout 
      */
-    void Read(Slice* slice) noexcept;
+    void Read(std::shared_ptr<Slice> slice) noexcept;
     /**
      * Return a promise of a bool
      */
-    bool isEof() noexcept;
+    void isEof() noexcept;
     /**
      *
      */
+    inline void ReturnHeader(std::shared_ptr<proxygen::HTTPMessage> msg){
+      headerPromise.set_value(msg);
+    }
+
     inline void ReturnCode(Code code){
       codePromise.set_value(code);
     }
     
+    void URL(std::string url){
+      url_ = url;
+    }
     void Abort() noexcept;
     void initializeSSL() noexcept;
     void sslHandshakeFollowup(proxygen::HTTPUpstreamSession* session) noexcept;  
@@ -141,31 +148,36 @@ namespace http {
     void CoalesceAndSetValue();
     void addFieldsOnHeader(proxygen::HTTPHeaders &headers);
     // Common
+     std::promise<bool> boolPromise;
      std::promise<Code> codePromise;
      std::promise<std::shared_ptr<proxygen::HTTPMessage>> headerPromise;
-     std::chrono::milliseconds promiseTimeout {0};
+     std::chrono::milliseconds promiseTimeout {5000};
      std::shared_ptr<proxygen::HTTPMessage> headerReceived {nullptr};
      proxygen::HTTPMethod method;
      std::map<std::string,std::string> fields;
+     bool errorHappened;
      // Reading
      std::shared_ptr<folly::IOBuf> readBuffer {nullptr};
      bool eof;
-     Slice* readSlice;
+     std::shared_ptr<Slice> readSlice;
      // Writing
+     int64_t content_length {-1};
      std::queue<std::shared_ptr<Slice>> writeQueue;
+     int64_t sent {-1};
      // Param for setting Connection
+    std::string url_;
      std::string sslCertPath;
      std::list<std::string> sslProtocols;
      std::set<std::string> sendTrailers;
      proxygen::HTTPException* error {nullptr};
-     bool sslEnabled;
+     bool sslEnabled {false};
      std::shared_ptr<folly::EventBase> eventBase {nullptr};
-    std::unique_ptr<proxygen::HTTPConnector> connector; 
+     std::unique_ptr<proxygen::HTTPConnector> connector {nullptr}; 
      std::shared_ptr<folly::SSLContext> sslContext {nullptr};
      folly::HHWheelTimer::SharedPtr timer {nullptr};
      folly::AsyncSocket::OptionMap optionMap;
      std::unique_ptr<folly::SocketAddress> socketAddress {nullptr};
-     std::chrono::milliseconds connectionTimeout {0};    
+     std::chrono::milliseconds connectionTimeout {5000};    
      proxygen::HTTPTransaction* transaction {nullptr};
      std::string serverName;
      proxygen::UpgradeProtocol protocol;
@@ -176,26 +188,48 @@ namespace http {
   template<class Slice>
   class ControllerProxygenHTTP{
   public:
+    ControllerProxygenHTTP(){}
+
     ControllerProxygenHTTP(std::shared_ptr<ProxygenHTTP<Slice>> proxygenHTTP)
-      :proxygenHTTP_{proxygenHTTP}{} 
+      :proxygenHTTP_{proxygenHTTP}{}
+
+    void SetProxygenHTTP(std::shared_ptr<ProxygenHTTP<Slice>> proxygenHTTP){
+      proxygenHTTP_ = proxygenHTTP; 
+    }
+    
     void Abort(){
       proxygenHTTP_.get()->eventBase.get()->template runInEventBaseThread<ProxygenHTTP<Slice>>(proxygenHTTPAbort,proxygenHTTP_.get());
     }
+    
     void Connect(){
-      proxygenHTTP_.get()->eventBase.get()->template runInEventBaseThread<ProxygenHTTP<Slice>>(proxygenHTTPConnect,proxygenHTTP_.get());     
+      if(proxygenHTTP_.get()->errorHappened)
+	return;
+      proxygenHTTP_.get()->eventBase.get()->template runInEventBaseThread<ProxygenHTTP<Slice>>(proxygenHTTPConnect,proxygenHTTP_.get());
     }
+    
     void SendEOM(){
+      if(proxygenHTTP_.get()->errorHappened)
+	return;
       proxygenHTTP_.get()->eventBase.get()->template runInEventBaseThread<ProxygenHTTP<Slice>>(proxygenHTTPSendEOM,proxygenHTTP_.get());
     }
-
-    void ReadHeader(){
-      proxygenHTTP_.get()->eventBase.get()->template runInEventBaseThread<ProxygenHTTP<Slice>>(proxygenHTTPReadHeader,proxygenHTTP_.get());
+    
+    void Read(std::shared_ptr<Slice> slice){
+      if(proxygenHTTP_.get()->errorHappened)
+	return;
+      std::pair<ProxygenHTTP<Slice>*,std::shared_ptr<Slice>> tmp_pair = {proxygenHTTP_.get(),slice};
+      proxygenHTTP_.get()->eventBase.get()->template runInEventBaseThread<std::pair<ProxygenHTTP<Slice>*,std::shared_ptr<Slice>>>(proxygenHTTPRead, &tmp_pair);
     }
+
     void Write(std::shared_ptr<Slice> slice){
-      std::pair<ProxygenHTTP<Slice>*,std::shared_ptr<Slice>> tmp_pair = {proxygenHTTP_.get(),&slice};
+      if(proxygenHTTP_.get()->errorHappened)
+	return ;
+      std::pair<ProxygenHTTP<Slice>*,std::shared_ptr<Slice>> tmp_pair = {proxygenHTTP_.get(),slice};
       proxygenHTTP_.get()->eventBase.get()->template runInEventBaseThread<std::pair<ProxygenHTTP<Slice>*,std::shared_ptr<Slice>>>(proxygenHTTPWrite, &tmp_pair);
     }
+
     Code ReturnCode(){
+      if(proxygenHTTP_.get()->errorHappened)
+	return Code::NetworkError;
       auto codeFuture = proxygenHTTP_.get()->codePromise.get_future();
       std::future_status status = codeFuture.wait_for(proxygenHTTP_.get()->promiseTimeout);
       proxygenHTTP_.get()->codePromise= std::promise<Code>();
@@ -204,34 +238,55 @@ namespace http {
       return Code::Timeout;
 
     }
+
+    bool ReturnIsEof(){
+      if(proxygenHTTP_.get()->errorHappened)
+	return true;
+      auto boolFuture = proxygenHTTP_.get()->codePromise.get_future();
+      std::future_status status = boolFuture.wait_for(proxygenHTTP_.get()->promiseTimeout);
+      proxygenHTTP_.get()->boolPromise = std::promise<bool>();
+      if(status == std::future_status::ready)
+	return boolFuture.get();
+      return true;
+    }
+    
     std::shared_ptr<proxygen::HTTPMessage> ReturnHeader(){
       auto headerFuture = proxygenHTTP_.get()->headerPromise.get_future();
       std::future_status status = headerFuture.wait_for(proxygenHTTP_.get()->promiseTimeout);
       proxygenHTTP_.get()->headerPromise =  std::promise<std::shared_ptr<proxygen::HTTPMessage>>();
       if(status == std::future_status::ready)
 	return headerFuture.get();
+      DLOG(INFO) << "Timeout of the response of the Header";
       return nullptr;
     }
+    
   private:
-    static void proxygenHTTPAbort(ProxygenHTTP<Slice>* proxygenHTTP){
-      proxygenHTTP->Abort();
+
+    static void proxygenHTTPIsEof(ProxygenHTTP<Slice>* proxygenHTTP){
+      proxygenHTTP->IsEof();
     }
+    
     static void proxygenHTTPConnect(ProxygenHTTP<Slice>* proxygenHTTP){
       proxygenHTTP->Connect();
     }
+
+    static void proxygenHTTPAbort(ProxygenHTTP<Slice>* proxygenHTTP){
+      proxygenHTTP->Abort();
+    }
+
     static void proxygenHTTPSendEOM(ProxygenHTTP<Slice>* proxygenHTTP){
       proxygenHTTP->SendEOM();
     }
-    static void proxygenHTTPReadHeader(ProxygenHTTP<Slice>* proxygenHTTP){
-      proxygenHTTP->ReadHeader();
-    }
-    static void proxygenHTTPWrite(std::pair<ProxygenHTTP<Slice>*,Slice*>* pair){
-      pair->first->Write(std::make_shared<Slice>(pair->second));
-    }
-    
-    std::shared_ptr<ProxygenHTTP<Slice>> proxygenHTTP_ ;  
-  };
 
+    static void proxygenHTTPWrite(std::pair<ProxygenHTTP<Slice>*,std::shared_ptr<Slice>>* pair){
+      pair->first->Write(pair->second);
+    }
+
+    static void proxygenHTTPRead(std::pair<ProxygenHTTP<Slice>*,std::shared_ptr<Slice>>* pair){
+      pair->first->Write(pair->second);
+    }
+    std::shared_ptr<ProxygenHTTP<Slice>> proxygenHTTP_ {nullptr} ;  
+  };
 
 }  // namespace http
 

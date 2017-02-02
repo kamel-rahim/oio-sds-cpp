@@ -357,7 +357,8 @@ find_library(PROXYGENHTTPSERVER_LIBRARIES
 find_path(PROXYGEN_INCLUDE_DIRS
 	NAMES proxygen
 	HINTS /usr/lib /usr/lib64 /usr/local/lib)	
-
+dump_dependency_components("PROXYGENCURL")
+dump_dependency_components("PROXYGENHTTPSERVER")
 ################################################################################
 ### Folly 
 
@@ -367,7 +368,7 @@ find_library(FOLLY_LIBRARIES
 find_path(FOLLY_INCLUDE_DIRS
 	NAMES folly
 	HINTS /usr/lib /usr/lib64 /usr/local/lib)	
-
+dump_dependency_components("FOLLY")
 ################################################################################
 ### Wrangle
 
@@ -377,7 +378,7 @@ find_library(WANGLE_LIBRARIES
 find_path(WANGLE_INCLUDE_DIRS
 	NAMES wangle
 	HINTS /usr/lib /usr/lib64 /usr/local/lib)	
-
+dump_dependency_components("WANGLE")
 ################################################################################
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")

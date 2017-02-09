@@ -26,6 +26,7 @@
 using folly::AsyncSSLSocket;
 using folly::AsyncSocketException;
 using folly::IOBuf;
+using oio::api::blob::Slice;
 using http::ProxygenHTTP;
 using proxygen::HTTPConnector;
 using proxygen::HTTPException;
@@ -38,8 +39,8 @@ using proxygen::UpgradeProtocol;
 using std::shared_ptr;
 using std::unique_ptr;
 
-template<class Slice>
-void ProxygenHTTP<Slice>::initializeSSL() noexcept {
+
+void ProxygenHTTP::initializeSSL() noexcept {
   sslContext = std::make_shared<folly::SSLContext>();
   sslContext->setOptions(SSL_OP_NO_COMPRESSION);
   wangle::SSLContextConfig config;
@@ -48,8 +49,8 @@ void ProxygenHTTP<Slice>::initializeSSL() noexcept {
   sslContext->setAdvertisedNextProtocols(sslProtocols);
 }
 
-template<class Slice>
-void ProxygenHTTP<Slice>::sslHandshakeFollowup(
+
+void ProxygenHTTP::sslHandshakeFollowup(
     HTTPUpstreamSession* session) noexcept {
   auto sslSocket = dynamic_cast<AsyncSSLSocket*>(session->getTransport());
   const unsigned char* nextProto = nullptr;
@@ -57,8 +58,8 @@ void ProxygenHTTP<Slice>::sslHandshakeFollowup(
   sslSocket->getSelectedNextProtocol(&nextProto, &nextProtoLength);
 }
 
-template<class Slice>
-void ProxygenHTTP<Slice>::Connect() noexcept {
+
+void ProxygenHTTP::Connect() noexcept {
     connector = unique_ptr<HTTPConnector>(new HTTPConnector(
         reinterpret_cast<Callback*>(this), timer.get()));
     if (!sslEnabled) {
@@ -73,116 +74,128 @@ void ProxygenHTTP<Slice>::Connect() noexcept {
     }
 }
 
-template<class Slice>
-void ProxygenHTTP<Slice>::connectSuccess(HTTPUpstreamSession* session) {
-  DLOG(INFO) <<  "Connection successful";
-  if (sslEnabled)
-    sslHandshakeFollowup(session);
-  transaction = session->newTransaction(this);
 
-  proxygen::HTTPMessage message {};
-  message.setMethod(method);
-  message.setHTTPVersion(1, 1);
-  addFieldsOnHeader(&(message.getHeaders()));
-  message.setURL(url_);
-  transaction->sendHeaders(message);
-  ReturnCode(Code::OK);
-  DLOG(INFO) << "Header sent";
+void ProxygenHTTP::connectSuccess(HTTPUpstreamSession* session) {
+    DLOG(INFO) <<  "Connection successful";
+    if (sslEnabled)
+        sslHandshakeFollowup(session);
+    this->transaction = session->newTransaction(this);
+
+    proxygen::HTTPMessage message {};
+    message.setMethod(method);
+    message.setHTTPVersion(1, 1);
+    addFieldsOnHeader(&(message.getHeaders()));
+    message.setURL(url_);
+    this->transaction->sendHeaders(message);
+    ReturnCode(Code::OK);
+    DLOG(INFO) << "Header sent";
+ 
 }
-template<class Slice>
-void ProxygenHTTP<Slice>::addFieldsOnHeader(proxygen::HTTPHeaders *headers) {
+
+void ProxygenHTTP::addFieldsOnHeader(proxygen::HTTPHeaders *headers) {
   for (auto field : fields) {
     headers->add(field.first, field.second);
   }
 }
-template<class Slice>
-void ProxygenHTTP<Slice>::onEgressPaused() noexcept {
-  // not needed because transaction.isEgressPaused() already
-  // give us this information
+
+void ProxygenHTTP::onEgressPaused() noexcept {
+  DLOG(INFO) << "Egress is Paused";
+  isEgressPaused = true;
 }
-template<class Slice>
-void ProxygenHTTP<Slice>::onEgressResumed() noexcept {
+
+void ProxygenHTTP::onEgressResumed() noexcept {
+  DLOG(INFO) << "Egress resumed";
+  isEgressPaused = false;
     while (!writeQueue.empty()) {
-        if (transaction->isEgressPaused())
+        if (isEgressPaused)
             return;
         std::shared_ptr<Slice> slice = writeQueue.front();
         writeQueue.pop();
-        if (slice->size() >= 0) {
+        if (slice->size() > 0) {
             transaction->sendBody(IOBuf::wrapBuffer(
                 slice->data(), (unsigned int)slice->size()));
             sent += slice->size();
         }
     }
 }
-template<class Slice>
-void ProxygenHTTP<Slice>::Abort() noexcept {
+
+void ProxygenHTTP::Abort() noexcept {
   transaction->sendAbort();
 }
-template<class Slice>
-void ProxygenHTTP<Slice>::SendEOM() noexcept {
-  if (content_length >= 0) {
-    if (sent != content_length) {
-      LOG(ERROR) << "Too few bytes have been sent";
-      ReturnCode(Code::ClientError);
+
+void ProxygenHTTP::SendEOM() noexcept {
+    if (contentLength >= 0) {
+        if (sent != contentLength) {
+            LOG(ERROR) << "Too few bytes have been sent";
+            ReturnCode(Code::ClientError);
+        }
+    } else {
+        transaction->sendEOM();
+        DLOG(INFO) << "End Of Message sent";
+        ReturnCode(Code::OK);
     }
-  } else {
-    transaction->sendEOM();
-    ReturnCode(Code::OK);
-  }
-}
-template<class Slice>
-void ProxygenHTTP<Slice>::Write(const std::shared_ptr<Slice> slice) noexcept {
-  if (transaction->isEgressPaused()) {
-    writeQueue.push(slice);
-  } else {
-    if (slice->size() >= 0) {
-      transaction->sendBody(folly::IOBuf::wrapBuffer(slice.get()->data(),
-     slice.get()->size()));
-      sent += slice.get()->size();
-    }
-  }
-  ReturnCode(Code::OK);
 }
 
-template<class Slice>
-void ProxygenHTTP<Slice>::connectError(const AsyncSocketException& exception) {
+void ProxygenHTTP::Write(const std::shared_ptr<Slice> slice) noexcept {
+    DLOG(INFO) << "Executing Write";
+    if (!isEgressPaused) {
+        writeQueue.push(slice);
+        if(slice == nullptr)
+            DLOG(ERROR) << "Write Slice Null";
+    }
+    else {
+        if (slice->size() > 0) {
+            transaction->sendBody(folly::IOBuf::wrapBuffer(slice->data(),
+                                                           slice->size()));
+            sent += slice->size();
+        }
+    }
+    ReturnCode(Code::OK);
+    DLOG(INFO) << "Writing done";
+}
+
+
+void ProxygenHTTP::connectError(const AsyncSocketException& exception) {
   ReturnCode(Code::NetworkError);
   this->exception = exception.getType();
 }
-template<class Slice>
-void ProxygenHTTP<Slice>::onEOM() noexcept {
+
+void ProxygenHTTP::onEOM() noexcept {
   eof = true;
   DLOG(INFO) << "End Of Message received";
 }
 
-template<class Slice>
-void ProxygenHTTP<Slice>::ReadHeader() noexcept {
+
+void ProxygenHTTP::ReadHeader() noexcept {
   headerPromise.set_value(headerReceived);
 }
 
-template<class Slice>
-void ProxygenHTTP<Slice>::setTransaction(HTTPTransaction* txn) noexcept {
-  if (!transaction) {
-    delete transaction;
-  }
-  transaction = txn;
+
+void ProxygenHTTP::setTransaction(HTTPTransaction* txn) noexcept {
+    DLOG(INFO) << "Set Transaction" ;
+    if (transaction) {
+        DLOG(INFO) << "Transaction already set";
+    }else{
+        if(false)
+            transaction = txn;
+    }
 }
 
-template<class Slice>
-void ProxygenHTTP<Slice>::onHeadersComplete(
+
+void ProxygenHTTP::onHeadersComplete(
     unique_ptr<HTTPMessage> msg) noexcept {
   headerReceived = std::move(msg);
   ReturnHeader(headerReceived);
   DLOG(INFO) << "Response header received";
 }
 
-template<class Slice>
-void ProxygenHTTP<Slice>::detachTransaction() noexcept {
-  delete transaction;
+
+void ProxygenHTTP::detachTransaction() noexcept {
+  //   delete transaction;
 }
 
-template<class Slice>
-void ProxygenHTTP<Slice>::onBody(std::unique_ptr<folly::IOBuf> chain) noexcept {
+
+void ProxygenHTTP::onBody(std::unique_ptr<folly::IOBuf> chain) noexcept {
   if (!readSlice) {
     if (readBuffer)
       readBuffer.get()->prependChain(std::move(chain));
@@ -193,8 +206,8 @@ void ProxygenHTTP<Slice>::onBody(std::unique_ptr<folly::IOBuf> chain) noexcept {
   }
 }
 
-template<class Slice>
-void ProxygenHTTP<Slice>::CoalesceAndSetValue() {
+
+void ProxygenHTTP::CoalesceAndSetValue() {
   readBuffer.get()->coalesce();
   readSlice.get()->append(std::move(readBuffer.get()->writableData()),
   readBuffer.get()->length());
@@ -203,36 +216,36 @@ void ProxygenHTTP<Slice>::CoalesceAndSetValue() {
   readBuffer = nullptr;
 }
 
-template<class Slice>
-void ProxygenHTTP<Slice>::Read(std::shared_ptr<Slice> slice) noexcept {
+
+void ProxygenHTTP::Read(std::shared_ptr<Slice> slice) noexcept {
   readSlice = slice;
   if (readBuffer) {
     CoalesceAndSetValue();
   }
 }
 
-template<class Slice>
-void ProxygenHTTP<Slice>::onTrailers(unique_ptr<HTTPHeaders> trailers)
+
+void ProxygenHTTP::onTrailers(unique_ptr<HTTPHeaders> trailers)
         noexcept {
   this->trailers = std::move(trailers);
 }
 
-template<class Slice>
-void ProxygenHTTP<Slice>::onUpgrade(UpgradeProtocol protocol) noexcept {
+
+void ProxygenHTTP::onUpgrade(UpgradeProtocol protocol) noexcept {
   this->protocol = protocol;
 }
 
-template<class Slice>
-void  ProxygenHTTP<Slice>::isEof() noexcept {
+
+void  ProxygenHTTP::isEof() noexcept {
   boolPromise.set_value(eof);
 }
 
-template<class Slice>
-void ProxygenHTTP<Slice>::onError(const HTTPException& error) noexcept {
+
+void ProxygenHTTP::onError(const HTTPException& error) noexcept {
   this->error = new proxygen::HTTPException(error);
   errorHappened = true;
 }
 
-template<class Slice>
-ProxygenHTTP<Slice>::~ProxygenHTTP() {
+
+ProxygenHTTP::~ProxygenHTTP() {
 }

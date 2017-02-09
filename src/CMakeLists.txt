@@ -32,12 +32,20 @@ add_custom_command(OUTPUT
 add_library(oio-utils SHARED
 		utils/utils.hpp utils/utils.cpp
 		utils/net.hpp utils/net.cpp
-		utils/http.hpp utils/http.cpp
-		utils/proxygen.hpp utils/proxygen.cpp)
+		utils/http.hpp utils/http.cpp)
 target_link_libraries(oio-utils
         oio-http-parser
         ${MILL_LIBRARIES} ${CRYPTO_LIBRARIES}
-		${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES})
+	${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES})
+
+add_library(oio-utils-proxygen SHARED
+	        utils/utils.hpp utils/utils.cpp
+		utils/net.hpp utils/net.cpp
+		utils/http.hpp utils/http.cpp
+		utils/proxygen.hpp utils/proxygen.cpp)
+	      
+target_link_libraries(oio-utils-proxygen ${CRYPTO_LIBRARIES}
+	${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES})	      
 
 
 add_library(oio-data SHARED

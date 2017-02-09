@@ -36,20 +36,61 @@
 
 #include "http.hpp"
 #include "utils.hpp"
-
+#include "oio/api/blob.hpp"
 
 namespace http {
 
-template<class Slice>
-class ControllerProxygenHTTP;
+class HTTPSlice :public  oio::api::blob::Slice{
+ public:
+    ~HTTPSlice() {}
+
+    HTTPSlice() {}
+
+    explicit HTTPSlice(HTTPSlice *slice) {
+        inner.insert(inner.end(), slice->data(), &slice->data()[slice->size()]);
+    }
+
+    explicit HTTPSlice(std::vector<uint8_t> *buf): inner{*buf} {}
+
+    HTTPSlice(const uint8_t *data, uint32_t size) {
+        inner.insert(inner.end(), data, &data[size]);
+    }
+
+    HTTPSlice(uint8_t *data, int32_t size) {
+        inner.insert(inner.end(), data, &data[size]);
+    }
+
+    uint8_t *data() {
+        return inner.data();
+    }
+
+    uint32_t size() {
+        return inner.size();
+    }
+
+    void append(uint8_t *data, uint32_t size) override {
+        inner.insert(inner.end(), data, &data[size]);
+    }
+
+    void append(HTTPSlice *slice) {
+        inner.insert(inner.end(), slice->data(), &slice->data()[slice->size()]);
+    }
+
+    bool empty() {
+        return inner.empty();
+    }
+
+ private:
+    std::vector<uint8_t> inner;
+};
 
 /**
  * Handle a Connection (Download and Upload) to a HTTPServer
  */
-template<class Slice>
+
 class ProxygenHTTP : public proxygen::HTTPConnector::Callback,
                      public proxygen::HTTPTransactionHandler {
-    friend class ControllerProxygenHTTP<Slice>;
+    friend class ControllerProxygenHTTP;
  public:
     /*
      *Setter of the Proxygen class
@@ -92,6 +133,11 @@ class ProxygenHTTP : public proxygen::HTTPConnector::Callback,
         this->method = method;
     }
 
+    void ContentLength(int64_t contentLength) noexcept {
+        this->contentLength = contentLength;
+        Field("Content-Length", std::to_string(contentLength));
+    }
+
     // The functions that permit to control ProxygenHTTP
     /**
      * 
@@ -101,17 +147,16 @@ class ProxygenHTTP : public proxygen::HTTPConnector::Callback,
     /**
      * Send a Slice to the other socket
      */
-    void Write(const std::shared_ptr<Slice> slice) noexcept;
+    void Write(const std::shared_ptr<::oio::api::blob::Slice> slice) noexcept;
     /**
      * Send the end the of message, no Write should be done after this point
      */
     void SendEOM() noexcept;
+
     /**
      * Return a promise of a Slice 
-     * if there is no Slice to send the Read will not answer
-     * it is up to the caller to add a timeout 
      */
-    void Read(std::shared_ptr<Slice> slice) noexcept;
+    void Read(std::shared_ptr<oio::api::blob::Slice> slice) noexcept;
     /**
      * Return a promise of a bool
      */
@@ -165,10 +210,11 @@ class ProxygenHTTP : public proxygen::HTTPConnector::Callback,
     // Reading
     std::shared_ptr<folly::IOBuf> readBuffer {nullptr};
     bool eof;
-    std::shared_ptr<Slice> readSlice;
+    std::shared_ptr<oio::api::blob::Slice> readSlice;
     // Writing
-    int64_t content_length {-1};
-    std::queue<std::shared_ptr<Slice>> writeQueue;
+    bool isEgressPaused {false};
+    int64_t contentLength {-1};
+    std::queue<std::shared_ptr<oio::api::blob::Slice>> writeQueue;
     int64_t sent {-1};
     // Param for setting Connection
     std::string url_;
@@ -191,22 +237,21 @@ class ProxygenHTTP : public proxygen::HTTPConnector::Callback,
     folly::AsyncSocketException::AsyncSocketExceptionType exception;
 };
 
-template<class Slice>
 class ControllerProxygenHTTP{
  public:
     ControllerProxygenHTTP() {}
 
-    explicit ControllerProxygenHTTP(std::shared_ptr<ProxygenHTTP<Slice>>
+    explicit ControllerProxygenHTTP(std::shared_ptr<ProxygenHTTP>
                                      proxygenHTTP)
             :proxygenHTTP_{proxygenHTTP} {}
 
-    void SetProxygenHTTP(std::shared_ptr<ProxygenHTTP<Slice>> proxygenHTTP) {
+    void SetProxygenHTTP(std::shared_ptr<ProxygenHTTP> proxygenHTTP) {
         proxygenHTTP_ = proxygenHTTP;
     }
 
     void Abort() {
         proxygenHTTP_->eventBase->template
-                runInEventBaseThread<ProxygenHTTP<Slice>>
+                runInEventBaseThread<ProxygenHTTP>
                 (proxygenHTTPAbort, proxygenHTTP_.get());
     }
 
@@ -214,7 +259,7 @@ class ControllerProxygenHTTP{
         if (proxygenHTTP_.get()->errorHappened)
             return;
         proxygenHTTP_->eventBase->template
-                runInEventBaseThread<ProxygenHTTP<Slice>>
+                runInEventBaseThread<ProxygenHTTP>
                 (proxygenHTTPConnect, proxygenHTTP_.get());
     }
 
@@ -222,30 +267,32 @@ class ControllerProxygenHTTP{
         if (proxygenHTTP_.get()->errorHappened)
             return;
         proxygenHTTP_->eventBase->template
-                runInEventBaseThread<ProxygenHTTP<Slice>>
+                runInEventBaseThread<ProxygenHTTP>
                 (proxygenHTTPSendEOM, proxygenHTTP_.get());
     }
 
-    void Read(std::shared_ptr<Slice> slice) {
+    void Read(std::shared_ptr<oio::api::blob::Slice> slice) {
         if (proxygenHTTP_.get()->errorHappened)
             return;
-        std::pair<ProxygenHTTP<Slice>*, std::shared_ptr<Slice>> tmp_pair =
-                {proxygenHTTP_.get(), slice};
-        proxygenHTTP_->eventBase->template
-                runInEventBaseThread
-                <std::pair<ProxygenHTTP<Slice>*, std::shared_ptr<Slice>>>
-                (proxygenHTTPRead, &tmp_pair);
+        auto *tmp_pair =  new std::pair<ProxygenHTTP*,
+                                        std::shared_ptr<oio::api::blob::Slice>>
+                (proxygenHTTP_.get(), slice);
+        proxygenHTTP_->eventBase->template runInEventBaseThread
+                <std::pair<ProxygenHTTP*,
+                           std::shared_ptr<oio::api::blob::Slice>>>
+                (proxygenHTTPRead, tmp_pair);
     }
 
-    void Write(std::shared_ptr<Slice> slice) {
+    void Write(std::shared_ptr<oio::api::blob::Slice> slice) {
         if (proxygenHTTP_.get()->errorHappened)
             return;
-        std::pair<ProxygenHTTP<Slice>*, std::shared_ptr<Slice>> tmp_pair =
-                {proxygenHTTP_.get(), slice};
-        proxygenHTTP_->eventBase->template
-                runInEventBaseThread
-                <std::pair<ProxygenHTTP<Slice>*, std::shared_ptr<Slice>>>
-                (proxygenHTTPWrite, &tmp_pair);
+       auto  *tmp_pair = new std::pair<ProxygenHTTP*,
+                                       std::shared_ptr<oio::api::blob::Slice>>
+               (proxygenHTTP_.get(), slice);
+        proxygenHTTP_->eventBase->template runInEventBaseThread
+                <std::pair<ProxygenHTTP*,
+                           std::shared_ptr<oio::api::blob::Slice>>>
+                (proxygenHTTPWrite, tmp_pair);
     }
 
     Code ReturnCode() {
@@ -285,32 +332,36 @@ class ControllerProxygenHTTP{
     }
 
  private:
-    static void proxygenHTTPIsEof(ProxygenHTTP<Slice>* proxygenHTTP) {
-        proxygenHTTP->IsEof();
+    static void proxygenHTTPIsEof(ProxygenHTTP* proxygenHTTP) {
+        proxygenHTTP->isEof();
     }
 
-    static void proxygenHTTPConnect(ProxygenHTTP<Slice>* proxygenHTTP) {
+    static void proxygenHTTPConnect(ProxygenHTTP* proxygenHTTP) {
         proxygenHTTP->Connect();
     }
 
-    static void proxygenHTTPAbort(ProxygenHTTP<Slice>* proxygenHTTP) {
+    static void proxygenHTTPAbort(ProxygenHTTP* proxygenHTTP) {
         proxygenHTTP->Abort();
     }
 
-    static void proxygenHTTPSendEOM(ProxygenHTTP<Slice>* proxygenHTTP) {
+    static void proxygenHTTPSendEOM(ProxygenHTTP* proxygenHTTP) {
         proxygenHTTP->SendEOM();
     }
 
-    static void proxygenHTTPWrite(std::pair<ProxygenHTTP<Slice>*,
-                                  std::shared_ptr<Slice>>* pair) {
+    static void proxygenHTTPWrite(std::pair<ProxygenHTTP*,
+                                  std::shared_ptr<oio::api::blob::Slice>>
+                                  *pair) {
         pair->first->Write(pair->second);
+        delete pair;
     }
 
-    static void proxygenHTTPRead(std::pair<ProxygenHTTP<Slice>*,
-                                 std::shared_ptr<Slice>>* pair) {
-        pair->first->Write(pair->second);
+    static void proxygenHTTPRead(std::pair<ProxygenHTTP*,
+                                 std::shared_ptr<oio::api::blob::Slice>>
+                                 *pair) {
+        pair->first->Read(pair->second);
+        delete pair;
     }
-    std::shared_ptr<ProxygenHTTP<Slice>> proxygenHTTP_ {nullptr};
+    std::shared_ptr<ProxygenHTTP> proxygenHTTP_ {nullptr};
 };
 
 }  // namespace http

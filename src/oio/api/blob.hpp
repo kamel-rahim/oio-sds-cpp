@@ -20,8 +20,10 @@
 #define SRC_OIO_API_BLOB_HPP_
 
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
+
 
 #include "oio/api/common.hpp"
 
@@ -31,6 +33,13 @@ namespace blob {
 
 enum class TransactionStep {
     Init, Prepared, Done
+};
+
+class Slice {
+ public:
+    virtual uint8_t *data() = 0;
+    virtual uint32_t size() = 0;
+    virtual void append(uint8_t *data, uint32_t length) = 0;
 };
 
 std::ostream& operator<<(std::ostream &out, const TransactionStep s);
@@ -119,6 +128,7 @@ class Upload {
     virtual Status Abort() = 0;
 
     // buffer copied
+
     virtual void Write(const uint8_t *buf, uint32_t len) = 0;
 
     void Write(const char *str, uint32_t len) {
@@ -128,6 +138,11 @@ class Upload {
     void Write(const std::string &s) {
         return this->Write(reinterpret_cast<const uint8_t *>(s.data()),
                            s.size());
+    }
+
+    Status Write(std::shared_ptr<Slice> s) {
+        this->Write(s->data(), s->size());
+        return Status();
     }
 
     void Write(const std::vector<uint8_t> &s) {
@@ -180,7 +195,15 @@ class Download {
      * @return the size of the buffer. A negative size means an error occured.
      */
     virtual int32_t Read(std::vector<uint8_t> *buf) = 0;
+
+    Status Read(std::shared_ptr<Slice> s) {
+        std::vector<uint8_t> tmp(s->data(), s->data() + s->size());
+        if ( Read(&tmp) < 0 )
+            return Status(Cause::InternalError);
+        return Status();
+    }
 };
+
 
 }  // namespace blob
 }  // namespace api

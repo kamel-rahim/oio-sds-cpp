@@ -23,7 +23,6 @@
 #include "utils/utils.hpp"
 #include "utils/http.hpp"
 #include "utils/proxygen.hpp"
-#include "utils/proxygen.cpp"
 using Step = oio::api::blob::TransactionStep;
 
 using http::Code;
@@ -35,11 +34,12 @@ using oio::api::Status;
 using oio::api::blob::Upload;
 using std::string;
 using std::unique_ptr;
+using oio::api::blob::Slice;
 
 void oio::http::async::HTTPUpload::SetXattr(
     const std::string& k, const std::string& v) {
     if (step_ == Step::Init)
-        proxygenHTTP_.get()->Field(k, v);
+        proxygenHTTP_->Field(k, v);
 }
 
 Status oio::http::async::HTTPUpload::Prepare() {
@@ -49,8 +49,6 @@ Status oio::http::async::HTTPUpload::Prepare() {
     controller_.Connect();
     return Status();
 }
-
-
 
 Status oio::http::async::HTTPUpload::WaitPrepare() {
     Code code = controller_.ReturnCode();
@@ -78,10 +76,15 @@ Status oio::http::async::HTTPUpload::WaitCommit() {
         return AbortAndReturn(Status(Cause::InternalError));
     }
     std::shared_ptr<proxygen::HTTPMessage> header = controller_.ReturnHeader();
-    if (header == nullptr)
+    if (header == nullptr) {
+      DLOG(INFO) << "Header Returned is null";
         return Status(Cause::InternalError);
-    if (header->getStatusCode() / 100 == 2)
+    }
+    if (header->getStatusCode() / 100 == 2) {
+      DLOG(INFO) << "Header Status Code is valid";
         return Status();
+    }
+    DLOG(INFO) << "The Status Code is not good" << header->getStatusCode();
     return Status(Cause::InternalError);
 }
 
@@ -93,7 +96,7 @@ Status oio::http::async::HTTPUpload::Abort() {
     return Status();
 }
 
-Status oio::http::async::HTTPUpload::Write(std::shared_ptr<HTTPSlice> slice) {
+Status oio::http::async::HTTPUpload::Write(std::shared_ptr<Slice> slice) {
     if (step_ != Step::Prepared)
         return Status(Cause::InternalError);
     controller_.Write(slice);
@@ -112,12 +115,14 @@ Status oio::http::async::HTTPUpload::WaitWrite() {
 
 Status oio::http::async::HTTPDownload::SetRange(
     uint32_t offset, uint32_t size) {
-    proxygenHTTP_.get()->Field("Range", "bytes="+std::to_string(offset)+
-                               "-"+std::to_string(size));
+    if (step_ != Step::Init)
+        return Status(Cause::InternalError);
+    proxygenHTTP_->Field("Range", "bytes="+std::to_string(offset)+
+                         "-"+std::to_string(size));
     return Status();
 }
 
-Status oio::http::async::HTTPDownload::Read(std::shared_ptr<HTTPSlice> slice) {
+Status oio::http::async::HTTPDownload::Read(std::shared_ptr<Slice> slice) {
     if (step_ != Step::Prepared)
         return Status(Cause::InternalError);
     controller_.Read(slice);
@@ -161,7 +166,7 @@ Status oio::http::async::HTTPDownload::WaitReadHeader() {
             controller_.ReturnHeader();
     if (httpMessage == nullptr)
         return Status(Cause::NetworkError);
-    if (httpMessage.get()->getStatusCode() == 404)
+    if (httpMessage->getStatusCode() == 404)
         return Status(Cause::NotFound);
     return Status();
 }
@@ -200,7 +205,7 @@ Status oio::http::async::HTTPRemoval::WaitCommit() {
         return AbortAndReturn(Status(Cause::InternalError));
     }
     std::shared_ptr<proxygen::HTTPMessage> header = controller_.ReturnHeader();
-    if (header.get()->getStatusCode() / 100 == 2)
+    if (header->getStatusCode() / 100 == 2)
         return Status();
     return Status(Cause::InternalError);
 }
@@ -211,6 +216,10 @@ Status oio::http::async::HTTPRemoval::Abort() {
     step_ = Step::Done;
     controller_.Abort();
     return Status();
+}
+
+void oio::http::async::HTTPBuilder::ContentLength(int64_t contentLength) {
+    this->contentLength = contentLength;
 }
 
 void oio::http::async::HTTPBuilder::URL(const std::string& s) {
@@ -259,15 +268,17 @@ oio::http::async::HTTPBuilder::BuildUpload() {
     auto ul = new HTTPUpload;
     if (timeout != std::chrono::milliseconds(0))
         ul->proxygenHTTP_->Timeout(timeout);
-    ul->proxygenHTTP_.get()->SocketAddress(std::move(socketAddress));
-    ul->proxygenHTTP_.get()->EventBase(eventBase);
-    ul->proxygenHTTP_.get()->Timer(timer);
-    ul->proxygenHTTP_.get()->URL(url);
-    ul->proxygenHTTP_.get()->Method(proxygen::HTTPMethod::PUT);
-    ul->proxygenHTTP_.get()->Field("Host", host);
+    if (contentLength > 0)
+        ul->proxygenHTTP_->ContentLength(contentLength);
+    ul->proxygenHTTP_->SocketAddress(std::move(socketAddress));
+    ul->proxygenHTTP_->EventBase(eventBase);
+    ul->proxygenHTTP_->Timer(timer);
+    ul->proxygenHTTP_->URL(url);
+    ul->proxygenHTTP_->Method(proxygen::HTTPMethod::PUT);
+    ul->proxygenHTTP_->Field("Host", host);
 
     for (const auto &e : fields) {
-        ul->proxygenHTTP_.get()->Field(e.first, e.second);
+        ul->proxygenHTTP_->Field(e.first, e.second);
     }
     return std::unique_ptr<oio::http::async::HTTPUpload>(ul);
 }
@@ -277,15 +288,17 @@ oio::http::async::HTTPBuilder::BuildDownload() {
     auto dl = new HTTPDownload;
     if (timeout !=std::chrono::milliseconds(0) )
         dl->proxygenHTTP_->Timeout(timeout);
-    dl->proxygenHTTP_.get()->SocketAddress(std::move(socketAddress));
-    dl->proxygenHTTP_.get()->EventBase(eventBase);
-    dl->proxygenHTTP_.get()->Timer(timer);
-    dl->proxygenHTTP_.get()->URL(url);
-    dl->proxygenHTTP_.get()->Method(proxygen::HTTPMethod::GET);
-    dl->proxygenHTTP_.get()->Field("Host", host);
+    if (contentLength > 0)
+        dl->proxygenHTTP_->ContentLength(contentLength);
+    dl->proxygenHTTP_->SocketAddress(std::move(socketAddress));
+    dl->proxygenHTTP_->EventBase(eventBase);
+    dl->proxygenHTTP_->Timer(timer);
+    dl->proxygenHTTP_->URL(url);
+    dl->proxygenHTTP_->Method(proxygen::HTTPMethod::GET);
+    dl->proxygenHTTP_->Field("Host", host);
 
     for (const auto &e : fields) {
-        dl->proxygenHTTP_.get()->Field(e.first, e.second);
+        dl->proxygenHTTP_->Field(e.first, e.second);
     }
     return std::unique_ptr<oio::http::async::HTTPDownload>(dl);
 }
@@ -295,36 +308,37 @@ oio::http::async::HTTPBuilder::BuildRemoval() {
     auto rm = new HTTPRemoval;
     if (timeout != std::chrono::milliseconds(0))
         rm->proxygenHTTP_->Timeout(timeout);
-    rm->proxygenHTTP_.get()->SocketAddress(std::move(socketAddress));
-    rm->proxygenHTTP_.get()->EventBase(eventBase);
-    rm->proxygenHTTP_.get()->Timer(timer);
-    rm->proxygenHTTP_.get()->URL(url);
-    rm->proxygenHTTP_.get()->Method(proxygen::HTTPMethod::DELETE);
-    rm->proxygenHTTP_.get()->Field("Host", host);
+    if (contentLength > 0)
+        rm->proxygenHTTP_->ContentLength(contentLength);
+    rm->proxygenHTTP_->SocketAddress(std::move(socketAddress));
+    rm->proxygenHTTP_->EventBase(eventBase);
+    rm->proxygenHTTP_->Timer(timer);
+    rm->proxygenHTTP_->URL(url);
+    rm->proxygenHTTP_->Method(proxygen::HTTPMethod::DELETE);
+    rm->proxygenHTTP_->Field("Host", host);
 
     for (const auto &e : fields) {
-        rm->proxygenHTTP_.get()->Field(e.first, e.second);
+        rm->proxygenHTTP_->Field(e.first, e.second);
     }
     return std::unique_ptr<oio::http::async::HTTPRemoval>(rm);
 }
 
 Status oio::http::sync::HTTPDownload::Prepare() {
-    inner.get()->Prepare();
-    return inner.get()->WaitPrepare();
+    inner->Prepare();
+    return inner->WaitPrepare();
 }
 
 bool oio::http::sync::HTTPDownload::IsEof() {
-    return inner.get()->IsEof();
+    return inner->IsEof();
 }
 
-Status oio::http::sync::HTTPDownload::Read(std::shared_ptr<HTTPSlice> slice) {
-    inner.get()->Read(slice);
-    return inner.get()->WaitRead();
+Status oio::http::sync::HTTPDownload::Read(std::shared_ptr<Slice> slice) {
+    inner->Read(slice);
+    return inner->WaitRead();
 }
 
 int32_t oio::http::sync::HTTPDownload::Read(std::vector<uint8_t> * buf) {
-    std::shared_ptr<HTTPSlice> slice = std::shared_ptr<HTTPSlice>(
-        new HTTPSlice(buf));
+    std::shared_ptr<Slice> slice(new HTTPSlice(buf));
     Status status = Read(slice);
     if (status.Why() != Cause::OK)
         return -1;
@@ -332,7 +346,7 @@ int32_t oio::http::sync::HTTPDownload::Read(std::vector<uint8_t> * buf) {
 }
 
 Status oio::http::sync::HTTPDownload::SetRange(uint32_t offset, uint32_t size) {
-    return inner.get()->SetRange(offset, size);
+    return inner->SetRange(offset, size);
 }
 
 oio::http::sync::HTTPDownload::~HTTPDownload() {}
@@ -344,6 +358,8 @@ oio::http::sync::HTTPBuilder::BuildUpload() {
     oio::http::async::HTTPBuilder builder;
     if (timeout != std::chrono::milliseconds(0))
         builder.Timeout(timeout);
+    if (contentLength > 0)
+        builder.ContentLength(contentLength);
     builder.SocketAddress(std::move(socketAddress));
     builder.EventBase(eventBase);
     builder.Timer(timer);
@@ -361,6 +377,8 @@ oio::http::sync::HTTPBuilder::BuildDownload() {
     oio::http::async::HTTPBuilder builder;
     if (timeout != std::chrono::milliseconds(0))
         builder.Timeout(timeout);
+    if (contentLength > 0)
+        builder.ContentLength(contentLength);
     builder.SocketAddress(std::move(socketAddress));
     builder.EventBase(eventBase);
     builder.Timer(timer);
@@ -378,6 +396,8 @@ oio::http::sync::HTTPBuilder::BuildRemoval() {
     oio::http::async::HTTPBuilder builder;
     if (timeout != std::chrono::milliseconds(0))
         builder.Timeout(timeout);
+    if (contentLength > 0)
+        builder.ContentLength(contentLength);
     builder.SocketAddress(std::move(socketAddress));
     builder.EventBase(eventBase);
     builder.Timer(timer);
@@ -390,6 +410,9 @@ oio::http::sync::HTTPBuilder::BuildRemoval() {
     return std::unique_ptr<oio::api::blob::Removal>(rm);
 }
 
+void oio::http::sync::HTTPBuilder::ContentLength(int64_t contentLength) {
+    this->contentLength = contentLength;
+}
 void oio::http::sync::HTTPBuilder::Timeout(
     const std::chrono::milliseconds &timeout) {
     this->timeout = timeout;
@@ -433,45 +456,45 @@ void oio::http::sync::HTTPBuilder::Timer(
 
 
 Status oio::http::sync::HTTPRemoval::Prepare() {
-    inner.get()->Prepare();
-    return inner.get()->WaitPrepare();
+    inner->Prepare();
+    return inner->WaitPrepare();
 }
 
 Status oio::http::sync::HTTPRemoval::Commit() {
-    inner.get()->Commit();
-    return inner.get()->WaitCommit();
+    inner->Commit();
+    return inner->WaitCommit();
 }
 
 Status oio::http::sync::HTTPRemoval::Abort() {
-    return inner.get()->Abort();
+    return inner->Abort();
 }
 
 Status oio::http::sync::HTTPUpload::Prepare() {
-    inner.get()->Prepare();
-    return inner.get()->WaitPrepare();
+    inner->Prepare();
+    return inner->WaitPrepare();
 }
 
 oio::http::sync::HTTPUpload::~HTTPUpload() {}
 
-Status oio::http::sync::HTTPUpload::Write(std::shared_ptr<HTTPSlice> slice) {
-    inner.get()->Write(slice);
-    return inner.get()->WaitWrite();
+Status oio::http::sync::HTTPUpload::Write(std::shared_ptr<Slice> slice) {
+    inner->Write(slice);
+    return inner->WaitWrite();
 }
 
 Status oio::http::sync::HTTPUpload::Commit() {
-    inner.get()->Commit();
-    return inner.get()->WaitCommit();
+    inner->Commit();
+    return inner->WaitCommit();
 }
 Status oio::http::sync::HTTPUpload::Abort() {
-    return inner.get()->Abort();
+    return inner->Abort();
 }
 
 Status oio::http::repli::ReplicatedHTTPUpload::Prepare() {
     for (auto &target :  targets_)
-        target.get()->Prepare();
+        target->Prepare();
     unsigned successful = 0;
     for (auto &target : targets_) {
-        Status status = target.get()->WaitPrepare();
+        Status status = target->WaitPrepare();
         if (status.Why() == Cause::OK)
             successful++;
     }
@@ -482,11 +505,11 @@ Status oio::http::repli::ReplicatedHTTPUpload::Prepare() {
 
 Status oio::http::repli::ReplicatedHTTPUpload::Commit() {
     for (auto &target : targets_)
-        target.get()->Commit();
+        target->Commit();
     unsigned successful = 0;
     Status status;
     for (auto &target : targets_) {
-        status = target.get()->WaitCommit();
+        status = target->WaitCommit();
         if (status.Why() == Cause::OK)
             successful++;
     }
@@ -497,18 +520,18 @@ Status oio::http::repli::ReplicatedHTTPUpload::Commit() {
 
 Status oio::http::repli::ReplicatedHTTPUpload::Abort() {
     for (auto &target : targets_)
-        target.get()->Abort();
+        target->Abort();
     return Status(Cause::OK);
 }
 
 Status oio::http::repli::ReplicatedHTTPUpload::Write(
-    std::shared_ptr<HTTPSlice> slice) {
+    std::shared_ptr<Slice> slice) {
     for (auto &target : targets_)
-        target.get()->Write(slice);
+        target->Write(slice);
     unsigned successful = 0;
     Status status;
     for (auto &target : targets_) {
-        status = target.get()->WaitWrite();
+        status = target->WaitWrite();
         if (status.Why() ==Cause::OK)
             successful++;
     }

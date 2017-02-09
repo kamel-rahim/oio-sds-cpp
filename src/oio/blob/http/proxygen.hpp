@@ -35,8 +35,10 @@
 namespace oio {
 namespace http {
 
-class HTTPSlice{
+class HTTPSlice :public  oio::api::blob::Slice{
  public:
+    ~HTTPSlice() {}
+
     HTTPSlice() {}
 
     explicit HTTPSlice(HTTPSlice *slice) {
@@ -45,7 +47,7 @@ class HTTPSlice{
 
     explicit HTTPSlice(std::vector<uint8_t> *buf): inner{*buf} {}
 
-    HTTPSlice(const uint8_t *data, int32_t size) {
+    HTTPSlice(const uint8_t *data, uint32_t size) {
         inner.insert(inner.end(), data, &data[size]);
     }
 
@@ -61,7 +63,7 @@ class HTTPSlice{
         return inner.size();
     }
 
-    void append(uint8_t *data, int32_t size) {
+    void append(uint8_t *data, uint32_t size) override {
         inner.insert(inner.end(), data, &data[size]);
     }
 
@@ -83,31 +85,29 @@ class HTTPDownload {
     friend class HTTPBuilder;
  public:
     HTTPDownload() {
-        proxygenHTTP_ = std::shared_ptr<::http::ProxygenHTTP
-                <oio::http::HTTPSlice>>(
-                    new ::http::ProxygenHTTP<oio::http::HTTPSlice>());
+        proxygenHTTP_ = std::shared_ptr<::http::ProxygenHTTP>(
+                    new ::http::ProxygenHTTP());
         controller_.SetProxygenHTTP(proxygenHTTP_);
     }
     oio::api::Status Prepare();
     oio::api::Status WaitPrepare();
-    oio::api::Status Read(std::shared_ptr<HTTPSlice> slice);
+    oio::api::Status Read(std::shared_ptr<oio::api::blob::Slice> slice);
     oio::api::Status WaitRead();
     oio::api::Status WaitReadHeader();
     oio::api::Status SetRange(uint32_t offset, uint32_t size);
     bool IsEof();
  private:
     oio::api::blob::TransactionStep step_;
-    std::shared_ptr<::http::ProxygenHTTP<oio::http::HTTPSlice>> proxygenHTTP_;
-    ::http::ControllerProxygenHTTP<oio::http::HTTPSlice> controller_;
+    std::shared_ptr<::http::ProxygenHTTP> proxygenHTTP_;
+    ::http::ControllerProxygenHTTP controller_;
 };
 
 class HTTPUpload {
     friend class HTTPBuilder;
  public:
     HTTPUpload() {
-        proxygenHTTP_ = std::shared_ptr<::http::ProxygenHTTP<
-            oio::http::HTTPSlice>>(
-                new ::http::ProxygenHTTP<oio::http::HTTPSlice>());
+        proxygenHTTP_ = std::shared_ptr<::http::ProxygenHTTP>(
+                new ::http::ProxygenHTTP());
         controller_.SetProxygenHTTP(proxygenHTTP_);
     }
     void SetXattr(const std::string& k, const std::string& v);
@@ -118,7 +118,7 @@ class HTTPUpload {
     oio::api::Status Abort();
     oio::api::Status WaitWrite();
     oio::api::Status Write(const uint8_t *buf, uint32_t len);
-    oio::api::Status Write(std::shared_ptr<HTTPSlice> slice);
+    oio::api::Status Write(std::shared_ptr<oio::api::blob::Slice> slice);
 
  private:
     oio::api::Status AbortAndReturn(oio::api::Status status) {
@@ -126,13 +126,18 @@ class HTTPUpload {
         return status;
     }
     oio::api::blob::TransactionStep step_;
-    std::shared_ptr<::http::ProxygenHTTP<oio::http::HTTPSlice>> proxygenHTTP_;
-    ::http::ControllerProxygenHTTP<oio::http::HTTPSlice> controller_;
+    std::shared_ptr<::http::ProxygenHTTP> proxygenHTTP_;
+    ::http::ControllerProxygenHTTP controller_;
 };
 
 class HTTPRemoval {
     friend class HTTPBuilder;
  public:
+    HTTPRemoval() {
+        proxygenHTTP_ = std::shared_ptr<::http::ProxygenHTTP>(
+            new ::http::ProxygenHTTP());
+        controller_.SetProxygenHTTP(proxygenHTTP_);
+    }
     oio::api::Status Prepare();
     oio::api::Status WaitPrepare();
     oio::api::Status Commit();
@@ -145,8 +150,8 @@ class HTTPRemoval {
         return status;
     }
     oio::api::blob::TransactionStep step_;
-    std::shared_ptr<::http::ProxygenHTTP<oio::http::HTTPSlice>> proxygenHTTP_;
-    ::http::ControllerProxygenHTTP<oio::http::HTTPSlice> controller_;
+    std::shared_ptr<::http::ProxygenHTTP> proxygenHTTP_;
+    ::http::ControllerProxygenHTTP controller_;
 };
 
 
@@ -175,6 +180,8 @@ class HTTPBuilder {
 
     void Timeout(const std::chrono::milliseconds &timeout);
 
+    void ContentLength(int64_t contentLength);
+
     std::unique_ptr<oio::http::async::HTTPDownload> BuildDownload();
 
     std::unique_ptr<oio::http::async::HTTPUpload> BuildUpload();
@@ -182,6 +189,7 @@ class HTTPBuilder {
     std::unique_ptr<oio::http::async::HTTPRemoval> BuildRemoval();
 
  private:
+    int64_t contentLength {-1};
     std::chrono::milliseconds timeout {0};
     std::string url;
     std::string host;
@@ -208,9 +216,9 @@ class HTTPUpload : public oio::api::blob::Upload {
     oio::api::Status Prepare() override;
     oio::api::Status Commit() override;
     oio::api::Status Abort() override;
-    oio::api::Status Write(std::shared_ptr<HTTPSlice> slice);
+    oio::api::Status Write(std::shared_ptr<oio::api::blob::Slice> slice);
     void Write(const uint8_t *buf, uint32_t len) override{
-        Write(std::make_shared<HTTPSlice>(HTTPSlice(buf, len)));
+        Write(std::shared_ptr<oio::api::blob::Slice>(new HTTPSlice(buf, len)));
     };
     explicit HTTPUpload(std::unique_ptr<::oio::http::async::HTTPUpload> upload)
             :inner{std::move(upload)} { }
@@ -231,7 +239,7 @@ class HTTPDownload : public oio::api::blob::Download {
     oio::api::Status Prepare() override;
     bool IsEof();
     int32_t Read(std::vector<uint8_t> *buf);
-    oio::api::Status Read(std::shared_ptr<HTTPSlice> slice);
+    oio::api::Status Read(std::shared_ptr<oio::api::blob::Slice> slice);
     oio::api:: Status SetRange(uint32_t offset, uint32_t size);
     explicit HTTPDownload(std::unique_ptr<::oio::http::async::HTTPDownload>
                           download) : inner{std::move(download)} { }
@@ -278,11 +286,14 @@ class HTTPBuilder {
 
     void Timeout(const std::chrono::milliseconds &timeout);
 
+    void ContentLength(int64_t contentLength);
+
     std::unique_ptr<oio::api::blob::Upload> BuildUpload();
     std::unique_ptr<oio::api::blob::Download> BuildDownload();
     std::unique_ptr<oio::api::blob::Removal> BuildRemoval();
 
  private:
+    int64_t contentLength {-1};
     std::chrono::milliseconds timeout {0};
     std::string url;
     std::string host;
@@ -318,9 +329,9 @@ class ReplicatedHTTPUpload : public oio::api::blob::Upload {
     oio::api::Status Commit() override;
     oio::api::Status Abort() override;
     void Write(const uint8_t *buf, uint32_t len) override {
-        Write(std::make_shared<HTTPSlice>(HTTPSlice(buf, len)));
+        Write(std::shared_ptr<oio::api::blob::Slice>(new HTTPSlice(buf, len)));
     };
-    oio::api::Status Write(std::shared_ptr<HTTPSlice> slice);
+    oio::api::Status Write(std::shared_ptr<oio::api::blob::Slice> slice);
 
  private:
     std::vector<std::unique_ptr<oio::http::async::HTTPUpload>> targets_;

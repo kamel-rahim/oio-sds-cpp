@@ -347,7 +347,22 @@ dump_dependency_components("RAPIDJSON")
 ### Proxygen 
 ### No need to build anything here, we expect proxygen to come from the system,
 ### at least for the moment.
-
+option(PROXYGEN_SYSTEM "Use system's Proxygen" OFF)
+option(PROXYGEN_GUESS "Guess the Proxygen places at system's standard" OFF)
+if (DEFINED PROXYGEN_INCDIR AND DEFINED PROXYGEN_LIBDIR)
+    find_library(PROXYGENCURL_LIBRARIES
+            NAMES proxygencurl
+            PATHS ${GLOG_LIBDIR})
+    find_library(PROXYGENHTTPSERVER_LIBRARIES
+            NAMES proxygenhttpserver
+            PATHS ${GLOG_LIBDIR})	  
+    find_path(GLOG_INCLUDE_DIRS
+            NAMES proxygen
+            PATHS ${GLOG_INCDIR})
+elseif (SYS AND PROXYGEN_SYSTEM)
+      pkg_check_modules(PROXYGENCURL libproxygencurl REQUIRED)
+      pkg_check_modules(PROXYGENHTTPSERVER libproxygenhttpserver REQUIRED)
+elseif (GUESS AND PROXYGEN_GUESS)
 find_library(PROXYGENCURL_LIBRARIES
         NAMES proxygencurl
         HINTS /usr/lib /usr/lib64 /usr/local/lib)
@@ -356,12 +371,26 @@ find_library(PROXYGENHTTPSERVER_LIBRARIES
         HINTS /usr/lib /usr/lib64 /usr/local/lib)
 find_path(PROXYGEN_INCLUDE_DIRS
 	NAMES proxygen
-	HINTS /usr/lib /usr/lib64 /usr/local/lib)	
+	HINTS /usr/lib /usr/lib64 /usr/local/lib)
+else()
+  execute_process(COMMAND "./deps.sh"
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/3rd/proxygen/proxygen)
 dump_dependency_components("PROXYGENCURL")
 dump_dependency_components("PROXYGENHTTPSERVER")
 ################################################################################
 ### Folly 
-
+option(FOLLY_SYSTEM "Use system's Folly" OFF)
+option(FOLLY_GUESS "Guess the Folly places at system's standard" OFF)
+if (DEFINED FOLLY_INCDIR AND DEFINED FOLLY_LIBDIR)
+    find_library(FOLLY_LIBRARIES
+            NAMES folly
+            PATHS ${GLOG_LIBDIR})
+    find_path(FOLLY_INCLUDE_DIRS
+            NAMES folly
+            PATHS ${GLOG_INCDIR})
+elseif (SYS AND FOLLY_SYSTEM)
+      pkg_check_modules(FOLLY libfolly REQUIRED)
+elseif (GUESS AND FOLLY_GUESS)
 find_library(FOLLY_LIBRARIES
         NAMES folly
         HINTS /usr/lib /usr/lib64 /usr/local/lib)      
@@ -371,7 +400,18 @@ find_path(FOLLY_INCLUDE_DIRS
 dump_dependency_components("FOLLY")
 ################################################################################
 ### Wrangle
-
+option(WANGLE_SYSTEM "Use system's Wangle" OFF)
+option(WANGLE_GUESS "Guess the Wangle places at system's standard" OFF)
+if (DEFINED WANGLE_INCDIR AND DEFINED WANGLE_LIBDIR)
+    find_library(WANGLE_LIBRARIES
+            NAMES wangle
+            PATHS ${GLOG_LIBDIR})
+    find_path(WANGLE_INCLUDE_DIRS
+            NAMES wangle
+            PATHS ${GLOG_INCDIR})
+elseif (SYS AND WANGLE_SYSTEM)
+    pkg_check_modules(WANGLE libwangle REQUIRED)
+elseif (GUESS AND FOLLY_GUESS)
 find_library(WANGLE_LIBRARIES
         NAMES wangle
         HINTS /usr/lib /usr/lib64 /usr/local/lib)

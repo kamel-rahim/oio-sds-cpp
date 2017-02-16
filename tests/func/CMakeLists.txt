@@ -38,6 +38,27 @@ target_link_libraries(test-blob-http
         ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES} ${GTEST_LIBRARIES})
 #add_test(NAME blob/http COMMAND test-blob-http)
 
+add_executable(test-blob-http-proxygen TestBlobHttpProxygen.cpp ~/proxygen/proxygen/lib/http/session/HTTPUpstreamSession.o ~/proxygen/proxygen/lib/http/HTTPConnector.o)
+target_link_libraries( test-blob-http-proxygen oio-data-rawx  
+        ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES} ${GTEST_LIBRARIES} pthread 
+	${PROXYGENHTTPSERVER_LIBRARIES} ${PROXYGENCURL_LIBRARIES} ${FOLLY_LIBRARIES} oio-data-http-proxygen oio-utils-proxygen  )
+#add_test(NAME blob/http-proxygen COMMAND test-blob-http-proxygen)
+
+add_executable(test-blob-http-proxygen-repli TestReplicatedHTTPUpload.cpp ~/proxygen/proxygen/lib/http/session/HTTPUpstreamSession.o ~/proxygen/proxygen/lib/http/HTTPConnector.o)
+target_link_libraries( test-blob-http-proxygen-repli oio-data-rawx 
+        ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES} ${GTEST_LIBRARIES} pthread
+	${PROXYGENHTTPSERVER_LIBRARIES} ${PROXYGENCURL_LIBRARIES} ${FOLLY_LIBRARIES} oio-utils-proxygen oio-data-http-proxygen)
+
+add_executable(test-blob-http-proxygen-upload TestSimpleHTTPUpload.cpp ~/proxygen/proxygen/lib/http/session/HTTPUpstreamSession.o ~/proxygen/proxygen/lib/http/HTTPConnector.o)
+target_link_libraries( test-blob-http-proxygen-upload oio-data-rawx  
+        ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES} ${GTEST_LIBRARIES} pthread
+	${PROXYGENHTTPSERVER_LIBRARIES} ${PROXYGENCURL_LIBRARIES} ${FOLLY_LIBRARIES} oio-utils-proxygen oio-data-http-proxygen)
+
+add_executable(test-blob-http-proxygen-download TestSimpleHTTPDownload.cpp ~/proxygen/proxygen/lib/http/session/HTTPUpstreamSession.o ~/proxygen/proxygen/lib/http/HTTPConnector.o)
+target_link_libraries( test-blob-http-proxygen-download oio-data-rawx  
+        ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES} ${GTEST_LIBRARIES} pthread
+	${PROXYGENHTTPSERVER_LIBRARIES} ${PROXYGENCURL_LIBRARIES} ${FOLLY_LIBRARIES} oio-utils-proxygen oio-data-http-proxygen)
+           
 add_executable(test-blob-kinetic TestBlobKinetic.cpp)
 target_link_libraries(test-blob-kinetic
         oio-data-kinetic

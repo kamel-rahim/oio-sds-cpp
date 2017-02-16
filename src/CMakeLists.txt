@@ -36,7 +36,14 @@ add_library(oio-utils SHARED
 target_link_libraries(oio-utils
         oio-http-parser
         ${MILL_LIBRARIES} ${CRYPTO_LIBRARIES}
-		${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES})
+	${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES})
+
+add_library(oio-utils-proxygen SHARED
+	        utils/utils.hpp utils/utils.cpp
+		utils/proxygen.hpp utils/proxygen.cpp)
+	      
+target_link_libraries(oio-utils-proxygen ${CRYPTO_LIBRARIES}
+	${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES})	      
 
 
 add_library(oio-data SHARED
@@ -79,6 +86,11 @@ add_library(oio-data-http SHARED
 target_link_libraries(oio-data-http
         oio-data oio-http-parser)
 
+add_library(oio-data-http-proxygen SHARED
+	oio/blob/http/proxygen.cpp
+	oio/blob/http/proxygen.hpp)
+target_link_libraries(oio-data-http-proxygen
+	oio-utils-proxygen)
 
 add_library(oio-data-rawx SHARED
 		oio/blob/rawx/blob.cpp

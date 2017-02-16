@@ -1,5 +1,8 @@
 ./.idea/*
 
+# Emacs temporary files
+*~
+
 # Protobuf generated files
 *.pb.*
 

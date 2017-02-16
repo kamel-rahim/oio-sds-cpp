@@ -40,8 +40,6 @@ target_link_libraries(oio-utils
 
 add_library(oio-utils-proxygen SHARED
 	        utils/utils.hpp utils/utils.cpp
-		utils/net.hpp utils/net.cpp
-		utils/http.hpp utils/http.cpp
 		utils/proxygen.hpp utils/proxygen.cpp)
 	      
 target_link_libraries(oio-utils-proxygen ${CRYPTO_LIBRARIES}
@@ -91,8 +89,8 @@ target_link_libraries(oio-data-http
 add_library(oio-data-http-proxygen SHARED
 	oio/blob/http/proxygen.cpp
 	oio/blob/http/proxygen.hpp)
-
-      
+target_link_libraries(oio-data-http-proxygen
+	oio-utils-proxygen)
 
 add_library(oio-data-rawx SHARED
 		oio/blob/rawx/blob.cpp

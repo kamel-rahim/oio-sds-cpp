@@ -140,7 +140,7 @@ class Upload {
                            s.size());
     }
 
-    Status Write(std::shared_ptr<Slice> s) {
+    virtual Status Write(std::shared_ptr<Slice> s) {
         this->Write(s->data(), s->size());
         return Status();
     }
@@ -196,8 +196,8 @@ class Download {
      */
     virtual int32_t Read(std::vector<uint8_t> *buf) = 0;
 
-    Status Read(std::shared_ptr<Slice> s) {
-        std::vector<uint8_t> tmp(s->data(), s->data() + s->size());
+    virtual Status Read(std::shared_ptr<Slice> slice) {
+        std::vector<uint8_t> tmp(slice->data(), slice->data() + slice->size());
         if ( Read(&tmp) < 0 )
             return Status(Cause::InternalError);
         return Status();

@@ -126,6 +126,6 @@ int main(int argc, char **argv) {
     }
   }
 
-  evb.get()->terminateLoopSoon();
+  //  evb.get()->terminateLoopSoon();
   return 0;
 }

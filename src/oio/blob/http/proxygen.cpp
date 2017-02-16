@@ -21,8 +21,8 @@
 #include <string>
 
 #include "utils/utils.hpp"
-#include "utils/http.hpp"
 #include "utils/proxygen.hpp"
+
 using Step = oio::api::blob::TransactionStep;
 
 using http::Code;
@@ -36,13 +36,13 @@ using std::string;
 using std::unique_ptr;
 using oio::api::blob::Slice;
 
-void oio::http::async::HTTPUpload::SetXattr(
+void oio::http::react::HTTPUpload::SetXattr(
     const std::string& k, const std::string& v) {
     if (step_ == Step::Init)
         proxygenHTTP_->Field(k, v);
 }
 
-Status oio::http::async::HTTPUpload::Prepare() {
+Status oio::http::react::HTTPUpload::Prepare() {
     if (step_ != Step::Init)
         return Status(Cause::InternalError);
     step_ = Step::Prepared;
@@ -50,7 +50,7 @@ Status oio::http::async::HTTPUpload::Prepare() {
     return Status();
 }
 
-Status oio::http::async::HTTPUpload::WaitPrepare() {
+Status oio::http::react::HTTPUpload::WaitPrepare() {
     Code code = controller_.ReturnCode();
     if (code != Code::OK) {
         if (code == Code::NetworkError)
@@ -60,7 +60,7 @@ Status oio::http::async::HTTPUpload::WaitPrepare() {
     return Status();
 }
 
-Status oio::http::async::HTTPUpload::Commit() {
+Status oio::http::react::HTTPUpload::Commit() {
     if (step_ != Step::Prepared)
         return Status(Cause::InternalError);
     step_ = Step::Done;
@@ -68,7 +68,7 @@ Status oio::http::async::HTTPUpload::Commit() {
     return Status();
 }
 
-Status oio::http::async::HTTPUpload::WaitCommit() {
+Status oio::http::react::HTTPUpload::WaitCommit() {
     Code code = controller_.ReturnCode();
     if (code != Code::OK) {
         if (code == Code::NetworkError)
@@ -77,18 +77,16 @@ Status oio::http::async::HTTPUpload::WaitCommit() {
     }
     std::shared_ptr<proxygen::HTTPMessage> header = controller_.ReturnHeader();
     if (header == nullptr) {
-      DLOG(INFO) << "Header Returned is null";
         return Status(Cause::InternalError);
     }
     if (header->getStatusCode() / 100 == 2) {
-      DLOG(INFO) << "Header Status Code is valid";
         return Status();
     }
-    DLOG(INFO) << "The Status Code is not good" << header->getStatusCode();
+    LOG(ERROR) << "The Status Code is not good" << header->getStatusCode();
     return Status(Cause::InternalError);
 }
 
-Status oio::http::async::HTTPUpload::Abort() {
+Status oio::http::react::HTTPUpload::Abort() {
     if (step_ != Step::Prepared)
         return Status(Cause::InternalError);
     step_ = Step::Done;
@@ -96,14 +94,14 @@ Status oio::http::async::HTTPUpload::Abort() {
     return Status();
 }
 
-Status oio::http::async::HTTPUpload::Write(std::shared_ptr<Slice> slice) {
+Status oio::http::react::HTTPUpload::Write(std::shared_ptr<Slice> slice) {
     if (step_ != Step::Prepared)
         return Status(Cause::InternalError);
     controller_.Write(slice);
     return Status();
 }
 
-Status oio::http::async::HTTPUpload::WaitWrite() {
+Status oio::http::react::HTTPUpload::WaitWrite() {
     Code code = controller_.ReturnCode();
     if (code != Code::OK) {
         if (code == Code::NetworkError)
@@ -113,7 +111,7 @@ Status oio::http::async::HTTPUpload::WaitWrite() {
     return Status();
 }
 
-Status oio::http::async::HTTPDownload::SetRange(
+Status oio::http::react::HTTPDownload::SetRange(
     uint32_t offset, uint32_t size) {
     if (step_ != Step::Init)
         return Status(Cause::InternalError);
@@ -122,18 +120,19 @@ Status oio::http::async::HTTPDownload::SetRange(
     return Status();
 }
 
-Status oio::http::async::HTTPDownload::Read(std::shared_ptr<Slice> slice) {
+Status oio::http::react::HTTPDownload::Read(std::shared_ptr<Slice> slice) {
     if (step_ != Step::Prepared)
         return Status(Cause::InternalError);
     controller_.Read(slice);
     return Status();
 }
 
-bool oio::http::async::HTTPDownload::IsEof() {
+bool oio::http::react::HTTPDownload::IsEof() {
+    controller_.IsEof();
     return controller_.ReturnIsEof();
 }
 
-Status oio::http::async::HTTPDownload::WaitRead() {
+Status oio::http::react::HTTPDownload::WaitRead() {
     Code code = controller_.ReturnCode();
     if (code != Code::OK) {
         if (code == Code::NetworkError)
@@ -143,14 +142,23 @@ Status oio::http::async::HTTPDownload::WaitRead() {
     return Status();
 }
 
-Status oio::http::async::HTTPDownload::Prepare() {
+Status oio::http::react::HTTPDownload::Abort() {
+    if (step_ != Step::Prepared)
+        return Status(Cause::InternalError);
+    step_ = Step::Done;
+    controller_.Abort();
+    return Status();
+}
+
+Status oio::http::react::HTTPDownload::Prepare() {
     if (step_ != Step::Init)
         return Status (Cause::InternalError);
+    step_ = Step::Prepared;
     controller_.Connect();
     return Status();
 }
 
-Status oio::http::async::HTTPDownload::WaitPrepare() {
+Status oio::http::react::HTTPDownload::WaitPrepare() {
     Code code = controller_.ReturnCode();
     if (code != Code::OK) {
         if (code == Code::NetworkError)
@@ -161,7 +169,14 @@ Status oio::http::async::HTTPDownload::WaitPrepare() {
     return Status();
 }
 
-Status oio::http::async::HTTPDownload::WaitReadHeader() {
+Status oio::http::react::HTTPDownload::WaitPrepareHeader() {
+    Code code = controller_.ReturnCode();
+    if (code != Code::OK) {
+        if (code == Code::NetworkError)
+            return Status(Cause::NetworkError);
+        return Status(Cause::InternalError);
+    }
+
     std::shared_ptr<proxygen::HTTPMessage> httpMessage =
             controller_.ReturnHeader();
     if (httpMessage == nullptr)
@@ -171,7 +186,7 @@ Status oio::http::async::HTTPDownload::WaitReadHeader() {
     return Status();
 }
 
-Status oio::http::async::HTTPRemoval::Prepare() {
+Status oio::http::react::HTTPRemoval::Prepare() {
     if (step_ != Step::Init)
         return Status(Cause::InternalError);
     step_ = Step::Prepared;
@@ -179,7 +194,7 @@ Status oio::http::async::HTTPRemoval::Prepare() {
     return Status();
 }
 
-Status oio::http::async::HTTPRemoval::WaitPrepare() {
+Status oio::http::react::HTTPRemoval::WaitPrepare() {
     Code code = controller_.ReturnCode();
     if (code != Code::OK) {
         if (code == Code::NetworkError)
@@ -189,7 +204,7 @@ Status oio::http::async::HTTPRemoval::WaitPrepare() {
     return Status();
 }
 
-Status oio::http::async::HTTPRemoval::Commit() {
+Status oio::http::react::HTTPRemoval::Commit() {
     if (step_ != Step::Prepared)
         return Status(Cause::InternalError);
     step_ = Step::Done;
@@ -197,7 +212,7 @@ Status oio::http::async::HTTPRemoval::Commit() {
     return Status();
 }
 
-Status oio::http::async::HTTPRemoval::WaitCommit() {
+Status oio::http::react::HTTPRemoval::WaitCommit() {
     Code code = controller_.ReturnCode();
     if (code != Code::OK) {
         if (code == Code::NetworkError)
@@ -210,7 +225,7 @@ Status oio::http::async::HTTPRemoval::WaitCommit() {
     return Status(Cause::InternalError);
 }
 
-Status oio::http::async::HTTPRemoval::Abort() {
+Status oio::http::react::HTTPRemoval::Abort() {
     if (step_ != Step::Prepared)
         return Status(Cause::InternalError);
     step_ = Step::Done;
@@ -218,53 +233,53 @@ Status oio::http::async::HTTPRemoval::Abort() {
     return Status();
 }
 
-void oio::http::async::HTTPBuilder::ContentLength(int64_t contentLength) {
+void oio::http::react::HTTPBuilder::ContentLength(int64_t contentLength) {
     this->contentLength = contentLength;
 }
 
-void oio::http::async::HTTPBuilder::URL(const std::string& s) {
+void oio::http::react::HTTPBuilder::URL(const std::string& s) {
     url = s;
 }
 
-void oio::http::async::HTTPBuilder::Name(const std::string& s) {
+void oio::http::react::HTTPBuilder::Name(const std::string& s) {
     name = s;
 }
 
-void oio::http::async::HTTPBuilder::Field(
+void oio::http::react::HTTPBuilder::Field(
     const std::string& k, const std::string &v) {
     fields[k] = v;
 }
 
-void oio::http::async::HTTPBuilder::Trailer(const std::string& k) {
+void oio::http::react::HTTPBuilder::Trailer(const std::string& k) {
     trailers.insert(k);
 }
 
-void oio::http::async::HTTPBuilder::Host(const std::string& s) {
+void oio::http::react::HTTPBuilder::Host(const std::string& s) {
     host = s;
 }
 
-void oio::http::async::HTTPBuilder::SocketAddress(
+void oio::http::react::HTTPBuilder::SocketAddress(
     unique_ptr<folly::SocketAddress> socketAddress) {
     this->socketAddress = std::move(socketAddress);
 }
 
-void oio::http::async::HTTPBuilder::EventBase(
+void oio::http::react::HTTPBuilder::EventBase(
     const std::shared_ptr<folly::EventBase> eventBase) {
     this->eventBase = eventBase;
 }
 
-void oio::http::async::HTTPBuilder::Timeout(
+void oio::http::react::HTTPBuilder::Timeout(
     const std::chrono::milliseconds &timeout) {
     this->timeout = timeout;
 }
 
-void oio::http::async::HTTPBuilder::Timer(
+void oio::http::react::HTTPBuilder::Timer(
     const folly::HHWheelTimer::SharedPtr timer) {
     this->timer = timer;
 }
 
-std::unique_ptr<oio::http::async::HTTPUpload>
-oio::http::async::HTTPBuilder::BuildUpload() {
+std::unique_ptr<oio::http::react::HTTPUpload>
+oio::http::react::HTTPBuilder::BuildUpload() {
     auto ul = new HTTPUpload;
     if (timeout != std::chrono::milliseconds(0))
         ul->proxygenHTTP_->Timeout(timeout);
@@ -280,11 +295,11 @@ oio::http::async::HTTPBuilder::BuildUpload() {
     for (const auto &e : fields) {
         ul->proxygenHTTP_->Field(e.first, e.second);
     }
-    return std::unique_ptr<oio::http::async::HTTPUpload>(ul);
+    return std::unique_ptr<oio::http::react::HTTPUpload>(ul);
 }
 
-std::unique_ptr<oio::http::async::HTTPDownload>
-oio::http::async::HTTPBuilder::BuildDownload() {
+std::unique_ptr<oio::http::react::HTTPDownload>
+oio::http::react::HTTPBuilder::BuildDownload() {
     auto dl = new HTTPDownload;
     if (timeout !=std::chrono::milliseconds(0) )
         dl->proxygenHTTP_->Timeout(timeout);
@@ -300,11 +315,11 @@ oio::http::async::HTTPBuilder::BuildDownload() {
     for (const auto &e : fields) {
         dl->proxygenHTTP_->Field(e.first, e.second);
     }
-    return std::unique_ptr<oio::http::async::HTTPDownload>(dl);
+    return std::unique_ptr<oio::http::react::HTTPDownload>(dl);
 }
 
-std::unique_ptr<oio::http::async::HTTPRemoval>
-oio::http::async::HTTPBuilder::BuildRemoval() {
+std::unique_ptr<oio::http::react::HTTPRemoval>
+oio::http::react::HTTPBuilder::BuildRemoval() {
     auto rm = new HTTPRemoval;
     if (timeout != std::chrono::milliseconds(0))
         rm->proxygenHTTP_->Timeout(timeout);
@@ -320,16 +335,21 @@ oio::http::async::HTTPBuilder::BuildRemoval() {
     for (const auto &e : fields) {
         rm->proxygenHTTP_->Field(e.first, e.second);
     }
-    return std::unique_ptr<oio::http::async::HTTPRemoval>(rm);
+    return std::unique_ptr<oio::http::react::HTTPRemoval>(rm);
 }
 
 Status oio::http::sync::HTTPDownload::Prepare() {
     inner->Prepare();
-    return inner->WaitPrepare();
+    inner->WaitPrepare();
+    return inner->WaitPrepareHeader();
 }
 
 bool oio::http::sync::HTTPDownload::IsEof() {
     return inner->IsEof();
+}
+
+Status oio::http::sync::HTTPDownload::Abort() {
+    return inner->Abort();
 }
 
 Status oio::http::sync::HTTPDownload::Read(std::shared_ptr<Slice> slice) {
@@ -355,7 +375,7 @@ oio::http::sync::HTTPRemoval::~HTTPRemoval() {}
 
 std::unique_ptr<oio::api::blob::Upload>
 oio::http::sync::HTTPBuilder::BuildUpload() {
-    oio::http::async::HTTPBuilder builder;
+    oio::http::react::HTTPBuilder builder;
     if (timeout != std::chrono::milliseconds(0))
         builder.Timeout(timeout);
     if (contentLength > 0)
@@ -374,7 +394,7 @@ oio::http::sync::HTTPBuilder::BuildUpload() {
 
 std::unique_ptr<oio::api::blob::Download>
 oio::http::sync::HTTPBuilder::BuildDownload() {
-    oio::http::async::HTTPBuilder builder;
+    oio::http::react::HTTPBuilder builder;
     if (timeout != std::chrono::milliseconds(0))
         builder.Timeout(timeout);
     if (contentLength > 0)
@@ -393,7 +413,7 @@ oio::http::sync::HTTPBuilder::BuildDownload() {
 
 std::unique_ptr<oio::api::blob::Removal>
 oio::http::sync::HTTPBuilder::BuildRemoval() {
-    oio::http::async::HTTPBuilder builder;
+    oio::http::react::HTTPBuilder builder;
     if (timeout != std::chrono::milliseconds(0))
         builder.Timeout(timeout);
     if (contentLength > 0)
@@ -540,3 +560,140 @@ Status oio::http::repli::ReplicatedHTTPUpload::Write(
     return Status(Cause::InternalError);
 }
 
+
+Status oio::http::repli::ReplicatedHTTPRemoval::Prepare() {
+    for (auto &target : targets_)
+        target->Prepare();
+    unsigned successful = 0;
+    for (auto &target : targets_ ) {
+        Status status = target->WaitPrepare();
+        if (status.Why() == Cause::OK)
+            successful++;
+    }
+    if(minimunSuccessful_ <= successful)
+        return Status();
+    return Status(Cause::InternalError);
+}
+
+Status oio::http::repli::ReplicatedHTTPRemoval::Commit() {
+    for (auto &target : targets_)
+        target->Commit();
+    unsigned successful = 0;
+    Status status;
+    for (auto &target : targets_) {
+        status = target->WaitCommit();
+        if(status.Why() == Cause::OK)
+            successful++;
+    }
+    if (minimunSuccessful_ <= successful)
+        return Status();
+    return Status(Cause::InternalError);
+}
+
+Status oio::http::repli::ReplicatedHTTPRemoval::Abort() {
+    for (auto &target : targets_)
+        target->Abort();
+
+    return Status(Cause::OK);
+}
+
+
+Status oio::http::ec::ECHTTPUpload::Prepare() {
+    for(auto &target :  targets_)
+        target.get()->Prepare();
+    unsigned successful = 0;
+    for(auto &target : targets_) {
+        Status status = target.get()->WaitPrepare();
+        if(status.Why() == Cause::OK)
+            successful ++;
+    }
+    if(minimunSuccessful_ <= successful)
+        return Status();
+    return Status(Cause::InternalError);
+}
+
+Status oio::http::ec::ECHTTPUpload::Commit () {
+    for(auto &target : targets_)
+        target.get()->Commit();
+    unsigned successful = 0;
+    Status status;
+    for(auto &target : targets_) {
+        status = target.get()->WaitCommit();
+        if(status.Why() ==Cause::OK)
+            successful ++;
+    }
+    if(minimunSuccessful_ <= successful)
+        return Status();
+    return Status(Cause::InternalError);
+}
+
+Status oio::http::ec::ECHTTPUpload::Abort() {
+    for(auto &target : targets_)
+        target.get()->Abort();
+    return Status();
+}
+
+Status oio::http::ec::ECHTTPUpload::Write(std::vector<std::shared_ptr<HTTPSlice>> slices) {
+    if(targets_.size() != slices.size())
+        return Status(Cause::Forbidden);
+    unsigned successful = 0;
+    Status status;
+    for(unsigned i = 0;i<targets_.size();i++) {
+        targets_[i].get()->Write(slices[i]);
+    }
+    for(auto &target : targets_) {
+        Status status = target.get()->WaitPrepare();
+        if(status.Why() == Cause::OK)
+            successful++;
+    }
+    if(minimunSuccessful_ > successful)
+        return Status();
+    return Status(Cause::InternalError);
+}
+
+Status oio::http::ec::ECHTTPDownload::Prepare() {
+    for(auto &target :  targets_)
+        target.get()->Prepare();
+    unsigned successful = 0;
+    for(auto &target : targets_) {
+        Status status = target.get()->WaitPrepare();
+        if(status.Why() == Cause::OK)
+            successful ++;
+    }
+    if(minimunSuccessful_ != successful)
+        return Status(Cause::InternalError);
+    
+    successful = 0;
+    for(auto &target : targets_) {
+        Status status = target.get()->WaitPrepareHeader();
+        if(status.Why() == Cause::OK)
+            successful ++;
+    }
+    if(minimunSuccessful_ <= successful)
+        return Status();
+    return Status(Cause::InternalError);  
+}
+
+Status oio::http::ec::ECHTTPDownload::Abort() {
+    for(auto &target : targets_)
+        target.get()->Abort();
+    return Status();  
+}
+
+Status oio::http::ec::ECHTTPDownload::Read(std::vector<std::shared_ptr<HTTPSlice>> slices ) {
+    if(targets_.size() != slices.size())
+        return Status(Cause::Forbidden);
+    unsigned successful = 0;
+    Status status;
+    for(unsigned i = 0;i<targets_.size();i++) {
+        targets_[i].get()->Read(slices[i]);
+    }
+    for(auto &target : targets_) {
+        Status status = target.get()->WaitPrepare();
+        if(status.Why() == Cause::OK)
+            successful++;
+    }
+    if(minimunSuccessful_ > successful)
+        return Status();
+    return Status(Cause::InternalError);  
+}

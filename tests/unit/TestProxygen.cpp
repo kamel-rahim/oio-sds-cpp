@@ -1,6 +1,6 @@
 /**
  * This file is part of the test tools for the OpenIO client libraries
- * Copyright (C) 2016 OpenIO SAS
+ * Copyright (C) 2017 OpenIO SAS
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -18,10 +18,9 @@
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include "oio/api/blob.hpp"
 #include "HTTPTransactionMocks.h"
-#include "utils/http.hpp"
 #include "utils/proxygen.hpp"
-#include "utils/proxygen.cpp"
 #include <future>
 #include <string>
 #include <folly/io/IOBuf.h>
@@ -32,9 +31,9 @@ using http::Code;
 using http::ProxygenHTTP;
 using http::ControllerProxygenHTTP;
 
-class TestSlice{
+class TestSlice : public oio::api::blob::Slice{
 public:
-  TestSlice(){}
+  TestSlice() {}
   TestSlice(TestSlice *slice){
     inner.insert(inner.end(),slice->data(),&slice->data()[slice->size()]);
   }
@@ -48,6 +47,9 @@ public:
     return inner.size();
   }
   void append(uint8_t *data,int32_t size){
+    inner.insert(inner.end(),data,&data[size]);
+  }
+   void append(uint8_t *data,uint32_t size){
     inner.insert(inner.end(),data,&data[size]);
   }
   void append(TestSlice& slice){
@@ -66,19 +68,20 @@ public:
   
   }
   void SetUp() override{
-    proxygenHTTP = std::shared_ptr<ProxygenHTTP<TestSlice>>(new ProxygenHTTP<TestSlice>());
+    proxygenHTTP = std::shared_ptr<ProxygenHTTP>(new ProxygenHTTP());
   
     transaction = new proxygen::MockHTTPTransaction(proxygen::TransportDirection::DOWNSTREAM,id,seqNo,egressQueue,timeout);
+    
     proxygenHTTP->setTransaction(transaction);
-    controllerProxygenHTTP =new ControllerProxygenHTTP<TestSlice>(proxygenHTTP);
+    controllerProxygenHTTP =new ControllerProxygenHTTP(proxygenHTTP);
   }
   void TearDown() override{
     //    delete controllerProxygenHTTP;
   }
 
 protected:
-  ControllerProxygenHTTP<TestSlice>* controllerProxygenHTTP {nullptr};
-  std::shared_ptr<ProxygenHTTP<TestSlice>> proxygenHTTP ;
+  ControllerProxygenHTTP* controllerProxygenHTTP {nullptr};
+  std::shared_ptr<ProxygenHTTP> proxygenHTTP ;
   proxygen::HTTPCodec::StreamID id {1};
   uint32_t seqNo {2};
   proxygen::HTTP2PriorityQueue egressQueue;
@@ -88,11 +91,11 @@ protected:
 
 
 TEST_F(ProxygenHTTPFixture,WriteSliceSend){
-   EXPECT_CALL(*transaction,sendBody(_)).WillOnce(Return());
-  uint8_t message[]{"TEST_MESSAGE"};
-  TestSlice slice(message,13);
-  proxygenHTTP->Write(std::make_shared<TestSlice>(slice));
-  controllerProxygenHTTP->ReturnCode();
+    EXPECT_CALL(*transaction,sendBody(_)).WillOnce(Return());
+    uint8_t message[]{"TEST_MESSAGE"};
+    std::shared_ptr<oio::api::blob::Slice> slice(new TestSlice(message,13));
+    proxygenHTTP->Write(slice);
+    controllerProxygenHTTP->ReturnCode();
 }
 
 TEST_F(ProxygenHTTPFixture,ReadSliceReceive){
@@ -140,20 +143,19 @@ TEST_F(ProxygenHTTPFixture,OnEgressPausedAccumulateSlice){
 }
 
 TEST_F(ProxygenHTTPFixture,OnEgressResumedSendItAll){
-   EXPECT_CALL(*transaction,sendBody(_)).Times(3).WillRepeatedly(Return());
-  ON_CALL(*transaction,isEgressPaused()).WillByDefault(Return(true));
-  proxygenHTTP->onEgressPaused();
-  uint8_t message[]{"TEST_MESSAGE"};
-  TestSlice slice(message,13);
-  std::shared_ptr<TestSlice> sharedSlices = std::make_shared<TestSlice>(slice);
-  for(int i=0;i<3;i++){
-    proxygenHTTP->Write(sharedSlices);
-    controllerProxygenHTTP->ReturnCode();
-    slice = TestSlice(message,13);
-    sharedSlices = std::make_shared<TestSlice>(slice);
-  }
-  
-  proxygenHTTP->onEgressResumed();
+    EXPECT_CALL(*transaction,sendBody(_)).Times(3).WillRepeatedly(Return());
+    ON_CALL(*transaction,isEgressPaused()).WillByDefault(Return(true));
+    proxygenHTTP->onEgressPaused();
+    uint8_t message[]{"TEST_MESSAGE"};
+    TestSlice slice(message,13);
+    std::shared_ptr<TestSlice> sharedSlices = std::make_shared<TestSlice>(slice);
+    for(int i=0;i<3;i++){
+        proxygenHTTP->Write(sharedSlices);
+        controllerProxygenHTTP->ReturnCode();
+        slice = TestSlice(message,13);
+        sharedSlices = std::make_shared<TestSlice>(slice);
+    }
+    proxygenHTTP->onEgressResumed();
 }
 
 TEST_F(ProxygenHTTPFixture,isEOFWhenEnded){
@@ -166,7 +168,6 @@ TEST_F(ProxygenHTTPFixture,isEOFWhenNotEnded){
 }
 
 TEST_F(ProxygenHTTPFixture,ReadHeader){
-  proxygenHTTP->ReadHeader();
 }
 
 TEST_F(ProxygenHTTPFixture,Abort){

@@ -28,7 +28,6 @@
 #include <vector>
 
 #include "oio/api/blob.hpp"
-#include "utils/http.hpp"
 #include "utils/proxygen.hpp"
 
 
@@ -79,8 +78,8 @@ class HTTPSlice :public  oio::api::blob::Slice{
     std::vector<uint8_t> inner;
 };
 
-namespace async {
-
+namespace react {
+   
 class HTTPDownload {
     friend class HTTPBuilder;
  public:
@@ -93,7 +92,8 @@ class HTTPDownload {
     oio::api::Status WaitPrepare();
     oio::api::Status Read(std::shared_ptr<oio::api::blob::Slice> slice);
     oio::api::Status WaitRead();
-    oio::api::Status WaitReadHeader();
+    oio::api::Status Abort();
+    oio::api::Status WaitPrepareHeader();
     oio::api::Status SetRange(uint32_t offset, uint32_t size);
     bool IsEof();
  private:
@@ -182,11 +182,11 @@ class HTTPBuilder {
 
     void ContentLength(int64_t contentLength);
 
-    std::unique_ptr<oio::http::async::HTTPDownload> BuildDownload();
+    std::unique_ptr<oio::http::react::HTTPDownload> BuildDownload();
 
-    std::unique_ptr<oio::http::async::HTTPUpload> BuildUpload();
+    std::unique_ptr<oio::http::react::HTTPUpload> BuildUpload();
 
-    std::unique_ptr<oio::http::async::HTTPRemoval> BuildRemoval();
+    std::unique_ptr<oio::http::react::HTTPRemoval> BuildRemoval();
 
  private:
     int64_t contentLength {-1};
@@ -201,7 +201,7 @@ class HTTPBuilder {
     folly::HHWheelTimer::SharedPtr timer;
 };
 
-}  // namespace async
+}  // namespace react
 
 namespace sync {
 
@@ -216,11 +216,11 @@ class HTTPUpload : public oio::api::blob::Upload {
     oio::api::Status Prepare() override;
     oio::api::Status Commit() override;
     oio::api::Status Abort() override;
-    oio::api::Status Write(std::shared_ptr<oio::api::blob::Slice> slice);
+    oio::api::Status Write(std::shared_ptr<oio::api::blob::Slice> slice) override;
     void Write(const uint8_t *buf, uint32_t len) override{
         Write(std::shared_ptr<oio::api::blob::Slice>(new HTTPSlice(buf, len)));
     };
-    explicit HTTPUpload(std::unique_ptr<::oio::http::async::HTTPUpload> upload)
+    explicit HTTPUpload(std::unique_ptr<::oio::http::react::HTTPUpload> upload)
             :inner{std::move(upload)} { }
  private:
     oio::api::Status AbortAndReturn(oio::api::Status status) {
@@ -228,7 +228,7 @@ class HTTPUpload : public oio::api::blob::Upload {
         return status;
     }
     std::map<std::string, std::string> xattrs;
-    std::unique_ptr<::oio::http::async::HTTPUpload> inner;
+    std::unique_ptr<::oio::http::react::HTTPUpload> inner;
 };
 
 class HTTPDownload : public oio::api::blob::Download {
@@ -236,15 +236,16 @@ class HTTPDownload : public oio::api::blob::Download {
  public:
     ~HTTPDownload();
     HTTPDownload() {}
+    oio::api::Status Abort();
     oio::api::Status Prepare() override;
     bool IsEof();
     int32_t Read(std::vector<uint8_t> *buf);
-    oio::api::Status Read(std::shared_ptr<oio::api::blob::Slice> slice);
-    oio::api:: Status SetRange(uint32_t offset, uint32_t size);
-    explicit HTTPDownload(std::unique_ptr<::oio::http::async::HTTPDownload>
+    oio::api::Status Read(std::shared_ptr<oio::api::blob::Slice> slice) override;
+    oio::api::Status SetRange(uint32_t offset, uint32_t size);
+    explicit HTTPDownload(std::unique_ptr<::oio::http::react::HTTPDownload>
                           download) : inner{std::move(download)} { }
  private:
-    std::unique_ptr<::oio::http::async::HTTPDownload> inner;
+    std::unique_ptr<::oio::http::react::HTTPDownload> inner;
 };
 
 class HTTPRemoval : public oio::api::blob::Removal {
@@ -255,10 +256,10 @@ class HTTPRemoval : public oio::api::blob::Removal {
     oio::api::Status Prepare() override;
     oio::api::Status Commit() override;
     oio::api::Status Abort() override;
-    explicit HTTPRemoval(std::unique_ptr<::oio::http::async::HTTPRemoval>
+    explicit HTTPRemoval(std::unique_ptr<::oio::http::react::HTTPRemoval>
                          removal) : inner{std::move(removal)} {}
  private:
-    std::unique_ptr<::oio::http::async::HTTPRemoval> inner;
+    std::unique_ptr<::oio::http::react::HTTPRemoval> inner;
 };
 
 class HTTPBuilder {
@@ -318,7 +319,7 @@ class ReplicatedHTTPUpload : public oio::api::blob::Upload {
         xattrs[k] = v;
     }
 
-    void Target(std::unique_ptr<oio::http::async::HTTPUpload> target) {
+    void Target(std::unique_ptr<oio::http::react::HTTPUpload> target) {
         targets_.push_back(std::move(target));
     }
 
@@ -334,13 +335,77 @@ class ReplicatedHTTPUpload : public oio::api::blob::Upload {
     oio::api::Status Write(std::shared_ptr<oio::api::blob::Slice> slice);
 
  private:
-    std::vector<std::unique_ptr<oio::http::async::HTTPUpload>> targets_;
+    std::vector<std::unique_ptr<oio::http::react::HTTPUpload>> targets_;
     unsigned timeout_;
     unsigned minimunSuccessful_;
     std::map<std::string, std::string> xattrs;
 };
 
+class ReplicatedHTTPRemoval : public oio::api::blob::Removal {
+  public:
+    ~ReplicatedHTTPRemoval() {}
+    oio::api::Status Prepare() override;
+    oio::api::Status Commit() override;
+    oio::api::Status Abort() override;
+    void Target(std::unique_ptr<oio::http::react::HTTPRemoval> target){
+        targets_.push_back(std::move(target));
+    }
+  private:
+    std::vector<std::unique_ptr<oio::http::react::HTTPRemoval>> targets_;
+    unsigned timeout;
+    unsigned minimunSuccessful_;
+};
+
 }  // namespace repli
+
+namespace ec{
+
+class ECHTTPUpload : public oio::api::blob::Upload{
+  public:
+    void SetXattr(const std::string& k, const std::string& v) override{
+        xattrs[k] = v;
+    }
+    
+    void Target(std::unique_ptr<oio::http::react::HTTPUpload> target){
+        targets_.push_back(std::move(target));
+    }
+    
+    void MinimunSuccessful(int min){
+        minimunSuccessful_ = min;
+    }
+    oio::api::Status Prepare() override;
+    oio::api::Status Commit() override;
+    oio::api::Status Abort() override;
+    oio::api::Status Write(std::vector<std::shared_ptr<HTTPSlice>> slices);
+    
+  private:
+    std::vector<std::unique_ptr<oio::http::react::HTTPUpload>> targets_;
+    unsigned timeout_;
+    unsigned minimunSuccessful_;
+    std::map<std::string,std::string> xattrs;  
+};
+
+class ECHTTPDownload : public oio::api::blob::Download{
+  public:
+    void Target(std::unique_ptr<oio::http::react::HTTPDownload> target){
+        targets_.push_back(std::move(target));
+    }
+    
+    void MinimunSuccessful(int min){
+        minimunSuccessful_ = min;
+    }
+    oio::api::Status Prepare() override;
+    oio::api::Status Read(std::vector<std::shared_ptr<HTTPSlice>> slices);
+    oio::api::Status Abort();
+    
+  private:
+    std::vector<std::unique_ptr<oio::http::react::HTTPDownload>> targets_;
+    unsigned timeout_;
+    unsigned minimunSuccessful_;
+    std::map<std::string,std::string> xattrs;      
+};
+
+}  // namespace ec
 }  // namespace http
 }  // namespace oio
 

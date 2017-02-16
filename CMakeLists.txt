@@ -347,6 +347,7 @@ dump_dependency_components("RAPIDJSON")
 ### Proxygen 
 ### No need to build anything here, we expect proxygen to come from the system,
 ### at least for the moment.
+
 option(PROXYGEN_SYSTEM "Use system's Proxygen" OFF)
 option(PROXYGEN_GUESS "Guess the Proxygen places at system's standard" OFF)
 if (DEFINED PROXYGEN_INCDIR AND DEFINED PROXYGEN_LIBDIR)
@@ -375,6 +376,7 @@ find_path(PROXYGEN_INCLUDE_DIRS
 else()
   execute_process(COMMAND "./deps.sh"
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/3rd/proxygen/proxygen)
+endif ()  
 dump_dependency_components("PROXYGENCURL")
 dump_dependency_components("PROXYGENHTTPSERVER")
 ################################################################################
@@ -396,7 +398,8 @@ find_library(FOLLY_LIBRARIES
         HINTS /usr/lib /usr/lib64 /usr/local/lib)      
 find_path(FOLLY_INCLUDE_DIRS
 	NAMES folly
-	HINTS /usr/lib /usr/lib64 /usr/local/lib)	
+	HINTS /usr/lib /usr/lib64 /usr/local/lib)
+endif ()      
 dump_dependency_components("FOLLY")
 ################################################################################
 ### Wrangle
@@ -417,7 +420,8 @@ find_library(WANGLE_LIBRARIES
         HINTS /usr/lib /usr/lib64 /usr/local/lib)
 find_path(WANGLE_INCLUDE_DIRS
 	NAMES wangle
-	HINTS /usr/lib /usr/lib64 /usr/local/lib)	
+	HINTS /usr/lib /usr/lib64 /usr/local/lib)
+endif ()      
 dump_dependency_components("WANGLE")
 ################################################################################
 

@@ -16,7 +16,7 @@ link_directories(
 
 add_executable(test-utils TestUtils.cpp)
 target_link_libraries(test-utils oio-utils oio-data
-        ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES} ${GTEST_LIBRARIES})
+  ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES} ${GTEST_LIBRARIES})
 add_test(NAME utils/hash COMMAND test-utils)
 
 add_executable(test-blob-local TestBlobLocal.cpp
@@ -32,7 +32,7 @@ target_link_libraries(test-blob-mem oio-data-mem
 add_test(NAME blob/mem COMMAND test-blob-mem)
 
 add_executable(test-utils-proxygen TestProxygen.cpp)
-target_link_libraries(test-utils-proxygen oio-utils
+target_link_libraries(test-utils-proxygen oio-utils-proxygen
         ${GLOG_LIBRARIES} ${GFLAGS_LIBRARIES} ${GTEST_LIBRARIES}
         ${GMOCK_LIBRARIES} pthread ${WANGLE_LIBRARIES} ${FOLLY_LIBRARIES}
 	${PROXYGENHTTPSERVER_LIBRARIES} ${PROXYGENCURL_LIBRARIES})

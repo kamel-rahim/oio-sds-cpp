@@ -23,25 +23,29 @@
 #include <proxygen/lib/http/session/HTTPTransaction.h>
 
 #include <cstdint>
-#include <future>
+#include <future>  //  NOLINT(build/c++11)
 #include <list>
 #include <map>
 #include <memory>
 #include <queue>
 #include <set>
 #include <string>
-#include <thread>
+#include <thread>  //  NOLINT(build/c++11)
 #include <utility>
 #include <vector>
 
-#include "http.hpp"
 #include "utils.hpp"
 #include "oio/api/blob.hpp"
 
 namespace http {
 
+enum Code {
+    OK, ClientError, ServerError, NetworkError, Done ,Timeout
+};
+
+  
 class HTTPSlice :public  oio::api::blob::Slice{
- public:
+  public:
     ~HTTPSlice() {}
 
     HTTPSlice() {}
@@ -63,7 +67,7 @@ class HTTPSlice :public  oio::api::blob::Slice{
     uint8_t *data() {
         return inner.data();
     }
-
+    
     uint32_t size() {
         return inner.size();
     }
@@ -80,21 +84,23 @@ class HTTPSlice :public  oio::api::blob::Slice{
         return inner.empty();
     }
 
- private:
+  private:
     std::vector<uint8_t> inner;
 };
 
 /**
- * Handle a Connection (Download and Upload) to a HTTPServer
+ * Handle a Downstream and  Upstream Connection to a HTTPServer with Proxygen
+ * The execution of the instance are in EventLoop so every function call is add
+ * to the EventLoop.Most of the functions are called by the library.
+ * But the Controller class can calls functions of the ProxygenHTTP.
  */
-
 class ProxygenHTTP : public proxygen::HTTPConnector::Callback,
                      public proxygen::HTTPTransactionHandler {
     friend class ControllerProxygenHTTP;
- public:
-    /*
-     *Setter of the Proxygen class
-     */
+  public:
+    
+    ~ProxygenHTTP();
+    
     void Trailer(std::string trailer) {
         this->sendTrailers.insert(trailer);
     }
@@ -134,71 +140,117 @@ class ProxygenHTTP : public proxygen::HTTPConnector::Callback,
     }
 
     void ContentLength(int64_t contentLength) noexcept {
+        sent = 0;
         this->contentLength = contentLength;
         Field("Content-Length", std::to_string(contentLength));
     }
+        
+    void LimitIngress(int64_t limitIngress){
+        this->limitIngress = limitIngress;
+    }
 
-    // The functions that permit to control ProxygenHTTP
-    /**
-     * 
-     * 
-     */
+    void LimitEgress(int64_t limitEgress){
+        this->limitEgress = limitEgress;
+    }
+
     void Connect() noexcept;
+
     /**
-     * Send a Slice to the other socket
+     * Write can be called anytime by the controller even when
+     * the Upstream transaction is on paused. For this reason
+     * we buffered to a certain amount set by limitEgress the data we send
+     * whe it is on paused.
      */
     void Write(const std::shared_ptr<::oio::api::blob::Slice> slice) noexcept;
-    /**
-     * Send the end the of message, no Write should be done after this point
-     */
+
     void SendEOM() noexcept;
 
-    /**
-     * Return a promise of a Slice 
-     */
     void Read(std::shared_ptr<oio::api::blob::Slice> slice) noexcept;
-    /**
-     * Return a promise of a bool
-     */
-    void isEof() noexcept;
-    /**
-     *
-     */
-    inline void ReturnHeader(std::shared_ptr<proxygen::HTTPMessage> msg) {
-        headerPromise.set_value(msg);
-    }
 
-    inline void ReturnCode(Code code) {
-        codePromise.set_value(code);
-    }
+    void isEof() noexcept;
 
     void URL(std::string url) {
         url_ = url;
     }
     void Abort() noexcept;
     void initializeSSL() noexcept;
+    
     void sslHandshakeFollowup(proxygen::HTTPUpstreamSession* session) noexcept;
-    ~ProxygenHTTP();
+
     void setHeader();
-    void ReadHeader() noexcept;
     // function of the Callback class
+
+    /**
+     * The connection is successful and it is only after this function is called
+     * that we can send the header.
+     */
     void connectSuccess(proxygen::HTTPUpstreamSession* session);
+
     void connectError(const folly::AsyncSocketException& exception);
     // function of the HTTPTransactionHandler class
+
     void onEOM() noexcept;
+
     void setTransaction(proxygen::HTTPTransaction* txn) noexcept;
+
     void detachTransaction() noexcept;
+
     void onHeadersComplete(std::unique_ptr<proxygen::HTTPMessage> msg) noexcept;
+
     void onEgressPaused() noexcept;
+
+    /**
+     * onEgress Resumed is automatically called when we can send
+     * It is the library that decide if we can send or not.
+     * Because it is asynchrone there can have  buffered data waiting
+     * to be send.
+     */
     void onEgressResumed() noexcept;
+
+    /**
+     * This is called automatically by the library when data have been received.
+     * So we need to buffered the data till a Read is called. But to not stock
+     * too much data. We set a limit that block the reading of new data.
+     */
     void onBody(std::unique_ptr<folly::IOBuf> chain) noexcept;
+
     void onTrailers(std::unique_ptr<proxygen::HTTPHeaders> trailers) noexcept;
+
     void onUpgrade(proxygen::UpgradeProtocol protocol) noexcept;
+
+    /**
+     * This function is called by the library whenever a error occured
+     * but the Controller can still called function from the instance.
+     * So for this reason a variable is set to know if an error happened.
+     */
     void onError(const proxygen::HTTPException& error) noexcept;
- private:
+  private:
+
+    /**
+     * Before a Read is called the instance may received many buffers of data
+     * So when a read is called we coalesce all the buffers to one and add it
+     * to the slice asked.
+     */
     void CoalesceAndSetValue();
+
     void addFieldsOnHeader(proxygen::HTTPHeaders *headers);
+    
+    inline void ReturnHeader(std::shared_ptr<proxygen::HTTPMessage> msg) {
+        headerPromise.set_value(msg);
+    }
+    
+    inline void ReturnBool(bool b){
+        boolPromise.set_value(b);
+    }
+    
+    inline void ReturnCode(Code code) {
+        codePromise.set_value(code);
+    }
     // Common
+    int64_t limitIngress {-1};
+    int64_t IngressBuffered {0};
+    int64_t limitEgress {-1};
+    int64_t EgressBuffered {0};
     std::promise<bool> boolPromise;
     std::promise<Code> codePromise;
     std::promise<std::shared_ptr<proxygen::HTTPMessage>> headerPromise;
@@ -207,11 +259,9 @@ class ProxygenHTTP : public proxygen::HTTPConnector::Callback,
     proxygen::HTTPMethod method;
     std::map<std::string, std::string> fields;
     bool errorHappened;
-    // Reading
     std::shared_ptr<folly::IOBuf> readBuffer {nullptr};
     bool eof;
-    std::shared_ptr<oio::api::blob::Slice> readSlice;
-    // Writing
+    std::shared_ptr<oio::api::blob::Slice> readSlice {nullptr};
     bool isEgressPaused {false};
     int64_t contentLength {-1};
     std::queue<std::shared_ptr<oio::api::blob::Slice>> writeQueue;
@@ -237,12 +287,17 @@ class ProxygenHTTP : public proxygen::HTTPConnector::Callback,
     folly::AsyncSocketException::AsyncSocketExceptionType exception;
 };
 
+/**
+ * The Controller of a ProxygenHTTP class goal is to give a interface to call
+ * functions of the ProxygenHTTP instance from any thread to the thread
+ * containing the EventLoop.
+ */
 class ControllerProxygenHTTP{
- public:
+  public:
     ControllerProxygenHTTP() {}
 
     explicit ControllerProxygenHTTP(std::shared_ptr<ProxygenHTTP>
-                                     proxygenHTTP)
+                                    proxygenHTTP)
             :proxygenHTTP_{proxygenHTTP} {}
 
     void SetProxygenHTTP(std::shared_ptr<ProxygenHTTP> proxygenHTTP) {
@@ -286,13 +341,22 @@ class ControllerProxygenHTTP{
     void Write(std::shared_ptr<oio::api::blob::Slice> slice) {
         if (proxygenHTTP_.get()->errorHappened)
             return;
-       auto  *tmp_pair = new std::pair<ProxygenHTTP*,
-                                       std::shared_ptr<oio::api::blob::Slice>>
-               (proxygenHTTP_.get(), slice);
+        auto  *tmp_pair = new std::pair<ProxygenHTTP*,
+                                        std::shared_ptr<oio::api::blob::Slice>>
+                (proxygenHTTP_.get(), slice);
         proxygenHTTP_->eventBase->template runInEventBaseThread
                 <std::pair<ProxygenHTTP*,
                            std::shared_ptr<oio::api::blob::Slice>>>
                 (proxygenHTTPWrite, tmp_pair);
+    }
+    void IsEof(){
+        if(proxygenHTTP_.get()->errorHappened){
+            LOG(ERROR) << "IsEof asked when error already happened on proxygen";
+            return;
+        }
+        proxygenHTTP_->eventBase->template
+                runInEventBaseThread<ProxygenHTTP>
+                (proxygenHTTPIsEof, proxygenHTTP_.get());
     }
 
     Code ReturnCode() {
@@ -310,10 +374,10 @@ class ControllerProxygenHTTP{
     bool ReturnIsEof() {
         if (proxygenHTTP_.get()->errorHappened)
             return true;
-        auto boolFuture = proxygenHTTP_.get()->codePromise.get_future();
+        auto boolFuture = proxygenHTTP_.get()->boolPromise.get_future();
         std::future_status status = boolFuture.wait_for(
             proxygenHTTP_->promiseTimeout);
-        proxygenHTTP_.get()->boolPromise = std::promise<bool>();
+        proxygenHTTP_->boolPromise = std::promise<bool>();
         if (status == std::future_status::ready)
             return boolFuture.get();
         return true;
@@ -327,11 +391,10 @@ class ControllerProxygenHTTP{
             std::shared_ptr<proxygen::HTTPMessage>>();
         if (status == std::future_status::ready)
             return headerFuture.get();
-        DLOG(INFO) << "Timeout of the response of the Header";
         return nullptr;
     }
 
- private:
+  private:
     static void proxygenHTTPIsEof(ProxygenHTTP* proxygenHTTP) {
         proxygenHTTP->isEof();
     }
@@ -358,6 +421,7 @@ class ControllerProxygenHTTP{
     static void proxygenHTTPRead(std::pair<ProxygenHTTP*,
                                  std::shared_ptr<oio::api::blob::Slice>>
                                  *pair) {
+        DLOG(INFO) << pair->second.get();
         pair->first->Read(pair->second);
         delete pair;
     }
